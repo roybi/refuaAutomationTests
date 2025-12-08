@@ -1,0 +1,72 @@
+# MEDITEK Test Automation Requirements
+# ======================================
+# This file defines dependencies for refuaAutomationTests
+
+# Core Framework
+# Using local development path since framework is local
+# Format: -e path/to/framework (editable install)
+# Install with: pip install -e ../refuaAutomationCore
+
+# When using requirements.txt, install the framework first:
+# pip install -e ../refuaAutomationCore
+# Then install other requirements: pip install -r requirements.txt
+
+# Alternative installation methods (when framework is published):
+# Install from PyPI when released:
+#   refua-automation-core>=1.0.0
+#
+# OR for development (use git reference):
+#   refua-automation-core @ git+https://github.com/org/refuaAutomationCore.git@main
+
+# Test Framework & Execution
+pytest>=7.0.0                           # Test framework
+pytest-xdist>=3.0.0                     # Parallel test execution
+pytest-timeout>=2.1.0                   # Test timeout handling
+
+# Reporting
+# Note: Allure reporting packages have compatibility issues with Python 3.12+
+# You can install separately when needed:
+# pip install allure-pytest==2.15.2
+
+# Browser Automation (from framework)
+playwright>=1.40.0                      # Browser automation engine
+
+# Configuration
+python-dotenv>=1.0.0                    # .env file support
+requests>=2.31.0                        # HTTP requests
+
+# Development Tools (optional, for development)
+black>=23.0.0                           # Code formatter
+flake8>=6.0.0                           # Linter
+mypy>=1.0.0                             # Type checker
+isort>=5.12.0                           # Import organizer
+
+# Utilities (optional)
+faker>=18.0.0                           # Fake data generation
+factory-boy>=3.2.0                      # Test data factories
+
+# Installation Instructions
+# ========================
+#
+# 1. Create virtual environment:
+#    python -m venv venv
+#    source venv/bin/activate  # On Windows: venv\Scripts\activate
+#
+# 2. Install dependencies:
+#    pip install -r requirements.txt
+#
+# 3. Install Playwright browsers:
+#    playwright install
+#
+# 4. Verify installation:
+#    python -c "from refua_core.config.environment import EnvironmentManager; print('OK')"
+#
+# Development Setup
+# =================
+#
+# For development with all tools:
+#    pip install -r requirements.txt
+#    pip install black flake8 mypy isort
+#
+# For production/CI:
+#    pip install -r requirements.txt
