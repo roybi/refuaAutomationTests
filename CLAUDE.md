@@ -1,6 +1,13 @@
-# CLAUDE.md - Test Repository Guidance
+﻿# CLAUDE.md - Test Repository Guidance
 
 This file provides guidance to Claude Code when working with the refuaAutomationTests repository.
+
+## ⚠️ Multi-Agent Handoff (MANDATORY)
+
+This repository is worked on by multiple LLM agents (Claude Code and GitHub Copilot).
+**At the start of every session, read `AGENT_HANDOFF.md` in the repo root.**
+- If its `STATUS` is `IN_PROGRESS`, continue from the `RESUME POINT` — do NOT restart the task.
+- Follow the PROTOCOL rules in that file: update the checklist and WORK LOG as you work, and fill in the RESUME POINT before you stop.
 
 ## Project Overview
 
@@ -204,7 +211,7 @@ TEST_ENV=test pytest refua_tests/tests/ -v
 TEST_ENV=test pytest refua_tests/tests/test_auth.py -v -k "login"
 
 # Run with reporting
-TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure-results -v
+TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure/results -v
 ```
 
 **CI Integration**:
@@ -250,13 +257,13 @@ TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure-results -v
 ```yaml
 - name: Run tests
   run: |
-    TEST_ENV=test pytest refua_tests/tests/ -v --alluredir=./allure-results
+    TEST_ENV=test pytest refua_tests/tests/ -v --alluredir=./allure/results
 
 - name: Upload reports
   uses: actions/upload-artifact@v3
   with:
-    name: allure-results
-    path: allure-results/
+    name: allure/results
+    path: allure/results/
 ```
 
 ## Setup & Installation
@@ -354,8 +361,8 @@ TEST_ENV=test DEVICE=android_pixel pytest refua_tests/tests/ -v
 
 ```bash
 # Allure report
-TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure-results -v
-allure serve ./allure-results
+TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure/results -v
+allure serve ./allure/results
 
 # JUnit XML
 TEST_ENV=test pytest refua_tests/tests/ --junit-xml=results.xml -v
