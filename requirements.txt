@@ -7,12 +7,8 @@
 # Format: -e path/to/framework (editable install)
 # Install with: pip install -e ../refuaAutomationCore
 
-# When using requirements.txt, install the framework first:
-# pip install -e ../refuaAutomationCore
-# Then install other requirements: pip install -r requirements.txt
-
-# Alternative installation methods (when framework is published):
-# Install from PyPI when released:
+ 
+ 
 #   refua-automation-core>=1.0.0
 #
 # OR for development (use git reference):
@@ -22,6 +18,7 @@
 pytest>=7.0.0                           # Test framework
 pytest-xdist>=3.0.0                     # Parallel test execution
 pytest-timeout>=2.1.0                   # Test timeout handling
+pytest-bdd>=7.0.0                       # BDD (Behavior-Driven Development) support
 
 # Reporting
 # Note: Allure reporting packages have compatibility issues with Python 3.12+
@@ -44,7 +41,7 @@ isort>=5.12.0                           # Import organizer
 # Utilities (optional)
 faker>=18.0.0                           # Fake data generation
 factory-boy>=3.2.0                      # Test data factories
-
+refua-automation-core>=1.0.1
 # Installation Instructions
 # ========================
 #

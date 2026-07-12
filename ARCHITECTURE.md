@@ -1,4 +1,4 @@
-# refuaAutomationTests - Test Implementation Architecture
+﻿# refuaAutomationTests - Test Implementation Architecture
 
 **Test Repository for MEDITEK Application**
 **Last Updated:** December 2025
@@ -62,7 +62,7 @@ refuaAutomationTests/
 │   │   ├── patient_page.py        # Patient management page
 │   │   └── settings_page.py       # Settings page
 │   │
-│   ├── tests/                     # Test Cases
+│   ├── tests/                     # Test Cases (Traditional)
 │   │   ├── __init__.py
 │   │   ├── conftest.py            # Pytest fixtures and configuration
 │   │   ├── test_authentication.py # Authentication tests
@@ -70,10 +70,34 @@ refuaAutomationTests/
 │   │   ├── test_patient_mgmt.py   # Patient management tests
 │   │   └── test_settings.py       # Settings tests
 │   │
-│   └── fixtures/                  # Test Fixtures and Utilities
+│   ├── bdd/                       # BDD/Gherkin Tests
+│   │   ├── __init__.py
+│   │   ├── conftest.py            # BDD-specific fixtures
+│   │   ├── features/              # Gherkin feature files
+│   │   │   ├── __init__.py
+│   │   │   ├── main_page.feature  # Feature scenarios
+│   │   │   └── ...
+│   │   ├── step_defs/             # Step definitions
+│   │   │   ├── __init__.py
+│   │   │   ├── common_steps.py    # Reusable steps
+│   │   │   ├── main_page_steps.py # Main page steps
+│   │   │   └── ...
+│   │   └── README.md              # BDD documentation
+│   │
+│   ├── fixtures/                  # Test Fixtures and Utilities
+│   │   ├── __init__.py
+│   │   ├── test_data.py           # Test data factories
+│   │   └── helpers.py             # Common helper functions
+│   │
+│   └── reports/                   # Report Generation
 │       ├── __init__.py
-│       ├── test_data.py           # Test data factories
-│       └── helpers.py             # Common helper functions
+│       ├── generate_report.py     # Node.js method
+│       ├── generate_report_java.py # Java method
+│       ├── serve_allure.py        # Allure server
+│       ├── serve_http.py          # HTTP server
+│       ├── README.md              # Reports documentation
+│       ├── QUICK_START.md         # Quick reference
+│       └── TROUBLESHOOTING.md     # Troubleshooting guide
 │
 ├── .env.test                      # Test environment credentials
 ├── .env.preprod                   # Preprod environment credentials
@@ -135,6 +159,38 @@ Reusable test fixtures, utilities, and test data.
 **Files**:
 - `test_data.py`: Test data factories and builders
 - `helpers.py`: Common utility functions
+
+#### `refua_tests/bdd/`
+BDD (Behavior-Driven Development) tests using Gherkin syntax.
+
+**Contains**:
+- `features/`: Gherkin .feature files with test scenarios
+- `step_defs/`: Python step definitions implementing Gherkin steps
+- `conftest.py`: BDD-specific pytest fixtures
+
+**Purpose**:
+- Provide business-readable test scenarios
+- Enable collaboration between technical and non-technical stakeholders
+- Serve as living documentation
+- Complement traditional pytest tests
+
+**Documentation**: See `refua_tests/bdd/README.md`
+
+#### `refua_tests/reports/`
+Allure report generation and serving utilities.
+
+**Contains**:
+- `generate_report.py`: Generate reports using Node.js
+- `generate_report_java.py`: Generate reports using Java (recommended)
+- `serve_allure.py`: Serve reports with Allure server
+- `serve_http.py`: Serve reports via Python HTTP server
+
+**Purpose**:
+- Generate HTML reports from test results
+- Serve reports to fix CORS issues
+- Provide multiple report generation methods
+
+**Documentation**: See `refua_tests/reports/README.md`
 
 ---
 
@@ -523,6 +579,219 @@ def test_expired_session_redirects_to_login(self):
 
 ---
 
+## BDD Testing (Gherkin)
+
+### Overview
+
+BDD (Behavior-Driven Development) tests use Gherkin syntax to write human-readable test scenarios. They **complement** traditional pytest tests, not replace them.
+
+### When to Use BDD
+
+**Use BDD Tests** for:
+- User acceptance criteria
+- Business scenarios and workflows
+- Feature specifications
+- Living documentation
+- Stakeholder communication
+
+**Use Traditional Tests** for:
+- Low-level technical verification
+- Edge cases and error conditions
+- Complex setup and teardown
+- Performance testing
+
+### Feature File Structure
+
+```gherkin
+Feature: Main Page Functionality
+  As a QA engineer
+  I want to verify the Main Page works correctly
+  So that users can access the application reliably
+
+  Background:
+    Given the test environment is configured
+    And the browser is launched
+
+  @smoke @main_page
+  Scenario: Test environment URL resolution
+    Given I am testing the main page
+    When I get the items base URL for "test" environment
+    Then the URL should contain "meditik.test.medical.idf.il"
+    And the full URL should be "https://meditik.test.medical.idf.il/home"
+
+  @regression
+  Scenario Outline: URL contains correct domain for each environment
+    Given I am testing the main page for "<environment>" environment
+    When I get the items base URL
+    Then the URL should contain the "<domain_pattern>" domain
+
+    Examples:
+      | environment | domain_pattern            |
+      | test        | .test.medical.idf.il      |
+      | preprod     | .preprod.medical.idf.il   |
+```
+
+### Step Definitions
+
+```python
+# step_defs/main_page_steps.py
+
+from pytest_bdd import given, when, then, parsers, scenarios
+from refua_tests.pages.mainPage import MainPage
+
+# Load all scenarios from feature file
+scenarios('../features/main_page.feature')
+
+@given("I am testing the main page")
+def testing_main_page(main_page, context):
+    """Initialize main page for testing"""
+    context['main_page'] = main_page
+
+@when(parsers.parse('I get the items base URL for "{environment}" environment'))
+def get_items_base_url_for_env(context, environment):
+    """Get items base URL for specific environment"""
+    main_page = context['main_page']
+    url = main_page.items_base_url
+    context['url'] = url
+
+@then(parsers.parse('the URL should contain "{text}"'))
+def url_should_contain(context, text):
+    """Verify URL contains specific text"""
+    url = context.get('url')
+    assert text in url, f"URL should contain '{text}', got '{url}'"
+```
+
+### Running BDD Tests
+
+```bash
+# Run all BDD tests
+TEST_ENV=test pytest refua_tests/bdd/ -v
+
+# Run specific feature
+TEST_ENV=test pytest refua_tests/bdd/features/main_page.feature -v
+
+# Run with markers
+TEST_ENV=test pytest refua_tests/bdd/ -m smoke -v
+
+# Run with allure reporting
+TEST_ENV=test pytest refua_tests/bdd/ --alluredir=allure/results -v
+```
+
+### BDD Best Practices
+
+```gherkin
+# ✅ GOOD: Business language, user-focused
+Scenario: User can view their profile
+  Given I am logged in
+  When I click on my profile
+  Then I should see my account information
+
+# ❌ AVOID: Technical details, implementation-focused
+Scenario: Profile page object loads correctly
+  Given the LoginPage object is initialized
+  When I call navigate_to_profile() method
+  Then the ProfilePage locators should be visible
+```
+
+### Integration with Traditional Tests
+
+Both test types can run together:
+
+```bash
+# Run all tests (traditional + BDD)
+TEST_ENV=test pytest refua_tests/ -v
+
+# Run only traditional tests
+TEST_ENV=test pytest refua_tests/tests/ -v
+
+# Run only BDD tests
+TEST_ENV=test pytest refua_tests/bdd/ -v
+```
+
+---
+
+## Report Generation
+
+### Overview
+
+The `refua_tests/reports/` package provides multiple methods to generate and view Allure HTML reports from test results.
+
+### Quick Start
+
+```bash
+# 1. Run tests with allure reporting
+TEST_ENV=test pytest refua_tests/tests/ --alluredir=allure/results -v
+
+# 2. Generate report
+python -m refua_tests.reports.generate_report_java
+
+# 3. View report (via HTTP to avoid CORS issues)
+python -m refua_tests.reports.serve_http
+# or
+view_report.bat
+```
+
+### Report Generation Methods
+
+#### Method 1: Java Direct (Recommended)
+```bash
+python -m refua_tests.reports.generate_report_java
+```
+- Most reliable
+- Works around Windows path issues
+- Doesn't require npm allure-commandline
+
+#### Method 2: Node.js Wrapper
+```bash
+python -m refua_tests.reports.generate_report
+```
+- Requires npm allure-commandline installed
+- May have issues with spaces in Windows usernames
+
+#### Method 3: Allure Server
+```bash
+python -m refua_tests.reports.serve_allure
+```
+- Dynamic server
+- No CORS issues
+- Requires Ctrl+C to stop
+
+#### Method 4: Python HTTP Server
+```bash
+python -m refua_tests.reports.serve_http --port 8000
+```
+- Serves existing report via HTTP
+- Fixes CORS issues with file:// protocol
+- Custom port support
+
+### Report Viewing
+
+**Important**: Always view reports via HTTP server, not by opening `index.html` directly (CORS issues).
+
+```bash
+# After generating report
+python -m refua_tests.reports.serve_http
+
+# Or use batch file
+view_report.bat
+```
+
+### Common Workflow
+
+```bash
+# Clean old data
+rm -rf allure/results allure/report
+
+# Run tests
+TEST_ENV=test pytest refua_tests/tests/ --alluredir=allure/results -v
+
+# Generate and view
+python -m refua_tests.reports.generate_report_java
+python -m refua_tests.reports.serve_http
+```
+
+---
+
 ## Configuration
 
 ### Environment Files
@@ -701,10 +970,10 @@ TEST_ENV=test BROWSER=webkit pytest refua_tests/tests/ -v
 
 ```bash
 # Generate Allure report
-TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure-results -v
+TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure/results -v
 
 # View Allure report
-allure serve ./allure-results
+allure serve ./allure/results
 
 # Generate JUnit XML report
 TEST_ENV=test pytest refua_tests/tests/ --junit-xml=results.xml -v
@@ -781,7 +1050,7 @@ TEST_ENV=test pytest refua_tests/tests/test_feature.py -v
 TEST_ENV=test pytest refua_tests/tests/ -m smoke -v
 
 # Run with reporting
-TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure-results -v
+TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure/results -v
 ```
 
 ### 5. Commit Changes
@@ -895,16 +1164,19 @@ pip install refua-automation-core
 ## Next Steps
 
 1. Create page objects for each application feature
-2. Write smoke tests for critical functionality
+2. Write smoke tests for critical functionality (traditional + BDD)
 3. Expand with regression tests
-4. Integrate with CI/CD pipeline
-5. Set up Allure reporting
-6. Document test scenarios
+4. Create Gherkin features for user acceptance criteria
+5. Integrate with CI/CD pipeline
+6. Set up Allure reporting (already configured)
+7. Document test scenarios and BDD features
 
 ---
 
 ## See Also
 
-- Framework Documentation: See `refuaAutomationCore/ARCHITECTURE.md`
-- Test Execution Guide: See `TEST_EXECUTION_QUICK_REFERENCE.md` (in core repo)
-- Parameter Guide: See `PARAMETER_GUIDE.md` (in core repo)
+- **BDD Testing**: See `refua_tests/bdd/README.md`
+- **Report Generation**: See `refua_tests/reports/README.md`
+- **Framework Documentation**: See `refuaAutomationCore/ARCHITECTURE.md`
+- **Test Execution Guide**: See `TEST_EXECUTION_QUICK_REFERENCE.md` (in core repo)
+- **Parameter Guide**: See `PARAMETER_GUIDE.md` (in core repo)

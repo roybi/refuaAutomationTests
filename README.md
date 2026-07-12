@@ -1,4 +1,4 @@
-# refuaAutomationTests
+﻿# refuaAutomationTests
 
 **Test Automation Implementation for MEDITEK Medical Application**
 
@@ -56,8 +56,8 @@ TEST_ENV=test pytest refua_tests/tests/ -v
 TEST_ENV=test pytest refua_tests/tests/test_authentication.py -v
 
 # Run with Allure reporting
-TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure-results -v
-allure serve ./allure-results
+TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure/results -v
+allure serve ./allure/results
 ```
 
 ## Project Structure
@@ -187,8 +187,8 @@ TEST_ENV=test BROWSER=firefox pytest refua_tests/tests/ -v
 ### Reporting
 ```bash
 # Allure reporting
-TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure-results -v
-allure serve ./allure-results
+TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure/results -v
+allure serve ./allure/results
 
 # JUnit XML
 TEST_ENV=test pytest refua_tests/tests/ --junit-xml=results.xml -v

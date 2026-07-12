@@ -15,5 +15,5 @@ Execution:
     TEST_ENV=test pytest refua_tests/tests/ -k "login" -v
 
     # Run with Allure reporting
-    TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure-results -v
+    TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure/results -v
 """

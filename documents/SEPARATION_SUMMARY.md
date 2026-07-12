@@ -1,4 +1,4 @@
-# Repository Separation Summary
+﻿# Repository Separation Summary
 
 ## Overview
 
@@ -342,7 +342,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 mkdir -p ~/.refua_sessions
 python scripts/capture_session.py --env test --user <username>
-TEST_ENV=test pytest --alluredir=./allure-results
+TEST_ENV=test pytest --alluredir=./allure/results
 ```
 
 ### Framework Release

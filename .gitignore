@@ -33,6 +33,7 @@ pip-delete-this-directory.txt
 
 # Virtual Environments
 venv/
+myenv/
 env/
 ENV/
 env.bak/
@@ -62,8 +63,10 @@ htmlcov/
 .nose*
 *.cover
 test-artifacts/
-allure-results/
-allure-report/
+
+# Allure Reports
+allure/results/
+allure/report/
 
 # Test Execution
 test_execution.log
@@ -107,3 +110,14 @@ Thumbs.db
 *.swn
 .vscode/settings.json
 .vscode/launch.json
+
+install-scoop.ps1
+
+# Claude Code local settings (per-machine, not shared)
+.claude/settings.local.json
+
+# Playwright MCP session logs
+.playwright-mcp/
+
+# One-off local artifacts
+session-bypass-simulation.png
