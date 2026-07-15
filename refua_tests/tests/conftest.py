@@ -81,8 +81,11 @@ def _auth_state_bypasses_2fa(auth_state_path: Path) -> bool:
         session_data = json.load(auth_state)
     storage_state = session_data.get("storage_state", session_data)
 
+    # Headed by default so the session validation is visible during local
+    # runs; set AUTH_CHECK_HEADLESS=true for CI/background execution.
+    check_headless = os.getenv("AUTH_CHECK_HEADLESS", "false").lower() == "true"
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=True)
+        browser = playwright.chromium.launch(headless=check_headless)
         context = browser.new_context(storage_state=storage_state)
         page = context.new_page()
 
