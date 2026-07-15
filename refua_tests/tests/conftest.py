@@ -115,7 +115,17 @@ def _auth_state_bypasses_2fa(auth_state_path: Path) -> bool:
                 # Tokens were picked up silently — no login click, no 2FA.
                 return True
 
-            login_button.click(timeout=10000)
+            try:
+                login_button.click(timeout=10000)
+            except Exception:
+                # The login button can vanish between the visibility wait and
+                # the click when MSAL signs in silently and swaps in the
+                # dashboard — that is a success, not a failure.
+                try:
+                    dashboard.wait_for(state="visible", timeout=15000)
+                    return True
+                except Exception:
+                    return False
 
             try:
                 page.wait_for_url(
