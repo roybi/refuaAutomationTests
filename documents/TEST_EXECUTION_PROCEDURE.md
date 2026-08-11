@@ -37,7 +37,7 @@ If `expires_at` is in the past (or the file is missing), recapture:
 
 ```powershell
 cd C:\_Dev\python\refuaAutomationCore
-C:\_Dev\python\refuaAutomationTests\venv\Scripts\python.exe scripts\capture_session.py --env test --app meditek --browser chromium
+C:\_Dev\python\refuaAutomationTests\venv\Scripts\python.exe scripts\capture_session.py --env test --app meditik --browser chromium
 ```
 
 A browser window opens — click **התחברות**, enter credentials, approve the number in

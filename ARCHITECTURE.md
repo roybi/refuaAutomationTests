@@ -566,7 +566,7 @@ def test_expired_session_redirects_to_login(self):
     self.page.context.add_cookies([{
         "name": "session_id",
         "value": "expired_session",
-        "domain": ".meditek.app"
+        "domain": ".meditik.app"
     }])
 
     # When - User tries to access dashboard
@@ -799,8 +799,8 @@ python -m refua_tests.reports.serve_http
 #### `.env.test` - Test Environment
 ```bash
 # Test environment configuration
-TEST_BASE_URL=https://test.meditek.app
-TEST_API_ENDPOINT=https://api-test.meditek.app
+TEST_BASE_URL=https://test.meditik.app
+TEST_API_ENDPOINT=https://api-test.meditik.app
 
 # Test user credentials
 TEST_USER_EMAIL=testuser@test.local
@@ -815,8 +815,8 @@ TEST_SESSION_TTL=259200  # 3 days in seconds
 #### `.env.preprod` - Preprod Environment
 ```bash
 # Preprod environment configuration
-PREPROD_BASE_URL=https://preprod.meditek.app
-PREPROD_API_ENDPOINT=https://api-preprod.meditek.app
+PREPROD_BASE_URL=https://preprod.meditik.app
+PREPROD_API_ENDPOINT=https://api-preprod.meditik.app
 
 # Preprod user credentials
 PREPROD_USER_EMAIL=testuser@preprod.local
@@ -830,11 +830,11 @@ PREPROD_SESSION_TTL=259200  # 3 days in seconds
 #### `.env.prod` - Production Environment
 ```bash
 # Production environment configuration
-PROD_BASE_URL=https://app.meditek.com
-PROD_API_ENDPOINT=https://api.meditek.com
+PROD_BASE_URL=https://app.meditik.com
+PROD_API_ENDPOINT=https://api.meditik.com
 
 # Production user credentials (read-only test user)
-PROD_USER_EMAIL=prod_readonly_user@meditek.com
+PROD_USER_EMAIL=prod_readonly_user@meditik.com
 PROD_USER_PASSWORD=SecureProdPassword123
 
 PROD_SKIP_2FA=false

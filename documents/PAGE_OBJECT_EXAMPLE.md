@@ -183,7 +183,7 @@ class MainPage(BasePage):
 
 ### ❌ DON'T
 
-- ❌ Hardcode URLs like `https://meditik.test.meditek.app`
+- ❌ Hardcode URLs like `https://meditik.test.meditik.app`
 - ❌ Use string replacement with placeholders: `{.test}`
 - ❌ Create separate page objects for each environment
 - ❌ Hardcode environment values in page objects
@@ -200,9 +200,9 @@ class MainPage(BasePage):
 def base_url(self) -> str:
     env = self.env_manager.current_env
     if env == EnvType.PROD:
-        return "https://app.meditek.com"
+        return "https://app.meditik.com"
     else:
-        return f"https://{env.value}.meditek.app"
+        return f"https://{env.value}.meditik.app"
 ```
 
 ### Pattern 2: Check Current Environment

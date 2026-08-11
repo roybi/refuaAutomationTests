@@ -686,17 +686,17 @@ SESSION_DIR=path/to/sessions   # Session storage (default: ~/.refua_sessions/)
 TEST_USER_EMAIL=user@test.local
 TEST_USER_PASSWORD=secure_password
 TEST_USER_PHONE=+1234567890
-TEST_BASE_URL=https://test.meditek.app
+TEST_BASE_URL=https://test.meditik.app
 
 # .env.preprod
 PREPROD_USER_EMAIL=user@preprod.local
 PREPROD_USER_PASSWORD=secure_password
-PREPROD_BASE_URL=https://preprod.meditek.app
+PREPROD_BASE_URL=https://preprod.meditik.app
 
 # .env.prod
 PROD_USER_EMAIL=user@production.com
 PROD_USER_PASSWORD=secure_password
-PROD_BASE_URL=https://app.meditek.com
+PROD_BASE_URL=https://app.meditik.com
 ```
 
 ### Devices Configuration (devices.json)

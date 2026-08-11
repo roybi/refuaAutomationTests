@@ -31,10 +31,10 @@ Run from `refuaAutomationTests`.
 cd C:\_Dev\python\refuaAutomationTests
 
 # Chromium
-$env:TEST_APP="meditek"; $env:TEST_ENV="test"; $env:BROWSER="chromium"; venv\Scripts\python.exe -m pytest
+$env:TEST_APP="meditik"; $env:TEST_ENV="test"; $env:BROWSER="chromium"; venv\Scripts\python.exe -m pytest
 
 # Firefox
-$env:TEST_APP="meditek"; $env:TEST_ENV="test"; $env:BROWSER="firefox"; venv\Scripts\python.exe -m pytest
+$env:TEST_APP="meditik"; $env:TEST_ENV="test"; $env:BROWSER="firefox"; venv\Scripts\python.exe -m pytest
 ```
 
 ### Useful flags
