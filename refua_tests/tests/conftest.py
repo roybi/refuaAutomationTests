@@ -217,12 +217,68 @@ def _ensure_auth_state() -> None:
 
 _load_environment_file()
 
-# Import fixtures from the framework so they are available to all tests.
-# browser_page — real Playwright browser (for UI/integration tests)
-# env_manager  — EnvironmentManager singleton
-# playwright_instance — raw sync_playwright context (advanced use)
-from refua_core.conftest import (browser_page, env_manager,  # noqa: F401
-                                 playwright_instance)
+# Framework fixtures still available to tests.
+# browser_page is defined locally below — core no longer ships that fixture.
+from refua_core.conftest import env_manager, playwright_instance  # noqa: F401
+from refua_core.config.environment import get_env_manager
+from refua_tests.pages.soft_notes import (
+    clear_session_soft_notes,
+    clear_soft_notes,
+    drain_soft_notes,
+    publish_soft_notes_to_allure,
+    session_soft_notes,
+    soft_notes_mode,
+)
+
+
+@pytest.fixture(autouse=True)
+def _soft_notes_per_test():
+    """Collect soft label notes and publish them to Allure at teardown."""
+    clear_soft_notes()
+    yield
+    notes = drain_soft_notes()
+    if not notes:
+        return
+    publish_soft_notes_to_allure(notes)
+    mode = soft_notes_mode()
+    summary = "\n".join(f"• {n}" for n in notes)
+    if mode == "fail":
+        pytest.fail(
+            "[SOFT WARNING] UI copy/label mismatch (data-testid OK):\n" + summary,
+            pytrace=False,
+        )
+    if mode == "broken":
+        # Non-AssertionError → Allure usually shows as broken (orange).
+        raise RuntimeError(
+            "[SOFT WARNING] UI copy/label mismatch (data-testid OK):\n" + summary
+        )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _soft_notes_session_log(auth_state_session):
+    """Write a suite-level soft-warnings log into allure/results at the end."""
+    clear_session_soft_notes()
+    results_dir = REPO_ROOT / "allure" / "results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    categories_src = REPO_ROOT / "allure" / "categories.json"
+    if categories_src.exists():
+        (results_dir / "categories.json").write_text(
+            categories_src.read_text(encoding="utf-8"), encoding="utf-8"
+        )
+    yield
+    notes = session_soft_notes()
+    if not notes:
+        return
+    log_path = results_dir / "soft-warnings-log.txt"
+    log_path.write_text(
+        "Meditik soft warnings (label/copy mismatches; data-testid OK)\n"
+        + "=" * 60
+        + "\n"
+        + "\n".join(f"• {n}" for n in notes)
+        + "\n",
+        encoding="utf-8",
+    )
+    print(f"\n[soft-warnings] {len(notes)} note(s) → {log_path}")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -257,6 +313,43 @@ def auth_state_session():
             f"\n[auth_state_session] WARNING: {auth_state_path} is no longer valid "
             "(likely expired) — the next run will trigger capture_session.py."
         )
+
+
+@pytest.fixture(scope="function")
+def browser_page(auth_state_session, request):
+    """Authenticated Playwright page for UI tests (2FA bypass via storage_state).
+
+    Session JSON from capture_session.py wraps Playwright's storage under
+    ``storage_state``; we unwrap before creating the context so cookies +
+    MSAL localStorage tokens are applied correctly.
+    """
+    from playwright.sync_api import sync_playwright
+
+    auth_state_path = auth_state_session
+    with auth_state_path.open("r", encoding="utf-8") as auth_state:
+        session_data = json.load(auth_state)
+    storage_state = session_data.get("storage_state", session_data)
+
+    env_mgr = get_env_manager()
+    browser_name = env_mgr.get_browser_type()
+    headless = bool(request.config.getoption("--headless", default=False))
+
+    with sync_playwright() as playwright:
+        browser_launcher = getattr(playwright, browser_name)
+        browser = browser_launcher.launch(headless=headless)
+        context = browser.new_context(
+            storage_state=storage_state,
+            locale="he-IL",
+            timezone_id="Asia/Jerusalem",
+        )
+        page = context.new_page()
+        from refua_tests.pages.common.pop_up_info import PopUpInfo
+
+        # Early install so PWA overlay is handled even before page objects exist.
+        PopUpInfo.install_auto_dismiss(page)
+        yield page
+        context.close()
+        browser.close()
 
 
 def pytest_configure(config):

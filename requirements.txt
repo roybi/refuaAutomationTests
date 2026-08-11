@@ -9,7 +9,7 @@
 
  
  
-#   refua-automation-core>=1.0.0
+#   refua-automation-core>=1.0.1
 #
 # OR for development (use git reference):
 #   refua-automation-core @ git+https://github.com/org/refuaAutomationCore.git@main
@@ -41,7 +41,7 @@ isort>=5.12.0                           # Import organizer
 # Utilities (optional)
 faker>=18.0.0                           # Fake data generation
 factory-boy>=3.2.0                      # Test data factories
-refua-automation-core>=1.0.1
+#refua-automation-core>=1.0.1
 # Installation Instructions
 # ========================
 #

@@ -269,7 +269,7 @@ The auth state JSON file contains Playwright storage state with cookies and loca
     {
       "name": "session_id",
       "value": "abc123...",
-      "domain": ".meditek.app",
+      "domain": ".meditik.app",
       "path": "/",
       "expires": 1735689600,
       "httpOnly": true,
@@ -279,7 +279,7 @@ The auth state JSON file contains Playwright storage state with cookies and loca
   ],
   "origins": [
     {
-      "origin": "https://meditek.app",
+      "origin": "https://meditik.app",
       "localStorage": [
         {
           "name": "auth_token",
@@ -465,8 +465,8 @@ test:
 
 **`.env.test`:**
 ```bash
-TEST_BASE_URL=https://test.meditek.app
-TEST_API_ENDPOINT=https://api-test.meditek.app
+TEST_BASE_URL=https://test.meditik.app
+TEST_API_ENDPOINT=https://api-test.meditik.app
 TEST_AUTH_STATE_FILE=C:\Users\YourName\auth_states\auth_state_test_chromium_latest.json
 TEST_SKIP_2FA=true
 ```
