@@ -1,7 +1,7 @@
-"""Meditik my-appointments (התורים שלי) — data-testid mapping."""
+﻿"""Meditik my-appointments (התורים שלי) — data-testid mapping."""
 
-from refua_tests.pages.automation_ids import MeditikIds as Ids
-from refua_tests.pages.meditek_content_page import MeditekContentPage
+from refua_tests.pages.automationIds import MeditikIds as Ids
+from refua_tests.pages.meditikContentPage import MeditekContentPage
 
 
 class MyAppointmentsPage(MeditekContentPage):

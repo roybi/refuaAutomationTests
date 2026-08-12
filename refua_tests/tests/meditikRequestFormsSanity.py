@@ -1,25 +1,34 @@
-"""
+﻿"""
 Sanity: כל הפעולות tiles → request form pages load with key objects.
 
-Does not submit forms — only open + verify URL / title / critical fields.
+Strategy:
+  Login once via pre-captured auth-state.
+  For each known form tile in כל הפעולות:
+    1. Click the tile.
+    2. Assert the form URL, page title, and required field elements are present.
+    3. Return to כל הפעולות for the next test.
+
+  Does NOT submit forms — only opens and verifies structure.
+  רפואה דחופה is tested separately because it is a full page, not a form.
+  Prescription form is also tested via speed-dial entry point.
 
 Run:
     $env:TEST_ENV="test"; $env:TEST_APP="meditek"
-    pytest refua_tests/tests/test_meditik_request_forms_sanity.py -v
+    pytest refua_tests/tests/meditikRequestFormsSanity.py -v
 """
 
 import json
 
 import pytest
 from playwright.sync_api import sync_playwright
-
 from refua_core.config.environment import get_env_manager
 
-from refua_tests.pages.automation_ids import MeditikIds as Ids
-from refua_tests.pages.common.pop_up_info import PopUpInfo
-from refua_tests.pages.meditek_base_page import MeditekBasePage
-from refua_tests.pages.request_forms import REQUEST_FORMS, RequestFormPage, RequestFormSpec
-from refua_tests.pages.speed_dial import SpeedDial
+from refua_tests.pages.automationIds import MeditikIds as Ids
+from refua_tests.pages.common.popUpInfo import PopUpInfo
+from refua_tests.pages.meditikBasePage import MeditekBasePage
+from refua_tests.pages.requestForms import (REQUEST_FORMS, RequestFormPage,
+                                            RequestFormSpec)
+from refua_tests.pages.speedDial import SpeedDial
 
 
 @pytest.fixture(scope="class")
@@ -84,8 +93,16 @@ def _back_to_all_actions_or_home(forms_page):
 
 @pytest.mark.smoke
 @pytest.mark.ui
-class TestMeditikRequestFormsSanity:
-    """Open each known request form from כל הפעולות and assert objects loaded."""
+class MeditikRequestFormsSanity:
+    """
+    Open each known request form from כל הפעולות and assert objects loaded.
+
+    Tests are parametrised over REQUEST_FORMS (one test per form spec) so
+    adding a new form only requires updating the REQUEST_FORMS registry —
+    no new test method is needed.
+    Urgent-care and prescription-via-speed-dial are non-parametrised because
+    their entry paths differ from the standard tile click flow.
+    """
 
     @pytest.mark.parametrize("spec", REQUEST_FORMS, ids=lambda s: s.path.strip("/"))
     def test_request_form_opens_from_all_actions(self, forms_page, spec: RequestFormSpec):

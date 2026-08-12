@@ -1,26 +1,34 @@
-"""
+﻿"""
 Meditik home + speed-dial + widget sanity (beyond side-menu suite).
 
-Shared Chrome session: login once → home checks → widget navigations →
-speed-dial on key screens → return home between steps.
+Strategy:
+  Login once via pre-captured auth-state. Tests verify the home dashboard
+  in isolation: widgets are rendered, CTAs navigate correctly, the last-update
+  timestamp updates on click, and the speed-dial FAB appears on every major
+  content screen with the correct action buttons.
+
+Coverage:
+  - Dashboard widget presence and navigation
+  - Send-doctor-request CTA
+  - Last-update-time interaction
+  - Speed-dial on: user-requests, zimun-torim, medicines, referrals, lab-results, sick-days
 
 Run:
     $env:TEST_ENV="test"; $env:TEST_APP="meditek"
-    pytest refua_tests/tests/test_meditik_home_and_actions_sanity.py -v
+    pytest refua_tests/tests/meditikHomeAndActionsSanity.py -v
 """
 
 import json
 
 import pytest
 from playwright.sync_api import sync_playwright
-
 from refua_core.config.environment import get_env_manager
 
-from refua_tests.pages.automation_ids import MeditikIds as Ids
-from refua_tests.pages.common.pop_up_info import PopUpInfo
-from refua_tests.pages.home_page_meditek import MeditekHomePage
-from refua_tests.pages.meditek_base_page import MeditekBasePage
-from refua_tests.pages.speed_dial import SPEED_DIAL_BY_PATH, SpeedDial
+from refua_tests.pages.automationIds import MeditikIds as Ids
+from refua_tests.pages.common.popUpInfo import PopUpInfo
+from refua_tests.pages.meditikBasePage import MeditekBasePage
+from refua_tests.pages.meditikHomePage import MeditekHomePage
+from refua_tests.pages.speedDial import SPEED_DIAL_BY_PATH, SpeedDial
 
 
 @pytest.fixture(scope="class")
@@ -71,8 +79,14 @@ def _return_home_after(home_actions_page):
 
 @pytest.mark.smoke
 @pytest.mark.ui
-class TestMeditikHomeAndActionsSanity:
-    """Home widgets, CTAs, and speed-dial actions (not side-menu)."""
+class MeditikHomeAndActionsSanity:
+    """
+    Home widgets, CTAs, and speed-dial actions (not side-menu).
+
+    This class covers everything on the home screen that is NOT reached via
+    the hamburger side-menu — that is covered by MeditikMenuSanity.
+    All tests share one browser context; _return_home_after resets between them.
+    """
 
     def test_home_widgets_present(self, home_actions_page):
         # Verifies that all expected dashboard widgets are rendered on the home page.

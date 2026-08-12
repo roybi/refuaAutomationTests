@@ -1,9 +1,9 @@
-"""Meditik all-actions hub — data-testid mapping."""
+﻿"""Meditik all-actions hub — data-testid mapping."""
 
 from playwright.sync_api import expect
 
-from refua_tests.pages.automation_ids import MeditikIds as Ids
-from refua_tests.pages.meditek_content_page import MeditekContentPage
+from refua_tests.pages.automationIds import MeditikIds as Ids
+from refua_tests.pages.meditikContentPage import MeditekContentPage
 
 
 class AllActionsPage(MeditekContentPage):

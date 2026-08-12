@@ -1,4 +1,4 @@
-"""Request / action form pages opened from כל הפעולות or speed dial."""
+﻿"""Request / action form pages opened from כל הפעולות or speed dial."""
 
 from __future__ import annotations
 
@@ -6,9 +6,9 @@ from dataclasses import dataclass
 
 from playwright.sync_api import Page, expect
 
-from refua_tests.pages.automation_ids import MeditikIds as Ids
-from refua_tests.pages.meditek_base_page import MeditekBasePage
-from refua_tests.pages.soft_notes import report_soft_note
+from refua_tests.pages.automationIds import MeditikIds as Ids
+from refua_tests.pages.meditikBasePage import MeditekBasePage
+from refua_tests.pages.softNotes import report_soft_note
 
 
 @dataclass(frozen=True)

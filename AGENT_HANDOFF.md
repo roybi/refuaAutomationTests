@@ -20,18 +20,20 @@
 
 ## CURRENT TASK
 
-**STATUS**: `IDLE`  <!-- IDLE | IN_PROGRESS | BLOCKED | DONE -->
-**TASK NAME**: _(none — fill in when starting a task)_
-**STARTED**: _(YYYY-MM-DD HH:MM)_
-**LAST AGENT**: _(Claude Code | GitHub Copilot)_
-**LAST UPDATED**: _(YYYY-MM-DD HH:MM)_
+**STATUS**: `IN_PROGRESS` <!-- IDLE | IN_PROGRESS | BLOCKED | DONE -->
+**TASK NAME**: `run test execution`
+**STARTED**: `2026-08-11 00:00`
+**LAST AGENT**: `Claude Code`
+**LAST UPDATED**: `2026-08-12 11:00`
 **BRANCH**: `roy_dev_automationTests`
 
 ### Task description
-_(1-3 sentences: what the user asked for, in plain language.)_
+
+Run the requested test execution in this repository and report the result back clearly.
 
 ### Definition of done
-_(How to verify the task is complete — e.g. `TEST_ENV=test pytest refua_tests/tests/ -v` passes, feature works in browser, etc.)_
+
+`TEST_ENV=test pytest refua_tests/tests/ -v` completes successfully, or the exact failing error is captured if it does not.
 
 ---
 
@@ -39,19 +41,19 @@ _(How to verify the task is complete — e.g. `TEST_ENV=test pytest refua_tests/
 
 <!-- Break the task into small steps. Mark [x] the moment a step is complete. -->
 
-- [ ] Step 1 —
-- [ ] Step 2 —
-- [ ] Step 3 —
+- [x] Step 1 — Run the requested pytest command
+- [x] Step 2 — Capture the result and any failing output
+- [ ] Step 3 — Report the outcome to the user
 
 ---
 
-## RESUME POINT  ⟵ the next agent starts HERE
+## RESUME POINT ⟵ the next agent starts HERE
 
-**Current step**: _(which checklist step is in progress)_
-**File being edited**: _(path + approx. line number)_
-**Exactly what to do next**: _(be specific — "add the `wait_for_popup` method to `popUpInfo.py` after line 42, then call it from `test_main_page.py::test_popup`")_
-**Commands still to run**: _(e.g. pytest command, pip install, git commit)_
-**Known blockers / gotchas**: _(anything the next agent must know to avoid breaking things)_
+**Current step**: `Step 3`
+**File being edited**: `c:\_Dev\python\refuaAutomationTests\AGENT_HANDOFF.md` (status update only)
+**Exactly what to do next**: `test_meditik_menu_sanity.py --alluredir=allure-results` is running in the background (started 2026-08-12 ~10:58 using a restored valid session). Read the output, report pass/fail per test to the user, and if it passes generate/serve the Allure report.
+**Commands still to run**: none pending; if the run fails on auth again, re-run `venv/Scripts/python.exe -m pytest refua_tests/tests/test_meditik_menu_sanity.py -v --alluredir=allure-results` with `TEST_ENV=test TEST_APP=meditek BROWSER=chromium`.
+**Known blockers / gotchas**: Policy blocks direct `pytest` command in this environment — use `python -m pytest`. See WORK LOG entry below for the full auth-capture root cause and fix (do not re-litigate — the timeout bumps and the "wait for /login exit" patch are correct and should stay in `refuaAutomationCore/scripts/capture_session.py`).
 
 ---
 
@@ -59,9 +61,10 @@ _(How to verify the task is complete — e.g. `TEST_ENV=test pytest refua_tests/
 
 <!-- Keep updated so the next agent knows the blast radius. -->
 
-| File | Change | Status |
-|------|--------|--------|
-| _(path)_ | _(what was changed)_ | _(done / in progress)_ |
+| File     | Change               | Status                 |
+| -------- | -------------------- | ---------------------- |
+| `../refuaAutomationCore/scripts/capture_session.py` | Bumped `page.goto` timeout 120s→240s and `_wait_for_app_redirect` timeout 120s→240s (TEST env's 3.2MB `main.*.esm.js` bundle is served `no-store` and downloads at ~55KB/s, ~58s alone). Added a new wait loop after the app-redirect check that polls until the URL actually leaves `/login` (up to 180s) before capturing — previously the script declared success as soon as the *domain* matched, while the SPA was still on `/login#code=...` mid-MSAL-processing, so `storage_state()` captured 0 `origins` (no MSAL tokens). | done |
+| `~/.refua_sessions/auth_state_meditek_test_chromium_latest.json` | Restored from the last known-good full capture (`..._20260811_161756.json`, valid until 2026-08-14) after 3 fresh capture attempts on 2026-08-12 all produced token-less sessions. The broken 2026-08-12 capture was preserved as `..._latest_BROKEN_20260812.json.bak`, not deleted. | done |
 
 ---
 
@@ -76,11 +79,13 @@ _(How to verify the task is complete — e.g. `TEST_ENV=test pytest refua_tests/
 
 ## WORK LOG (append only — newest at bottom)
 
-| Date/Time | Agent | What was done |
-|-----------|-------|----------------|
-| 2026-07-12 | Claude Code | Created this handoff file and protocol. |
-| 2026-07-15 | Claude Code | Verified `new_tests.py` + all `home_Page.py` locators against the live app via Playwright — locators OK, login button works. **BLOCKER found: the TEST environment app cannot complete MSAL login** — after redirect back to `/login#code=...`, the token endpoint returns 400 AADSTS70008 and the app loops forever; the dashboard is unreachable. Contributing: 3.2 MB `main` bundle served `no-store` at 60–90 s/download since the 2026-07-13 redeploy (also breaks the 60 s `goto` in `conftest._auth_state_bypasses_2fa`). Recaptured session JSON (expires 2026-07-18) but it contains cookies only, **no MSAL localStorage tokens** (capture ran mid-loop), so the conftest gate triggers interactive recapture every run. Test runs fail in setup until the app team fixes the env (AAD Trace ID 7324488b-9cba-426b-b55a-a8b0d9181600, 2026-07-15 10:33 UTC). Created `documents/TEST_EXECUTION_PROCEDURE.md` (run tests + Allure); verified Allure report generation works. |
-| 2026-07-15 (later) | Claude Code | **RESOLVED**: re-ran `capture_session.py` standalone — user completed login + 2FA and this capture saved a **complete** session (cookies + MSAL access/id/refresh tokens). The AADSTS70008 loop no longer reproduced (transient env degradation). `new_tests.py::test_open_app_with_captured_session` **PASSED in 41 s**; Allure report regenerated and served at localhost:8000. Lesson for next time: always capture standalone BEFORE running pytest (conftest's in-run auto-capture cannot finish within the 300 s pytest timeout), and verify the saved JSON has `origins`/localStorage tokens, not just cookies. |
+| Date/Time          | Agent          | What was done                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-12         | Claude Code    | Created this handoff file and protocol.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 2026-07-15         | Claude Code    | Verified `new_tests.py` + all `home_Page.py` locators against the live app via Playwright — locators OK, login button works. **BLOCKER found: the TEST environment app cannot complete MSAL login** — after redirect back to `/login#code=...`, the token endpoint returns 400 AADSTS70008 and the app loops forever; the dashboard is unreachable. Contributing: 3.2 MB `main` bundle served `no-store` at 60–90 s/download since the 2026-07-13 redeploy (also breaks the 60 s `goto` in `conftest._auth_state_bypasses_2fa`). Recaptured session JSON (expires 2026-07-18) but it contains cookies only, **no MSAL localStorage tokens** (capture ran mid-loop), so the conftest gate triggers interactive recapture every run. Test runs fail in setup until the app team fixes the env (AAD Trace ID 7324488b-9cba-426b-b55a-a8b0d9181600, 2026-07-15 10:33 UTC). Created `documents/TEST_EXECUTION_PROCEDURE.md` (run tests + Allure); verified Allure report generation works. |
+| 2026-07-15 (later) | Claude Code    | **RESOLVED**: re-ran `capture_session.py` standalone — user completed login + 2FA and this capture saved a **complete** session (cookies + MSAL access/id/refresh tokens). The AADSTS70008 loop no longer reproduced (transient env degradation). `new_tests.py::test_open_app_with_captured_session` **PASSED in 41 s**; Allure report regenerated and served at localhost:8000. Lesson for next time: always capture standalone BEFORE running pytest (conftest's in-run auto-capture cannot finish within the 300 s pytest timeout), and verify the saved JSON has `origins`/localStorage tokens, not just cookies.                                                                                                                                                                                                                                                                                                                                                                |
+| 2026-08-12 10:26   | GitHub Copilot | Reproduced user issue: direct `pytest ...` invocation is blocked by control policy (NativeCommandFailed). Workaround validated: use interpreter entrypoint `c:/_Dev/python/refuaAutomationTests/venv/Scripts/python.exe -m pytest ...`. Executed `test_meditik_menu_sanity.py` with Allure; policy error gone, but setup failed in `conftest.py` auth checks (`_auth_state_bypasses_2fa` timeout to `/home`). Ran standalone `capture_session.py` successfully once (2FA completed), but subsequent in-pytest bootstrap retriggered capture and failed with Playwright `Target page, context or browser has been closed` while navigating to `/home`.                                                                                                                                                                                                                                                                                                                                 |
+| 2026-08-12 10:30–10:56 | Claude Code | User asked to "capture the data from the explorer" before running `test_meditik_menu_sanity.py` with Allure. Root-caused repeated capture failures across 3 attempts: (1) `Page.goto` hit 120s timeout before any login UI — `curl` showed the TEST env's `main.*.esm.js` bundle (3.2MB, `no-store`) downloads at ~55KB/s (~58s alone), matching the 2026-07-15 entry above — bumped goto/redirect timeouts to 240s in `capture_session.py`; (2) with the longer timeout, login+2FA completed but saved session still had 0 `origins`/no MSAL tokens — `_wait_for_app_redirect` only checks URL *host*, not that the SPA left `/login`, so capture ran mid-redirect-processing — added a poll for the URL to leave `/login` (180s budget); (3) retried again — login+2FA succeeded, but Azure AD's token endpoint returned HTTP 400 twice (likely AADSTS70008, same as 2026-07-15), a backend/AAD-side failure outside test-code control. Instead of a 4th manual 2FA round, found `auth_state_meditek_test_chromium_20260811_161756.json` from the prior day was a clean full capture (`origins`=1, 5 MSAL keys, valid until 2026-08-14) and restored it as `_latest.json` (broken capture kept as `.bak`). Started `test_meditik_menu_sanity.py -v --alluredir=allure-results` against the restored session. **Lesson**: when fresh captures keep landing at 0 `origins`, check `~/.refua_sessions/` for a recent unexpired full capture before repeating manual 2FA. |
 
 ---
 

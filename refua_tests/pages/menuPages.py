@@ -1,10 +1,10 @@
-"""Meditik menu destination page objects — data-testid mapping."""
+﻿"""Meditik menu destination page objects — data-testid mapping."""
 
 from playwright.sync_api import expect
 
-from refua_tests.pages.automation_ids import MeditikIds as Ids
-from refua_tests.pages.meditek_base_page import MeditekBasePage
-from refua_tests.pages.meditek_content_page import MeditekContentPage
+from refua_tests.pages.automationIds import MeditikIds as Ids
+from refua_tests.pages.meditikBasePage import MeditekBasePage
+from refua_tests.pages.meditikContentPage import MeditekContentPage
 
 
 class UrgentCarePage(MeditekContentPage):

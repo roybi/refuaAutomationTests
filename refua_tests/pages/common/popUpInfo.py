@@ -1,4 +1,4 @@
-"""Reusable Meditik dialogs / popups (PWA install, info modals)."""
+﻿"""Reusable Meditik dialogs / popups (PWA install, info modals)."""
 
 from playwright.sync_api import Page
 
@@ -34,7 +34,7 @@ class PopUpInfo:
             _close,
         )
         try:
-            from refua_tests.pages.automation_ids import MeditikIds as Ids
+            from refua_tests.pages.automationIds import MeditikIds as Ids
 
             page.add_locator_handler(
                 page.get_by_test_id(Ids.DOWNLOAD_PWA_MODAL),
@@ -62,7 +62,7 @@ class PopUpInfo:
     def _dismiss_once(self) -> bool:
         """Return True if something was dismissed."""
         try:
-            from refua_tests.pages.automation_ids import MeditikIds as Ids
+            from refua_tests.pages.automationIds import MeditikIds as Ids
 
             pwa = self._page.get_by_test_id(Ids.DOWNLOAD_PWA_MODAL).or_(
                 self._page.locator("#download-pwa")

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Pytest configuration for refuaAutomationTests.
 
 This conftest imports selected fixtures from the framework
@@ -17,12 +17,13 @@ import pytest
 from dotenv import load_dotenv
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CORE_REPO_ROOT = REPO_ROOT.parent / "refuaAutomationCore"
+CORE_REPO_ROOT = REPO_ROOT.parent / "refuaAutomationCore"  # sibling repo — contains capture_session.py
 AUTH_STATE_HOST = "meditik.test.medical.idf.il"
 AUTH_STATE_URL = f"https://{AUTH_STATE_HOST}/home"
 
 
 def _load_environment_file() -> None:
+    # Loads .env.test / .env.preprod / .env.prod depending on TEST_ENV; never overrides values already set by CI.
     test_env = os.getenv("TEST_ENV", "test")
     os.environ.setdefault("TEST_ENV", test_env)
 
@@ -38,6 +39,7 @@ def _auth_state_path() -> Path:
 
 
 def _auth_state_is_valid(auth_state_path: Path) -> bool:
+    # Checks file existence, JSON parse, expiry timestamp, and that it was captured on the correct host.
     if not auth_state_path.exists():
         return False
 
@@ -68,7 +70,8 @@ def _auth_state_is_valid(auth_state_path: Path) -> bool:
     return urlparse(captured_url).netloc == AUTH_STATE_HOST
 
 
-DASHBOARD_QUICK_ACTIONS = "פעולות מהירות"  # SpeedDial label, rendered only when logged in
+# This text only appears in the DOM when the user is fully authenticated — used as logged-in proof.
+DASHBOARD_QUICK_ACTIONS = "פעולות מהירות"
 
 
 def _auth_state_bypasses_2fa(auth_state_path: Path) -> bool:
@@ -90,7 +93,7 @@ def _auth_state_bypasses_2fa(auth_state_path: Path) -> bool:
         page = context.new_page()
 
         try:
-            page.goto(AUTH_STATE_URL, wait_until="domcontentloaded", timeout=60000)
+            page.goto(AUTH_STATE_URL, wait_until="domcontentloaded", timeout=180000)
 
             login_button = page.locator("#login-button")
             dashboard = page.get_by_text(DASHBOARD_QUICK_ACTIONS).first
@@ -217,30 +220,28 @@ def _ensure_auth_state() -> None:
 
 _load_environment_file()
 
+from refua_core.config.environment import get_env_manager
 # Framework fixtures still available to tests.
 # browser_page is defined locally below — core no longer ships that fixture.
 from refua_core.conftest import env_manager, playwright_instance  # noqa: F401
-from refua_core.config.environment import get_env_manager
-from refua_tests.pages.soft_notes import (
-    clear_session_soft_notes,
-    clear_soft_notes,
-    drain_soft_notes,
-    publish_soft_notes_to_allure,
-    session_soft_notes,
-    soft_notes_mode,
-)
+
+from refua_tests.pages.softNotes import (clear_session_soft_notes,
+                                         clear_soft_notes, drain_soft_notes,
+                                         publish_soft_notes_to_allure,
+                                         session_soft_notes, soft_notes_mode)
 
 
 @pytest.fixture(autouse=True)
 def _soft_notes_per_test():
     """Collect soft label notes and publish them to Allure at teardown."""
+    # Soft notes record label/copy mismatches that shouldn't hard-fail the test but should be visible in Allure.
     clear_soft_notes()
     yield
     notes = drain_soft_notes()
     if not notes:
         return
     publish_soft_notes_to_allure(notes)
-    mode = soft_notes_mode()
+    mode = soft_notes_mode()  # SOFT_NOTES_MODE env var: warn (default) / fail / broken
     summary = "\n".join(f"• {n}" for n in notes)
     if mode == "fail":
         pytest.fail(
@@ -257,6 +258,7 @@ def _soft_notes_per_test():
 @pytest.fixture(scope="session", autouse=True)
 def _soft_notes_session_log(auth_state_session):
     """Write a suite-level soft-warnings log into allure/results at the end."""
+    # categories.json is copied here so Allure can group broken/soft-warning tests under custom category labels.
     clear_session_soft_notes()
     results_dir = REPO_ROOT / "allure" / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
@@ -323,6 +325,7 @@ def browser_page(auth_state_session, request):
     ``storage_state``; we unwrap before creating the context so cookies +
     MSAL localStorage tokens are applied correctly.
     """
+    # A new browser context per test ensures no state leaks between independent test functions.
     from playwright.sync_api import sync_playwright
 
     auth_state_path = auth_state_session
@@ -343,7 +346,7 @@ def browser_page(auth_state_session, request):
             timezone_id="Asia/Jerusalem",
         )
         page = context.new_page()
-        from refua_tests.pages.common.pop_up_info import PopUpInfo
+        from refua_tests.pages.common.popUpInfo import PopUpInfo
 
         # Early install so PWA overlay is handled even before page objects exist.
         PopUpInfo.install_auto_dismiss(page)
@@ -355,5 +358,5 @@ def browser_page(auth_state_session, request):
 def pytest_configure(config):
     """Set TEST_ENV from environment if not already set."""
     if not os.getenv("TEST_ENV"):
-        # Default to 'test' environment if not specified
+        # Fallback so tests can run without exporting TEST_ENV manually.
         os.environ["TEST_ENV"] = "test"

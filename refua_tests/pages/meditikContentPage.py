@@ -1,4 +1,4 @@
-"""Shared Meditik content-page sanity helpers using data-testid mapping.
+﻿"""Shared Meditik content-page sanity helpers using data-testid mapping.
 
 During rollout: prefer data-testid; fall back to Hebrew title/tabs when ids
 are not yet present on the environment.
@@ -6,8 +6,8 @@ are not yet present on the environment.
 
 from playwright.sync_api import Page, expect
 
-from refua_tests.pages.meditek_base_page import MeditekBasePage
-from refua_tests.pages.soft_notes import report_soft_note
+from refua_tests.pages.meditikBasePage import MeditekBasePage
+from refua_tests.pages.softNotes import report_soft_note
 
 
 class MeditekContentPage(MeditekBasePage):

@@ -1,11 +1,11 @@
-"""Meditik Speed Dial (+ / פעולות מהירות) — shared across screens."""
+﻿"""Meditik Speed Dial (+ / פעולות מהירות) — shared across screens."""
 
 from __future__ import annotations
 
 from playwright.sync_api import Page, expect
 
-from refua_tests.pages.automation_ids import MeditikIds as Ids
-from refua_tests.pages.soft_notes import report_soft_note
+from refua_tests.pages.automationIds import MeditikIds as Ids
+from refua_tests.pages.softNotes import report_soft_note
 
 
 # Expected Hebrew labels for known action testids (soft-checked).

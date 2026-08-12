@@ -1,38 +1,39 @@
-"""
+﻿"""
 Meditik menu navigation sanity suite — one shared Chrome session.
 
-Login once → for each screen: menu navigate → assert → return home → next.
-Skips utility/admin items: feedback, מנהלן, חיילי דיבאג, install, share, logout.
+Strategy:
+  Login once via the pre-captured auth-state file (bypasses Microsoft 2FA).
+  For each side-menu screen:
+    1. Open the hamburger menu.
+    2. Click the target item.
+    3. Assert the page title, URL and list/card content loaded.
+    4. Return to /home for the next test.
+
+Skips utility/admin items that open external flows or require special roles:
+  feedback, מנהלן, חיילי דיבאג, install, share, logout.
 
 Run:
     $env:TEST_ENV="test"; $env:TEST_APP="meditek"
-    pytest refua_tests/tests/test_meditik_menu_sanity.py -v
+    pytest refua_tests/tests/meditikMenuSanity.py -v
 """
 
 import json
 
 import pytest
 from playwright.sync_api import sync_playwright
-
 from refua_core.config.environment import get_env_manager
 
-from refua_tests.pages.all_actions_page import AllActionsPage
-from refua_tests.pages.common.pop_up_info import PopUpInfo
-from refua_tests.pages.medical_profile_page import MedicalProfilePage
-from refua_tests.pages.meditek_base_page import MeditekBasePage
-from refua_tests.pages.menu_pages import (
-    BookAppointmentPage,
-    ExemptionsPage,
-    LabResultsPage,
-    MedicinesPage,
-    ReferralsPage,
-    SickDaysPage,
-    UrgentCarePage,
-    VaccinationsPage,
-    VisitSummariesPage,
-)
-from refua_tests.pages.my_appointments_page import MyAppointmentsPage
-from refua_tests.pages.my_requests_page import MyRequestsPage
+from refua_tests.pages.allActionsPage import AllActionsPage
+from refua_tests.pages.common.popUpInfo import PopUpInfo
+from refua_tests.pages.medicalProfilePage import MedicalProfilePage
+from refua_tests.pages.meditikBasePage import MeditekBasePage
+from refua_tests.pages.menuPages import (BookAppointmentPage, ExemptionsPage,
+                                         LabResultsPage, MedicinesPage,
+                                         ReferralsPage, SickDaysPage,
+                                         UrgentCarePage, VaccinationsPage,
+                                         VisitSummariesPage)
+from refua_tests.pages.myAppointmentsPage import MyAppointmentsPage
+from refua_tests.pages.myRequestsPage import MyRequestsPage
 
 
 @pytest.fixture(scope="class")
@@ -88,8 +89,15 @@ def _return_home_after_each(menu_sanity_page):
 
 @pytest.mark.smoke
 @pytest.mark.ui
-class TestMeditikMenuSanity:
-    """Shared-session sanity for every side-menu content screen."""
+class MeditikMenuSanity:
+    """
+    Shared-session sanity for every side-menu content screen.
+
+    All tests in this class share one browser context (scope="class").
+    Each test navigates to its screen, asserts content loaded correctly,
+    and relies on the _return_home_after_each fixture to reset state.
+    Failures here indicate either a navigation regression or a backend data issue.
+    """
 
     # session_ready=True tells each page object to skip its own browser setup — the shared page is already on home.
 

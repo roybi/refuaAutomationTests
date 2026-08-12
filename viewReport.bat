@@ -14,4 +14,4 @@ echo Press Ctrl+C to stop the server
 echo ============================================================
 echo.
 
-python -m refua_tests.reports.serve_http
+python -m refua_tests.reports.serveHttp

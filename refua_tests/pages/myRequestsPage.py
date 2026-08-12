@@ -1,9 +1,9 @@
-"""Meditik my-requests (הבקשות שלי) — data-testid mapping."""
+﻿"""Meditik my-requests (הבקשות שלי) — data-testid mapping."""
 
 from playwright.sync_api import Page, expect
 
-from refua_tests.pages.automation_ids import MeditikIds as Ids
-from refua_tests.pages.meditek_content_page import MeditekContentPage
+from refua_tests.pages.automationIds import MeditikIds as Ids
+from refua_tests.pages.meditikContentPage import MeditekContentPage
 
 
 class MyRequestsPage(MeditekContentPage):

@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 REM Allure Report Generator - Quick Access Script
 REM Calls the Python package module
 
@@ -8,10 +8,10 @@ echo ============================================================
 echo Allure Report Generator
 echo ============================================================
 echo.
-echo Running: python -m refua_tests.reports.generate_report_java
+echo Running: python -m refua_tests.reports.generateReportJava
 echo.
 
-python -m refua_tests.reports.generate_report_java
+python -m refua_tests.reports.generateReportJava
 
 if %ERRORLEVEL% NEQ 0 (
     echo.

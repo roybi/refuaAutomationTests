@@ -1,14 +1,14 @@
-"""Shared Meditik base page — chrome, login, menu via data-testid mapping."""
+﻿"""Shared Meditik base page — chrome, login, menu via data-testid mapping."""
 
-from playwright.sync_api import Page, expect
 from urllib.parse import urlparse
 
+from playwright.sync_api import Page, expect
 from refua_core.config.environment import EnvironmentManager
-from refua_core.pages.base_page import BasePage
+from refua_core.core.base_page import BasePage
 
-from refua_tests.pages.automation_ids import MeditikIds as Ids
-from refua_tests.pages.common.pop_up_info import PopUpInfo
-from refua_tests.pages.soft_notes import report_soft_note
+from refua_tests.pages.automationIds import MeditikIds as Ids
+from refua_tests.pages.common.popUpInfo import PopUpInfo
+from refua_tests.pages.softNotes import report_soft_note
 
 
 class MeditekBasePage(BasePage):
