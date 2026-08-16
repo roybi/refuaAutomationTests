@@ -1,5 +1,6 @@
 ﻿"""Shared Meditik base page — chrome, login, menu via data-testid mapping."""
 
+from typing import cast
 from urllib.parse import urlparse
 
 from playwright.sync_api import Page, expect
@@ -48,6 +49,8 @@ class MeditekBasePage(BasePage):
 
     def __init__(self, page: Page):
         super().__init__(page)
+        assert self.page is not None, "MeditekBasePage requires a Playwright Page instance"
+        self.page = cast(Page, self.page)
         self.env_manager = EnvironmentManager()
         self.popup = PopUpInfo(page)
         # Close PWA overlay whenever it appears (mid-action / any screen).

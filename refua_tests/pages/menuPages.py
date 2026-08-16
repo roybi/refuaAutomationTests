@@ -13,8 +13,10 @@ class UrgentCarePage(MeditekContentPage):
     PAGE_TEST_ID = Ids.URGENT_CARE_PAGE
 
     def assert_content_loaded(self):
+        page = self.page
+        assert page is not None
         expect(self.page_marker()).to_be_visible()
-        assert self.PATH in self.page.url
+        assert self.PATH in page.url
         self.assert_no_app_error(context=self.PAGE_TITLE)
 
 
@@ -91,23 +93,60 @@ class BookAppointmentPage(MeditekBasePage):
     EXPECTED_TITLE = "זימון תורים"
 
     def run_menu_sanity(self, *, session_ready: bool = False):
+        page = self.page
+        assert page is not None
         if not session_ready:
             self.open_home()
             self.ensure_logged_in()
         self.navigate_via_menu(self.MENU_BOOK_APPOINTMENT)
-        self.page.wait_for_url(f"**{self.EXTERNAL_HOST}**", timeout=60000)
-        assert self.EXTERNAL_HOST in self.page.url, (
-            f"Expected external Torim host, got {self.page.url}"
+        page.wait_for_url(f"**{self.EXTERNAL_HOST}**", timeout=60000)
+        assert self.EXTERNAL_HOST in page.url, (
+            f"Expected external Torim host, got {page.url}"
         )
         # Title may lag slightly after navigation
         try:
-            self.page.wait_for_function(
+            page.wait_for_function(
                 "() => (document.title || '').includes('זימון')",
                 timeout=10000,
             )
         except Exception:
-            self.page.wait_for_timeout(1500)
-        title = self.page.title() or ""
+            page.wait_for_timeout(1500)
+        title = page.title() or ""
         assert self.EXPECTED_TITLE in title or "זימון" in title, (
             f"Expected Torim booking title, got {title!r}"
         )
+
+
+class FeedbackPage(MeditekBasePage):
+    """משוב — feedback modal opened from the side drawer utility action."""
+
+    MENU_LABEL = "משוב"
+
+    def run_menu_sanity(self, *, session_ready: bool = False):
+        page = self.page
+        assert page is not None
+        if not session_ready:
+            self.open_home()
+            self.ensure_logged_in()
+
+        self.navigate_via_menu(self.MENU_LABEL, test_id=Ids.FEEDBACK_BTN_OPEN)
+        self.assert_no_app_error(context=self.MENU_LABEL)
+
+        feedback_modal = page.get_by_test_id(Ids.FEEDBACK_MODAL)
+        rating_input = page.get_by_test_id(Ids.FEEDBACK_INPUT_RATING)
+        text_input = page.get_by_test_id(Ids.FEEDBACK_INPUT_TEXT)
+        submit_button = page.get_by_test_id(Ids.FEEDBACK_BTN_SUBMIT)
+        close_button = page.get_by_test_id(Ids.FEEDBACK_BTN_CLOSE)
+
+        expect(feedback_modal).to_be_visible(timeout=10000)
+        expect(rating_input).to_be_visible(timeout=10000)
+        expect(text_input).to_be_visible(timeout=10000)
+        expect(submit_button).to_be_visible(timeout=10000)
+        expect(close_button).to_be_visible(timeout=10000)
+        expect(close_button).to_be_enabled(timeout=10000)
+        assert "microsoftonline" not in page.url, (
+            f"Unexpected redirect to Microsoft auth while opening feedback: {page.url}"
+        )
+
+        close_button.click()
+        expect(feedback_modal).to_be_hidden(timeout=10000)

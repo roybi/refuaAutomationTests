@@ -30,6 +30,10 @@ from refua_tests.pages.requestForms import (REQUEST_FORMS, RequestFormPage,
                                             RequestFormSpec)
 from refua_tests.pages.speedDial import SpeedDial
 
+SPECIAL_REQUEST_FORMS = tuple(
+    spec for spec in REQUEST_FORMS if len(spec.required_test_ids) > 2
+)
+
 
 @pytest.fixture(scope="class")
 def forms_page(auth_state_session, request):
@@ -108,6 +112,68 @@ class MeditikRequestFormsSanity:
     def test_request_form_opens_from_all_actions(self, forms_page, spec: RequestFormSpec):
         # Clicks each tile in כל הפעולות and verifies the form URL, title, and required fields are present.
         RequestFormPage(forms_page, spec).run_sanity_from_all_actions(session_ready=True)
+
+    @pytest.mark.parametrize("spec", REQUEST_FORMS, ids=lambda s: s.path.strip("/"))
+    def test_request_form_required_controls_are_visible(
+        self, forms_page, spec: RequestFormSpec
+    ):
+        # Confirms every declared field and submit control is visible after navigation.
+        form = RequestFormPage(forms_page, spec)
+        form.open_from_all_actions(session_ready=True)
+        form.assert_form_loaded()
+        form.assert_required_controls_visible()
+
+    @pytest.mark.parametrize("spec", REQUEST_FORMS, ids=lambda s: s.path.strip("/"))
+    def test_request_form_input_controls_are_interactive(
+        self, forms_page, spec: RequestFormSpec
+    ):
+        # Confirms the declared fields can accept user input; no request is submitted.
+        form = RequestFormPage(forms_page, spec)
+        form.open_from_all_actions(session_ready=True)
+        form.assert_form_loaded()
+        form.assert_input_controls_interactive()
+
+    @pytest.mark.parametrize("spec", REQUEST_FORMS, ids=lambda s: s.path.strip("/"))
+    def test_request_form_required_content_is_complete(
+        self, forms_page, spec: RequestFormSpec
+    ):
+        # Confirms all form-specific labels/content are present, not only the route and test ids.
+        form = RequestFormPage(forms_page, spec)
+        form.open_from_all_actions(session_ready=True)
+        form.assert_form_loaded()
+        form.assert_required_content_present()
+
+    @pytest.mark.parametrize("spec", REQUEST_FORMS, ids=lambda s: s.path.strip("/"))
+    def test_request_form_accepts_valid_phone_input(
+        self, forms_page, spec: RequestFormSpec
+    ):
+        # Simulates entering a valid-format phone number without submitting the form.
+        form = RequestFormPage(forms_page, spec)
+        form.open_from_all_actions(session_ready=True)
+        form.assert_form_loaded()
+        form.assert_valid_phone_input()
+
+    @pytest.mark.parametrize("spec", REQUEST_FORMS, ids=lambda s: s.path.strip("/"))
+    def test_request_form_rejects_invalid_phone_input(
+        self, forms_page, spec: RequestFormSpec
+    ):
+        # Simulates invalid phone input and verifies client-side validation feedback.
+        form = RequestFormPage(forms_page, spec)
+        form.open_from_all_actions(session_ready=True)
+        form.assert_form_loaded()
+        form.assert_invalid_phone_input()
+
+    @pytest.mark.parametrize(
+        "spec", SPECIAL_REQUEST_FORMS, ids=lambda s: s.path.strip("/")
+    )
+    def test_request_form_extra_controls_are_usable(
+        self, forms_page, spec: RequestFormSpec
+    ):
+        # Exercises form-specific cause/date or provider controls without submitting.
+        form = RequestFormPage(forms_page, spec)
+        form.open_from_all_actions(session_ready=True)
+        form.assert_form_loaded()
+        form.assert_extra_controls_are_usable()
 
     def test_urgent_care_from_all_actions(self, forms_page):
         # רפואה דחופה is not a form — it’s a full page tile that gets a dedicated test because the flow differs.

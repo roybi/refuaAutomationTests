@@ -95,6 +95,9 @@ REQUEST_FORMS: tuple[RequestFormSpec, ...] = (
 class RequestFormPage(MeditekBasePage):
     """Open a request form from כל הפעולות and assert shell + key objects."""
 
+    VALID_PHONE = "0501234567"
+    INVALID_PHONE = "123"
+
     def __init__(self, page: Page, spec: RequestFormSpec):
         super().__init__(page)
         self.spec = spec
@@ -199,6 +202,124 @@ class RequestFormPage(MeditekBasePage):
                 f"{spec.page_title}: expected text {t!r} not found on form "
                 f"(testids OK). Body snip: {body[:200]!r}"
             )
+        return self
+
+    def assert_required_controls_visible(self):
+        """Verify every control in the form contract is visible to the user."""
+        missing = []
+        for test_id in self.spec.required_test_ids:
+            try:
+                expect(self.page.get_by_test_id(test_id).first).to_be_visible(
+                    timeout=10000
+                )
+            except Exception:
+                missing.append(test_id)
+
+        assert not missing, (
+            f"{self.spec.page_title}: required controls are not visible: "
+            + ", ".join(missing)
+        )
+        return self
+
+    def assert_input_controls_interactive(self):
+        """Verify non-submit controls are enabled for user input."""
+        disabled = []
+        for test_id in self.spec.required_test_ids:
+            if test_id.endswith("-btn-submit"):
+                continue
+            control = self.page.get_by_test_id(test_id).first
+            try:
+                expect(control).to_be_enabled(timeout=10000)
+            except Exception:
+                disabled.append(test_id)
+
+        assert not disabled, (
+            f"{self.spec.page_title}: input controls are disabled or missing: "
+            + ", ".join(disabled)
+        )
+        return self
+
+    def assert_required_content_present(self):
+        """Verify all declared form labels/content are present, not just the title."""
+        body = self._body_text(timeout=15000)
+        missing = [text for text in self.spec.required_texts if text not in body]
+        assert not missing, (
+            f"{self.spec.page_title}: expected form content is missing: "
+            + ", ".join(repr(text) for text in missing)
+        )
+        return self
+
+    def _phone_input(self):
+        """Return the native phone input inside its data-testid control."""
+        control = self.page.get_by_test_id(Ids.INPUT_PHONE_NUMBER).first
+        nested_input = control.locator("input, textarea").first
+        return nested_input if nested_input.count() else control
+
+    def assert_valid_phone_input(self):
+        """Fill a valid-format phone number and verify it remains accepted."""
+        phone = self._phone_input()
+        phone.fill(self.VALID_PHONE)
+        phone.blur()
+        expect(phone).to_have_value(self.VALID_PHONE, timeout=5000)
+        assert phone.get_attribute("aria-invalid") != "true", (
+            f"{self.spec.page_title}: valid phone number was marked invalid"
+        )
+        return self
+
+    def assert_invalid_phone_input(self):
+        """Fill an invalid phone number and verify client-side validation appears."""
+        phone = self._phone_input()
+        phone.fill(self.INVALID_PHONE)
+        phone.blur()
+        self.page.wait_for_timeout(300)
+
+        invalid_control = phone.get_attribute("aria-invalid") == "true"
+        invalid_wrapper = (
+            self.page.get_by_test_id(Ids.INPUT_PHONE_NUMBER)
+            .first.get_attribute("aria-invalid")
+            == "true"
+        )
+        visible_error = self.page.locator(
+            '[role="alert"], .MuiFormHelperText-root.Mui-error, [aria-errormessage]'
+        ).filter(visible=True).count() > 0
+
+        assert invalid_control or invalid_wrapper or visible_error, (
+            f"{self.spec.page_title}: invalid phone input produced no validation state"
+        )
+        return self
+
+    def assert_extra_controls_are_usable(self):
+        """Interact with form-specific controls without submitting the form."""
+        for test_id in self.spec.required_test_ids:
+            if test_id in (Ids.INPUT_PHONE_NUMBER,) or test_id.endswith("-btn-submit"):
+                continue
+
+            control = self.page.get_by_test_id(test_id).first
+            editable = control.locator("input, textarea, select").first
+            target = editable if editable.count() else control
+            tag_name = target.evaluate("element => element.tagName.toLowerCase()")
+
+            if tag_name in ("input", "textarea"):
+                input_type = target.get_attribute("type") or "text"
+                if input_type == "date":
+                    target.fill("2025-01-15")
+                else:
+                    target.fill("Test value")
+                target.blur()
+            elif tag_name == "select":
+                options = target.locator("option").all()
+                selectable = next(
+                    (option for option in options if option.get_attribute("value")),
+                    None,
+                )
+                assert selectable is not None, (
+                    f"{self.spec.page_title}: {test_id} has no selectable option"
+                )
+                target.select_option(selectable.get_attribute("value"))
+            else:
+                target.click()
+                self.page.keyboard.press("Escape")
+
         return self
 
     def run_sanity_from_all_actions(self, *, session_ready: bool = False):

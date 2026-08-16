@@ -10,7 +10,7 @@ Strategy:
     4. Return to /home for the next test.
 
 Skips utility/admin items that open external flows or require special roles:
-  feedback, מנהלן, חיילי דיבאג, install, share, logout.
+    מנהלן, חיילי דיבאג, install, share, logout.
 
 Run:
     $env:TEST_ENV="test"; $env:TEST_APP="meditek"
@@ -28,10 +28,10 @@ from refua_tests.pages.common.popUpInfo import PopUpInfo
 from refua_tests.pages.medicalProfilePage import MedicalProfilePage
 from refua_tests.pages.meditikBasePage import MeditekBasePage
 from refua_tests.pages.menuPages import (BookAppointmentPage, ExemptionsPage,
-                                         LabResultsPage, MedicinesPage,
-                                         ReferralsPage, SickDaysPage,
-                                         UrgentCarePage, VaccinationsPage,
-                                         VisitSummariesPage)
+                                         FeedbackPage, LabResultsPage,
+                                         MedicinesPage, ReferralsPage,
+                                         SickDaysPage, UrgentCarePage,
+                                         VaccinationsPage, VisitSummariesPage)
 from refua_tests.pages.myAppointmentsPage import MyAppointmentsPage
 from refua_tests.pages.myRequestsPage import MyRequestsPage
 
@@ -39,7 +39,7 @@ from refua_tests.pages.myRequestsPage import MyRequestsPage
 @pytest.fixture(scope="class")
 def menu_sanity_page(auth_state_session, request):
     """One Chromium context for the whole menu-sanity class."""
-    # scope="class" means one browser/context is shared across all 13 tests — faster than opening a new browser per test.
+    # scope="class" means one browser/context is shared across all 14 tests — faster than opening a new browser per test.
     with auth_state_session.open("r", encoding="utf-8") as auth_state:
         session_data = json.load(auth_state)
     # The session file wraps Playwright's storage under "storage_state"; unwrap so cookies/MSAL tokens load correctly.
@@ -174,3 +174,7 @@ class MeditikMenuSanity:
         MedicalProfilePage(menu_sanity_page).run_menu_sanity(
             MeditekBasePage.MENU_MEDICAL_PROFILE, session_ready=True
         )
+
+    def test_meditik_navigation_FeedbackButton(self, menu_sanity_page):
+        # משוב: feedback modal must open from the side menu and display all required controls.
+        FeedbackPage(menu_sanity_page).run_menu_sanity(session_ready=True)

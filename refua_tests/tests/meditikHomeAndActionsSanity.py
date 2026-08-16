@@ -95,6 +95,7 @@ class MeditikHomeAndActionsSanity:
     def test_home_speed_dial_actions(self, home_actions_page):
         # Verifies the speed-dial FAB is present and all expected action buttons are listed.
         MeditekHomePage(home_actions_page).assert_speed_dial_actions()
+        
 
     def test_home_cta_send_doctor_request(self, home_actions_page):
         # Clicks the “send request to doctor” CTA and verifies the form page loads.
