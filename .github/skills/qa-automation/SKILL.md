@@ -107,6 +107,37 @@ report the missing selector contract.
   and close behavior.
 - Add or update pytest markers according to the project's `pytest.ini`.
 
+## Required BDD duplicate
+
+Every new or materially changed pytest UI test must have a matching executable
+BDD scenario. This is a required duplicate of coverage, not optional
+documentation.
+
+- Put product scenarios in `refua_tests/bdd/features/<application>_<area>.feature`.
+- Implement the matching Given/When/Then steps in
+  `refua_tests/bdd/step_defs/<application>Steps.py`.
+- Register feature files in the application BDD runner, for example
+  `refua_tests/bdd/test_meditik_bdd.py`.
+- Keep the BDD scenario business-readable; call existing page-object helpers
+  from the step definition rather than duplicating locator logic.
+- Preserve parameterized coverage: every pytest parameter set must be an
+  Examples row or an equivalent BDD scenario.
+- Tag every feature with `@bdd`, the application tag such as `@meditik` or
+  `@cprgo`, and the relevant execution tags such as `@smoke`, `@menu`, or
+  `@request_forms`.
+- Use `@known_issue` for an existing product defect so it remains visible in
+  Allure as an expected failure rather than being silently omitted.
+
+When adding a new application, add an application tag and adapter/step module;
+do not make Meditik-specific locators or text part of generic BDD steps.
+
+## BDD Allure trace
+
+BDD runs must use `--alluredir=./allure/results`. The report must contain the
+Gherkin scenario and an attachment listing every executed Given/When/Then step
+with its outcome. Verify this for a focused BDD run after changing BDD steps or
+hooks.
+
 ## Implementation workflow
 
 1. Inspect `AGENT_HANDOFF.md` and existing project guidance.
@@ -116,8 +147,9 @@ report the missing selector contract.
 5. Implement the smallest TEST-side change first.
 6. If a generic capability is genuinely missing, implement the smallest CORE
    change in the CORE repository and consume it from TEST.
-7. Add focused tests for the changed behavior.
-8. Run collection first, then the narrow test, then the relevant suite.
+7. Add the pytest test and its matching BDD scenario/steps.
+8. Run collection first, then the narrow pytest and BDD tests, then the
+   relevant suite.
 9. Generate Allure results when requested.
 10. Report test results, live-site verification status, and every missing
     `data-testid` found.

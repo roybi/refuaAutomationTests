@@ -103,6 +103,13 @@ Cleared: full suite execution completed on 2026-08-16. Three test failures were 
 
 | 2026-08-16 | GitHub Copilot | Added `docs/REQUEST_FORMS_COVERAGE_SUMMARY.txt`, documenting all six forms and their coverage types. Updated the human guide with valid/invalid phone and form-specific interaction coverage; current request-form collection is 40 cases, verified with `venv\\Scripts\\python.exe -m pytest refua_tests/tests/meditikRequestFormsSanity.py --collect-only -q`. |
 
+| `.github/skills/qa-automation/SKILL.md` and `.claude/skills/qa-automation/SKILL.md` | Added mandatory pytest-to-BDD duplicate coverage policy, application tags, and BDD Allure trace requirement. | done |
+| `refua_tests/bdd/features/meditik_*.feature` and `refua_tests/bdd/step_defs/meditikSteps.py` | Added executable Meditik BDD coverage mirroring all Home, Menu, and Request Form pytest cases. | done |
+| `refua_tests/bdd/conftest.py` | Added per-Gherkin-action Allure attachments for BDD scenario results. | done |
+| `docs/bdd/QUICK_START_BDD.md` | Updated BDD run commands, application/area tags, duplication rule, and Allure trace behavior. | done |
+
+| 2026-08-17 | GitHub Copilot | Added 69 executable Meditik BDD scenarios mirroring the Home (15), Menu (14), and Request Form (40) pytest cases. Registered `@bdd`, `@meditik`, `@cprgo`, area, and `@known_issue` markers. BDD runs reuse the authenticated browser fixture; each completed/failed Given/When/Then is attached to the Allure result as `BDD scenario action`. Verified 69 scenarios collect; focused home BDD scenario passed and its Allure JSON contained two action attachments. A six-form BDD run had 5 pass and 1 TEST-environment auth/load failure on the Insoles case. |
+
 ## PROJECT QUICK REFERENCE (static — rarely changes)
 
 - **Project**: refuaAutomationTests — Playwright/pytest test automation for the MEDITEK medical app.
