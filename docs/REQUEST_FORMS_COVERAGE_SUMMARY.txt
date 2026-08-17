@@ -1,0 +1,299 @@
+MEDITEK REQUEST FORMS - COVERAGE SUMMARY
+=========================================
+
+Purpose
+-------
+This document summarizes every request form currently registered in
+refua_tests/pages/requestForms.py and the tests that cover it.
+
+The request-form tests open the form and simulate safe UI behavior. They do not
+submit a request, create a request, or modify medical data.
+
+Current totals
+--------------
+- Request forms: 6
+- Common coverage groups: 6 per form
+- Form-specific extra-control cases: 2
+- Additional flow cases: 2
+- Total collected request-form test cases: 40
+
+Monitoring table
+----------------
+Use this table as a quick dashboard when reviewing the suite or an Allure run.
+The common checks are applied to every form. "Extra" identifies behavior that
+is unique to one form. "Status" describes coverage in code; it is not a
+substitute for the result of the latest test execution.
+
+| Form | Route | Cases | Common coverage | Extra coverage | Status |
+|---|---|---:|---|---|---|
+| New Referral | `/referral-request` | 6 | Navigation, structure, visibility, interactivity, content, valid/invalid phone | None | Implemented |
+| Prescription | `/prescription-request` | 7 | Navigation, structure, visibility, interactivity, content, valid/invalid phone | Speed-dial entry point | Implemented |
+| Sick Days | `/sick-days-request` | 7 | Navigation, structure, visibility, interactivity, content, valid/invalid phone | Cause and date-range controls | Implemented |
+| Insoles Voucher | `/insoles-request` | 6 | Navigation, structure, visibility, interactivity, content, valid/invalid phone | None | Implemented |
+| Referral Answer | `/referral-answers-request` | 6 | Navigation, structure, visibility, interactivity, content, valid/invalid phone | None | Implemented |
+| Home Dentist | `/dentist-request` | 7 | Navigation, structure, visibility, interactivity, content, valid/invalid phone | Provider-chain selection | Implemented |
+
+Coverage monitoring checklist
+-----------------------------
+For each Allure/test run, monitor these columns:
+
+| Check | Expected result |
+|---|---|
+| Form route | URL contains the route listed above |
+| Required test ids | Every declared `data-testid` is attached |
+| Visibility | Every declared control is visible |
+| Interactivity | Non-submit controls are enabled |
+| Valid phone | `0501234567` is retained and not invalid |
+| Invalid phone | `123` produces an invalid state or visible error |
+| Required content | All declared labels/text are present |
+| Form-specific controls | Sick Days and Dentist controls can be interacted with |
+| Allure result | Review passed/failed status per parameterized form case |
+
+Coverage type legend
+--------------------
+- Navigation: opens the form from All Actions and verifies the expected route.
+- Structure: verifies the page title/content and required data-testid controls.
+- Visibility: verifies every declared control is visible to the user.
+- Interactivity: verifies non-submit controls are enabled.
+- Valid input: enters a valid phone number and verifies it remains accepted.
+- Invalid input: enters an invalid phone number and verifies validation feedback.
+- Content: verifies all declared form-specific text is present.
+- Extra controls: interacts with controls unique to a form, without submitting.
+
+Common tests applied to all six forms
+-------------------------------------
+Each form receives these six parametrized tests:
+
+1. test_request_form_opens_from_all_actions[form]
+   Type: Navigation + structure
+   Checks: opens the form tile, verifies the URL, page content, and required
+   data-testid controls.
+
+2. test_request_form_required_controls_are_visible[form]
+   Type: Visibility
+   Checks: every required field/control and the submit button are visible.
+
+3. test_request_form_input_controls_are_interactive[form]
+   Type: Interactivity
+   Checks: every non-submit control declared for the form is enabled.
+
+4. test_request_form_required_content_is_complete[form]
+   Type: Content validation
+   Checks: every text requirement declared for the form is present in the page.
+
+5. test_request_form_accepts_valid_phone_input[form]
+   Type: Positive input validation
+   Checks: enters the valid-format phone value 0501234567, verifies the value is
+   retained, and verifies the field is not marked invalid.
+
+6. test_request_form_rejects_invalid_phone_input[form]
+   Type: Negative input validation
+   Checks: enters the invalid value 123, blurs the field, and verifies that an
+   aria-invalid state or visible validation error appears.
+
+FORM 1: NEW REFERRAL
+====================
+Hebrew name: הפניה חדשה
+Tile: הפניה חדשה
+Route: /referral-request
+
+Required controls:
+- meditik-input-phone-number
+- meditik-referral-request-btn-submit
+
+Required content:
+- הפניה
+- טלפון
+
+Coverage:
+- Navigation and form loading
+- Required data-testid structure
+- Required-control visibility
+- Input-control interactivity
+- Complete required text/content
+- Valid phone input
+- Invalid phone input
+
+Number of cases: 6
+
+FORM 2: PRESCRIPTION
+====================
+Hebrew name: קבלת מרשם
+Tile: קבלת מרשם
+Route: /prescription-request
+
+Required controls:
+- meditik-input-phone-number
+- meditik-prescription-request-btn-submit
+
+Required content:
+- מרשם
+- טלפון
+- שליחת בקשה
+
+Coverage:
+- Navigation and form loading
+- Required data-testid structure
+- Required-control visibility
+- Input-control interactivity
+- Complete required text/content
+- Valid phone input
+- Invalid phone input
+- Prescription form opened through the Home speed dial
+
+Additional test:
+- test_speed_dial_opens_prescription_form
+  Type: Alternate-entry-point navigation + structure
+  Checks that the prescription form can also be opened from the speed dial and
+  that its required form controls are present.
+
+Number of cases: 7
+
+FORM 3: SICK DAYS REQUEST
+=========================
+Hebrew name: אישור ימי מחלה
+Tile: אישור ימי מחלה
+Route: /sick-days-request
+
+Required controls:
+- meditik-input-phone-number
+- meditik-sick-days-request-btn-submit
+- meditik-sick-days-request-input-cause
+- meditik-sick-days-request-input-date-range
+
+Required content:
+- ימי מחלה
+- טלפון
+
+Coverage:
+- Navigation and form loading
+- Required data-testid structure
+- Required-control visibility
+- Input-control interactivity
+- Complete required text/content
+- Valid phone input
+- Invalid phone input
+- Cause and date-range controls are exercised
+
+Additional test:
+- test_request_form_extra_controls_are_usable[sick-days-request]
+  Type: Form-specific interaction
+  Checks that the cause/date-range controls accept safe test interaction without
+  submitting the form.
+
+Number of cases: 7
+
+FORM 4: INSOLES VOUCHER
+=======================
+Hebrew name: קבלת שובר למדרסים
+Tile: קבלת שובר למדרסים
+Route: /insoles-request
+
+Required controls:
+- meditik-input-phone-number
+- meditik-insoles-request-btn-submit
+
+Required content:
+- מדרסים
+- טלפון
+- שליחת בקשה
+
+Coverage:
+- Navigation and form loading
+- Required data-testid structure
+- Required-control visibility
+- Input-control interactivity
+- Complete required text/content
+- Valid phone input
+- Invalid phone input
+
+Number of cases: 6
+
+FORM 5: REFERRAL ANSWER
+=======================
+Hebrew name: בקשה להחזרת תשובה להפניה
+Tile: החזרת תשובה להפניה
+Route: /referral-answers-request
+
+Required controls:
+- meditik-input-phone-number
+- meditik-referral-answer-request-btn-submit
+
+Required content:
+- הפניה
+- טלפון
+
+Coverage:
+- Navigation and form loading
+- Required data-testid structure
+- Required-control visibility
+- Input-control interactivity
+- Complete required text/content
+- Valid phone input
+- Invalid phone input
+
+Number of cases: 6
+
+FORM 6: HOME DENTAL HYGIENIST
+=============================
+Hebrew name: שיננית עד הבית
+Tile: שיננית עד הבית
+Route: /dentist-request
+
+Required controls:
+- meditik-input-phone-number
+- meditik-dentist-request-btn-submit
+- meditik-dentist-request-select-chain
+
+Required content:
+- שיננית
+- טלפון
+- שליחת בקשה
+
+Coverage:
+- Navigation and form loading
+- Required data-testid structure
+- Required-control visibility
+- Input-control interactivity
+- Complete required text/content
+- Valid phone input
+- Invalid phone input
+- Provider-chain selection control is exercised
+
+Additional test:
+- test_request_form_extra_controls_are_usable[dentist-request]
+  Type: Form-specific interaction
+  Checks that the provider-chain control can be interacted with safely without
+  submitting the form.
+
+Number of cases: 7
+
+Additional request-suite flows
+------------------------------
+1. test_urgent_care_from_all_actions
+   This is not one of the six request forms. It verifies that the Urgent Care
+   tile opens /urgent-care and that the page is not a 404 or application error.
+
+2. test_speed_dial_opens_prescription_form
+   This is an alternate entry path for the Prescription form and is counted
+   under the Prescription form above.
+
+Coverage not currently implemented
+-----------------------------------
+The current suite does not submit requests, so it does not yet verify:
+- successful form submission
+- server-side validation responses
+- required-field errors caused by submitting an empty form
+- field-specific error messages for every form control
+- maximum/minimum length boundaries for text fields
+- duplicate request behavior
+- API payload correctness after submission
+- cancellation or back-navigation behavior from every form
+- accessibility semantics for every form control
+
+Important status note
+---------------------
+The coverage cases are implemented in the TEST project. Run the suite to know
+whether the current environment passes them. A test being listed here means the
+coverage exists in code; it does not by itself mean the live environment passed
+that case.
