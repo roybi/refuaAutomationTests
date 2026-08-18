@@ -2,6 +2,9 @@
 
 import pytest
 
+from refua_tests.tests.conftest import (auth_state_session,  # noqa: F401
+                                        browser_page)
+
 
 def _bdd_trace(request):
     trace = getattr(request.node, "_bdd_step_trace", None)
@@ -9,11 +12,6 @@ def _bdd_trace(request):
         trace = []
         request.node._bdd_step_trace = trace
     return trace
-
-# Reuse the standard authenticated browser/session fixture. Future CPRGO BDD
-# steps can provide an app-specific fixture while keeping the same tag scheme.
-pytest_plugins = ("refua_tests.tests.conftest",)
-
 
 @pytest.fixture(scope="function")
 def setup_browser(browser_page):

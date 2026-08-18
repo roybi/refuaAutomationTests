@@ -1,0 +1,71 @@
+Test_ID,System,Area,Coverage_Type,Test_Name,BDD_Feature,Status,Notes
+MED-001,Meditik,Home,UI presence,Home dashboard widgets are displayed,meditik_home.feature,Active,
+MED-002,Meditik,Home,Quick actions,Home speed dial actions are displayed,meditik_home.feature,Active,
+MED-003,Meditik,Home,Navigation,Doctor request CTA opens All Actions,meditik_home.feature,Active,
+MED-004,Meditik,Home,Data display,Last update timestamp is displayed,meditik_home.feature,Active,
+MED-005,Meditik,Home widget,Navigation,My Requests widget opens destination,meditik_home.feature,Active,/user-requests
+MED-006,Meditik,Home widget,Navigation,Appointments widget opens destination,meditik_home.feature,Active,/zimun-torim
+MED-007,Meditik,Home widget,Navigation,Referrals widget opens destination,meditik_home.feature,Active,/referrals
+MED-008,Meditik,Home widget,Navigation,Medicines widget opens destination,meditik_home.feature,Active,/medicines
+MED-009,Meditik,Home widget,Navigation,Exemptions widget opens destination,meditik_home.feature,Active,/exemptions
+MED-010,Meditik,Speed dial,UI actions,Speed dial actions on My Requests,meditik_home.feature,Active,
+MED-011,Meditik,Speed dial,UI actions,Speed dial actions on Appointments,meditik_home.feature,Active,
+MED-012,Meditik,Speed dial,UI actions,Speed dial actions on Medicines,meditik_home.feature,Active,
+MED-013,Meditik,Speed dial,UI actions,Speed dial actions on Referrals,meditik_home.feature,Active,
+MED-014,Meditik,Speed dial,UI actions,Speed dial actions on Lab Results,meditik_home.feature,Active,
+MED-015,Meditik,Speed dial,UI actions,Speed dial actions on Sick Days,meditik_home.feature,Active,
+MED-016,Meditik,Side menu,External navigation,Appointment booking opens Torim,meditik_menu.feature,Active,
+MED-017,Meditik,Side menu,Navigation,All Actions page loads,meditik_menu.feature,Active,
+MED-018,Meditik,Side menu,Navigation,Urgent Care page loads,meditik_menu.feature,Active,
+MED-019,Meditik,Side menu,Content loading,My Appointments content loads,meditik_menu.feature,Active,
+MED-020,Meditik,Side menu,Content loading,My Requests content loads,meditik_menu.feature,Active,
+MED-021,Meditik,Side menu,Content loading,Lab Results content loads,meditik_menu.feature,Active,
+MED-022,Meditik,Side menu,Content loading,Medicines content loads,meditik_menu.feature,Active,
+MED-023,Meditik,Side menu,Content loading,Visit Summaries content loads,meditik_menu.feature,Active,
+MED-024,Meditik,Side menu,Content loading,Exemptions content loads,meditik_menu.feature,Active,
+MED-025,Meditik,Side menu,Content loading,Sick Days content loads,meditik_menu.feature,Active,
+MED-026,Meditik,Side menu,Content loading,Referrals content loads,meditik_menu.feature,Active,
+MED-027,Meditik,Side menu,Content loading,Vaccinations content loads,meditik_menu.feature,Active,
+MED-028,Meditik,Side menu,Content loading,Medical Profile content loads,meditik_menu.feature,Active,
+MED-029,Meditik,Side menu,Modal behavior,Feedback modal opens and closes,meditik_menu.feature,Active,
+MED-030,Meditik,Request form,Navigation and structure,New Referral form opens,meditik_request_forms.feature,Active,
+MED-031,Meditik,Request form,Navigation and structure,Prescription form opens,meditik_request_forms.feature,Active,
+MED-032,Meditik,Request form,Navigation and structure,Sick Days form opens,meditik_request_forms.feature,Active,
+MED-033,Meditik,Request form,Navigation and structure,Insoles Voucher form opens,meditik_request_forms.feature,Active,
+MED-034,Meditik,Request form,Navigation and structure,Referral Answer form opens,meditik_request_forms.feature,Active,
+MED-035,Meditik,Request form,Navigation and structure,Home Dentist form opens,meditik_request_forms.feature,Active,
+MED-036,Meditik,Request form,Control visibility,New Referral required controls visible,meditik_request_forms.feature,Active,
+MED-037,Meditik,Request form,Control visibility,Prescription required controls visible,meditik_request_forms.feature,Active,
+MED-038,Meditik,Request form,Control visibility,Sick Days required controls visible,meditik_request_forms.feature,Active,
+MED-039,Meditik,Request form,Control visibility,Insoles required controls visible,meditik_request_forms.feature,Active,
+MED-040,Meditik,Request form,Control visibility,Referral Answer required controls visible,meditik_request_forms.feature,Active,
+MED-041,Meditik,Request form,Control visibility,Home Dentist required controls visible,meditik_request_forms.feature,Active,
+MED-042,Meditik,Request form,Control interactivity,New Referral inputs are interactive,meditik_request_forms.feature,Active,
+MED-043,Meditik,Request form,Control interactivity,Prescription inputs are interactive,meditik_request_forms.feature,Active,
+MED-044,Meditik,Request form,Control interactivity,Sick Days inputs are interactive,meditik_request_forms.feature,Active,
+MED-045,Meditik,Request form,Control interactivity,Insoles inputs are interactive,meditik_request_forms.feature,Active,
+MED-046,Meditik,Request form,Control interactivity,Referral Answer inputs are interactive,meditik_request_forms.feature,Active,
+MED-047,Meditik,Request form,Control interactivity,Home Dentist inputs are interactive,meditik_request_forms.feature,Active,
+MED-048,Meditik,Request form,Content validation,New Referral required content displayed,meditik_request_forms.feature,Active,
+MED-049,Meditik,Request form,Content validation,Prescription required content displayed,meditik_request_forms.feature,Active,
+MED-050,Meditik,Request form,Content validation,Sick Days required content displayed,meditik_request_forms.feature,Active,
+MED-051,Meditik,Request form,Content validation,Insoles required content displayed,meditik_request_forms.feature,Active,
+MED-052,Meditik,Request form,Content validation,Referral Answer required content displayed,meditik_request_forms.feature,Active,
+MED-053,Meditik,Request form,Content validation,Home Dentist required content displayed,meditik_request_forms.feature,Active,
+MED-054,Meditik,Request form,Positive validation,New Referral accepts valid phone input,meditik_request_forms.feature,Blocked,Phone input is disabled in TEST
+MED-055,Meditik,Request form,Positive validation,Prescription accepts valid phone input,meditik_request_forms.feature,Blocked,Phone input is disabled in TEST
+MED-056,Meditik,Request form,Positive validation,Sick Days accepts valid phone input,meditik_request_forms.feature,Blocked,Phone input is disabled in TEST
+MED-057,Meditik,Request form,Positive validation,Insoles accepts valid phone input,meditik_request_forms.feature,Blocked,Phone input is disabled in TEST
+MED-058,Meditik,Request form,Positive validation,Referral Answer accepts valid phone input,meditik_request_forms.feature,Blocked,Phone input is disabled in TEST
+MED-059,Meditik,Request form,Positive validation,Home Dentist accepts valid phone input,meditik_request_forms.feature,Blocked,Phone input is disabled in TEST
+MED-060,Meditik,Request form,Negative validation,New Referral rejects invalid phone input,meditik_request_forms.feature,Known issue,Phone input is disabled in TEST
+MED-061,Meditik,Request form,Negative validation,Prescription rejects invalid phone input,meditik_request_forms.feature,Known issue,Phone input is disabled in TEST
+MED-062,Meditik,Request form,Negative validation,Sick Days rejects invalid phone input,meditik_request_forms.feature,Known issue,Phone input is disabled in TEST
+MED-063,Meditik,Request form,Negative validation,Insoles rejects invalid phone input,meditik_request_forms.feature,Known issue,Phone input is disabled in TEST
+MED-064,Meditik,Request form,Negative validation,Referral Answer rejects invalid phone input,meditik_request_forms.feature,Known issue,Phone input is disabled in TEST
+MED-065,Meditik,Request form,Negative validation,Home Dentist rejects invalid phone input,meditik_request_forms.feature,Known issue,Phone input is disabled in TEST
+MED-066,Meditik,Request form,Form-specific interaction,Sick Days additional controls usable,meditik_request_forms.feature,Active,Cause and date range
+MED-067,Meditik,Request form,Form-specific interaction,Home Dentist provider control usable,meditik_request_forms.feature,Active,Provider chain
+MED-068,Meditik,All Actions,Navigation,Urgent Care opens from All Actions,meditik_request_forms.feature,Active,
+MED-069,Meditik,Speed dial,Alternate entry point,Prescription opens from speed dial,meditik_request_forms.feature,Active,
+CPRGO-001,CPRGO,Not implemented,Placeholder,Reserve IDs beginning with CPRGO for future CPRGO test cases,,Planned,Add rows when CPRGO tests are created

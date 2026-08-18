@@ -110,6 +110,11 @@ Cleared: full suite execution completed on 2026-08-16. Three test failures were 
 
 | 2026-08-17 | GitHub Copilot | Added 69 executable Meditik BDD scenarios mirroring the Home (15), Menu (14), and Request Form (40) pytest cases. Registered `@bdd`, `@meditik`, `@cprgo`, area, and `@known_issue` markers. BDD runs reuse the authenticated browser fixture; each completed/failed Given/When/Then is attached to the Allure result as `BDD scenario action`. Verified 69 scenarios collect; focused home BDD scenario passed and its Allure JSON contained two action attachments. A six-form BDD run had 5 pass and 1 TEST-environment auth/load failure on the Insoles case. |
 
+| `docs/setup/TEST_CASE_TRACKER.csv` | Added an Excel-compatible register for 69 Meditik business test cases and a CPRGO placeholder, including area, coverage type, source test, BDD duplicate, status, and notes. | done |
+| `.github/skills/qa-automation/SKILL.md` and `.claude/skills/qa-automation/SKILL.md` | Added mandatory tracker maintenance for every new pytest/BDD business test case. | done |
+
+| 2026-08-18 | GitHub Copilot | Created `docs/setup/TEST_CASE_TRACKER.csv` with 69 Meditik rows plus a CPRGO placeholder. Updated the matching Copilot and Claude QA skills so all new/changed test coverage must update this Excel-compatible registry. Verified CSV parsing, unique IDs, and identical skill files. |
+
 ## PROJECT QUICK REFERENCE (static — rarely changes)
 
 - **Project**: refuaAutomationTests — Playwright/pytest test automation for the MEDITEK medical app.

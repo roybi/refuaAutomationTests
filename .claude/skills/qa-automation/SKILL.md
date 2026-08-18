@@ -131,6 +131,24 @@ documentation.
 When adding a new application, add an application tag and adapter/step module;
 do not make Meditik-specific locators or text part of generic BDD steps.
 
+## Required test-case tracker
+
+Maintain `docs/setup/TEST_CASE_TRACKER.csv` whenever test coverage changes.
+This CSV is the Excel-compatible inventory for all systems, including Meditik
+and future CPRGO coverage.
+
+- Add one row for every business test case. Parameterized cases with different
+  paths, forms, roles, or expected behavior each require their own row.
+- A pytest test and its matching BDD duplicate are one business case: use one
+  tracker row and fill both `Pytest_Source` and `BDD_Feature`.
+- Assign the next system-prefixed ID, such as `MED-070` or `CPRGO-001`.
+- Populate `System`, `Area`, `Coverage_Type`, `Test_Name`, `Status`, and
+  `Notes` so the register can be filtered in Excel.
+- Mark known product limitations as `Known issue` or `Blocked`; do not mark
+  them as Active until the behavior is executable in the target environment.
+- Do not delete historical rows. Update the existing row when a test is moved,
+  renamed, or its BDD duplicate changes.
+
 ## BDD Allure trace
 
 BDD runs must use `--alluredir=./allure/results`. The report must contain the
@@ -180,6 +198,7 @@ Always report:
 - Files changed and whether they are in TEST or CORE.
 - Live URL and flow inspected, or why live inspection was unavailable.
 - Every element found without `data-testid`.
+- Test-case tracker rows added or updated.
 - Tests collected and commands run.
 - Pass/fail/skip counts and the key failure cause.
 - Allure result directory when Allure was used.
