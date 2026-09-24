@@ -5,11 +5,11 @@ Implements the Gherkin steps defined in main_page.feature
 """
 
 import pytest
-from pytest_bdd import given, when, then, parsers, scenarios
+from pytest_bdd import given, parsers, then, when
+
 from refua_tests.pages.mainPage import MainPage
 
-# Load all scenarios from main_page.feature
-scenarios('../features/main_page.feature')
+# Scenarios are loaded by the test_main_page_bdd.py collector, not here.
 
 
 # Fixtures
@@ -28,6 +28,19 @@ def main_page(setup_browser):
 
 
 # Given Steps
+
+@given("the test environment is configured")
+def the_test_environment_is_configured():
+    """TEST_ENV is resolved by EnvironmentManager on MainPage init; just verify it's set."""
+    import os
+    assert os.getenv("TEST_ENV"), "TEST_ENV must be set to run this feature"
+
+
+@given("the browser is launched")
+def the_browser_is_launched(main_page):
+    """Realizes the main_page fixture, which requires setup_browser to launch the browser."""
+    assert main_page is not None
+
 
 @given("I am testing the main page")
 def testing_main_page(main_page, context):
@@ -103,6 +116,48 @@ def current_environment_should_be(context, expected_env):
     """Verify current environment matches expected"""
     env = context.get('environment')
     assert env == expected_env, f"Environment should be '{expected_env}', got '{env}'"
+
+
+@then(parsers.parse('the "{method}" method should be callable'))
+def method_should_be_callable(main_page, method):
+    """Verify a named main-page method is callable"""
+    fn = getattr(main_page, method, None)
+    assert callable(fn), f"{method} should be callable"
+
+
+@then(parsers.parse('the "{attribute}" should be initialized'))
+def attribute_should_be_initialized(main_page, attribute):
+    """Verify a named main-page attribute is set (not None)"""
+    value = getattr(main_page, attribute, None)
+    assert value is not None, f"{attribute} should be initialized"
+
+
+@then(parsers.parse('the "{property}" property should not be None'))
+def property_should_not_be_none(main_page, property):
+    """Verify a named main-page property is not None"""
+    value = getattr(main_page, property, None)
+    assert value is not None, f"{property} should not be None"
+
+
+@then("it should return a string")
+def result_should_be_string(context):
+    """Verify the last accessed result is a string"""
+    result = context.get('result')
+    assert isinstance(result, str), f"Result should be a string, got {type(result)}"
+
+
+@then(parsers.parse('it should start with "{prefix}"'))
+def result_should_start_with(context, prefix):
+    """Verify the last accessed result starts with the given prefix"""
+    result = context.get('result')
+    assert result.startswith(prefix), f"Result should start with '{prefix}', got '{result}'"
+
+
+@then(parsers.parse('it should end with "{suffix}"'))
+def result_should_end_with(context, suffix):
+    """Verify the last accessed result ends with the given suffix"""
+    result = context.get('result')
+    assert result.endswith(suffix), f"Result should end with '{suffix}', got '{result}'"
 
 
 @then(parsers.parse('the main page should have the "{method}" method'))
