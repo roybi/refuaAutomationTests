@@ -28,6 +28,11 @@ pytest-bdd>=7.0.0                       # BDD (Behavior-Driven Development) supp
 # Browser Automation (from framework)
 playwright>=1.40.0                      # Browser automation engine
 
+# Database (data validation before/after tests, see refua_core.config.database)
+psycopg2-binary>=2.9.0                  # PostgreSQL driver
+boto3>=1.34.0                           # AWS Secrets Manager (used on the AWS VPS runner)
+holidays>=0.50                          # Israeli public holidays for seeded-date working-day rules
+
 # Configuration
 python-dotenv>=1.0.0                    # .env file support
 requests>=2.31.0                        # HTTP requests

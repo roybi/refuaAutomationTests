@@ -20,20 +20,20 @@
 
 ## CURRENT TASK
 
-**STATUS**: `DONE` <!-- IDLE | IN_PROGRESS | BLOCKED | DONE -->
-**TASK NAME**: `run test execution`
-**STARTED**: `2026-08-11 00:00`
+**STATUS**: `BLOCKED` <!-- IDLE | IN_PROGRESS | BLOCKED | DONE -->
+**TASK NAME**: `Workbook v2 pytest and BDD implementation`
+**STARTED**: `2026-09-08`
 **LAST AGENT**: `GitHub Copilot`
-**LAST UPDATED**: `2026-08-16 10:43`
+**LAST UPDATED**: `2026-09-27`
 **BRANCH**: `roy_dev_automationTests`
 
 ### Task description
 
-Run the requested test execution in this repository and report the result back clearly.
+Implement the 48 workbook cases with matching pytest and BDD coverage. User authorized TEST with isolated synthetic data, submissions/cleanup, and browser-level failure interception. Missing contracts and undefined business rules must remain blocked.
 
 ### Definition of done
 
-`TEST_ENV=test pytest refua_tests/tests/ -v` completes successfully, or the exact failing error is captured if it does not.
+Preserve source case IDs/actions/results, maintain tracker mappings, implement approved workflows with pytest/BDD duplicates, and validate focused execution with Allure. Pending registration is not completed workflow coverage.
 
 ---
 
@@ -41,15 +41,29 @@ Run the requested test execution in this repository and report the result back c
 
 <!-- Break the task into small steps. Mark [x] the moment a step is complete. -->
 
-- [x] Step 1 — Run the requested pytest command
-- [x] Step 2 — Capture the result and any failing output
-- [x] Step 3 — Report the outcome to the user
+- [x] Read the replacement workbook and clarify execution permissions.
+- [x] Preserve 48 cases and register blocked pytest/BDD entries and tracker rows.
+- [x] Validate pending registration: 96 collected and skipped, no fixture execution.
+- [ ] Obtain approved isolated data setup/cleanup and API/data-model contracts.
+- [ ] Implement and live-validate actual workflows once dependencies are available.
 
 ---
 
 ## RESUME POINT
 
-Cleared: full suite execution completed on 2026-08-16. Three test failures were captured and reported; Allure results are in `allure/results`.
+Separate senior DBA skill task completed (2026-09-27). Created identical `.github/skills/senior-dba/SKILL.md` and `.claude/skills/senior-dba/SKILL.md`; validated frontmatter, description length, required contracts, and matching SHA256 hashes. No DB connection, credential persistence, seed script, or UI execution in this task. Next action when implementation is requested: load senior-dba, resolve the explicit execution environment and user, privately configure the connection including the still-unverified database/schema, and discover the medicines relationship graph read-only before designing inserts. User confirmed repository scope for both agents and rolling non-working dates forward. Requirements: feature-scoped beforeAll creation, at least three date cases (+2 days, +1 week, +1 calendar month), Asia/Jerusalem, exclude Israeli weekends/holidays, TEST/PREPROD only, command-selected user, and best-effort soft deletion with visible leftover warnings. Do not assume these workflow approvals establish the schema or permit changing unrelated records. Earlier blocked task status remains unchanged.
+
+User confirmed TEST personal number 4444401 (2026-09-24). Explicit check with TEST_ENV=test, TEST_APP=meditek and `check_local_login.py 4444401 --headless` exited 1 before any login request: AUTOMATION_SECRET is missing. The account no longer needs confirmation; private secret configuration is still required. No offline compatibility test was added and no live tests ran during this check.
+
+CORE upgrade verified (2026-09-24): sibling source version was already 2.0.1 but TEST venv metadata was 1.0.1. Refreshed with `venv/Scripts/python.exe -m pip install --no-deps -e ../refuaAutomationCore`; pip show now confirms 2.0.1. Focused collect-only validation passed: 39 selected, 106 deselected. Rechecked automation-login preflight: AUTOMATION_SECRET remains missing. No UI rerun or auth-fixture code changes; continue with the configuration/integration steps below.
+
+Latest request (2026-09-24): rerun the same three home/medicines features using the new URL/header login, not captured-session authentication. BLOCKED: CORE scripts/check_local_login.py --headless exited 1 because AUTOMATION_SECRET is not set. CORE EnvironmentManager provides get_automation_login_url(personal_number, env_type) and apply_automation_secret_header(page); the latter scopes x-automation-secret to automation-login requests. The TEST browser fixture still uses captured storage state. Next action: user privately configures AUTOMATION_SECRET and confirms the approved test personal number (CORE diagnostic default is 4444401); then integrate the existing CORE helpers into refua_tests/tests/conftest.py auth_state_session/browser_page, validate TEST login, rerun the same 39 selected cases, and generate a separate Allure report. No authentication code changed and no rerun occurred yet. Never print the secret or include it in report artifacts.
+
+Separate requested execution completed on 2026-09-24: home and medicines BDD run finished; no execution remains pending. Results: 16 passed, 5 failed, 18 skipped. Allure report: `allure/report_meditik_home_medicines_20260924/index.html`. No test code changed. The blocked workbook task and its next actions below remain unchanged.
+
+User approved proceeding with HOME-001/002/003 (UI-only, no submission) using the existing authenticated session + live MCP Playwright discovery, leaving all submission/persistence cases blocked. Attempted live inspection by opening https://meditik.test.medical.idf.il/home in the integrated browser tool — it landed on the unauthenticated MSAL login page ("כניסה למערכת"); the integrated browser tool does not accept/load the captured `auth_state_meditek_test_chromium_latest.json` storage state, so it cannot reach the authenticated home page without a manual login+2FA step. User said "stop" before any further action or code change was made.
+
+Next action (when resumed): either (a) get a fresh manual login in the integrated browser first, then re-open /home for live snapshot/data-testid discovery, or (b) skip live MCP inspection and instead implement HOME-001/002/003 pytest+BDD steps directly against the existing `MeditekHomePage`/`MeditekBasePage` page objects (already used by the working authenticated pytest suite), reusing their existing locators instead of new live discovery. HOME-004 still has its navigation-versus-persistence contradiction unresolved. Full submission/persistence cases (the other 45) remain blocked on missing data setup/cleanup and API/data-model contracts. No CORE changes. Preserve pre-existing edits in commonSteps.py, meditikSteps.py, tests/conftest.py, requirements.txt, .kiro/, and utils/.
 
 ---
 
@@ -72,6 +86,14 @@ Cleared: full suite execution completed on 2026-08-16. Three test failures were 
 ---
 
 | `docs/REQUEST_FORMS_COVERAGE_SUMMARY.txt` | Added a per-form coverage matrix listing routes, controls, test names, coverage types, case counts, and uncovered submission/server-validation areas. | done |
+| `docs/setup/MY_REQUESTS_CASES.json` | Exported all 31 MYREQ-001..031 rows (every column, incl. BDD_Scenario) from `My Requset Test cases.xlsx` for programmatic use by the pending-case loader and the tracker append script. | done |
+| `refua_tests/pages/myRequestsTabbedPage.py` | Added `assert_tab_selected`, `rapid_switch`, `assert_all_categories_valid`, `assert_hebrew_rtl_rendering`, `assert_widget_data_state` to the pre-existing (untracked) page object so all 15 Ready MYREQ cases have a page-object method to call. | done |
+| `refua_tests/tests/meditikMyRequestsSanity.py` | New — 15 pytest cases (one per Ready MYREQ ID; tabs 003/004/005 and 010/011 parametrized with `id=` matching the MYREQ ID) against the tabbed /user-requests screen. | done |
+| `refua_tests/tests/test_my_requests_pending.py` | New — registers the 16 Blocked MYREQ cases as collected-and-skipped (skip reason = the workbook's own Clarification Status), same pattern as `test_workbook_cases.py`. | done |
+| `refua_tests/bdd/features/meditik_my_requests.feature` + `refua_tests/bdd/step_defs/myRequestsSteps.py` | New — BDD duplicate of the 15 Ready pytest cases (5 as two Scenario Outlines for the three/two-tab pairs), wired into `refua_tests/bdd/test_meditik_bdd.py`. | done |
+| `refua_tests/bdd/features/meditik_my_requests_pending.feature` + `refua_tests/bdd/test_my_requests_pending_bdd.py` | New — BDD duplicate of the 16 Blocked cases, whole-module `pytest.mark.skip`, same pattern as `test_workbook_pending_bdd.py`. | done |
+| `pytest.ini` | Added the `my_requests` marker (unregistered custom mark warning on the `@my_requests` BDD tag otherwise). | done |
+| `docs/setup/TEST_CASE_TRACKER.csv` | Appended 31 rows (`MYREQ-001`..`MYREQ-031`, preserving the workbook's own IDs — not renumbered into the `MED-` sequence) — 15 `Active`, 16 `Blocked`. | done |
 
 ## KEY DECISIONS & CONTEXT
 
@@ -114,6 +136,31 @@ Cleared: full suite execution completed on 2026-08-16. Three test failures were 
 | `.github/skills/qa-automation/SKILL.md` and `.claude/skills/qa-automation/SKILL.md` | Added mandatory tracker maintenance for every new pytest/BDD business test case. | done |
 
 | 2026-08-18 | GitHub Copilot | Created `docs/setup/TEST_CASE_TRACKER.csv` with 69 Meditik rows plus a CPRGO placeholder. Updated the matching Copilot and Claude QA skills so all new/changed test coverage must update this Excel-compatible registry. Verified CSV parsing, unique IDs, and identical skill files. |
+
+| 2026-09-08 | GitHub Copilot | Read the accessible replacement workbook (48 cases). User approved isolated TEST submissions/cleanup and browser-level failure interception, but deferred undefined rules and requested dependency-blocked cases remain blocked. Added full JSON catalog, pending pytest adapter, source Gherkin plus skipped loader, docs/bdd/WORKBOOK_V2.md, and tracker MED-070 through MED-117. Validation: 96 collected, 96 skipped in 0.31s; Allure at allure/results/workbook. Initial body-level skips triggered autouse session capture and timed out; collection-time skip markers now prevent fixture execution. No actual workflow implementation or live selector verification; no CORE modifications. |
+| 2026-09-14 | Claude Code | **Separate, self-contained task — not the same workbook as the entry above.** User shared a different, new workbook (`My Requset Test cases.xlsx`, 31 MYREQ-001..031 cases, all scoped to the tabbed /user-requests "My Requests" screen). Exported it to `docs/setup/MY_REQUESTS_CASES.json`. Its `Clarification Status` column marks 15 cases Ready and 16 Blocked (Product/Security/API/Data-Model/Non-Functional/Accessibility confirmation needed). Found a pre-existing untracked page object (`refua_tests/pages/myRequestsTabbedPage.py`) already built against this exact workbook's locators — extended it with 5 new assertion/action methods, then implemented all 15 Ready cases as pytest (`meditikMyRequestsSanity.py`) and BDD (`meditik_my_requests.feature` + `myRequestsSteps.py`) duplicates, and registered the 16 Blocked cases as collected-and-skipped pytest + BDD (mirroring the existing `test_workbook_cases.py` / `test_workbook_pending_bdd.py` pattern). Appended 31 rows to the tracker CSV. **Validation**: `pytest refua_tests/ --collect-only` → 296 tests, 0 errors (up from 234); `-m my_requests` selects exactly 62 (15+16 pytest, 15+16 BDD); the 32 Blocked/pending pytest+BDD tests were actually run and skip cleanly in 0.10s with no fixture/auth execution. **Not done**: the 15 Ready tests were NOT run live — `~/.refua_sessions/auth_state_meditek_test_chromium_latest.json` expired 2026-09-12 (today 2026-09-14), and a fresh capture needs the user to complete 2FA interactively. Whoever resumes: run `meditikMyRequestsSanity.py` live once a fresh session exists, and locator-verify the 5 new page-object methods (`assert_tab_selected` assumes MUI's standard `aria-selected`; `assert_hebrew_rtl_rendering` assumes `document.dir`/computed direction is `rtl` — neither was checked against the live DOM). |
+
+| 2026-09-24 | GitHub Copilot | Completed the separately requested TEST BDD run for meditik_home.feature, meditik_medicines_tabs.feature and meditik_medicines_pending.feature. Preflight GET https://meditik.test.medical.idf.il/home returned HTTP 200. Command: venv/Scripts/python.exe -m pytest refua_tests/bdd/test_meditik_bdd.py refua_tests/bdd/test_medicines_pending_bdd.py -m "home or medicines" -v --strict-markers --tb=short --capture=no -ra --alluredir=allure/results/meditik_home_medicines_20260924 with TEST_ENV=test, TEST_APP=meditek, AUTH_CHECK_HEADLESS=true. Result: 16 passed, 5 failed, 18 skipped, 106 deselected in 811.11s. Three failures waited unsuccessfully for initial home/login readiness; one found no speed dial on /zimun-torim; one detected the app error screen selecting expired prescriptions. Pending cases remain skipped for missing approved contracts. Generated isolated report via direct Java Allure CLI at allure/report_meditik_home_medicines_20260924; summary.json confirms all 39 cases and BDD action attachments exist. No TEST/CORE code or tracker changes. Existing workbook task remains BLOCKED. |
+
+| 2026-09-24 | GitHub Copilot | Investigated requested rerun using new URL/header login. Found existing CORE automation-login URL/header helpers and check_local_login.py. Local TEST fixtures still load captured sessions. Preflight exited 1: AUTOMATION_SECRET not set; no tests rerun, no auth code changed, prior Allure report unchanged. Await private secret configuration and confirmation of approved test personal number before fixture integration and execution. |
+
+| 2026-09-24 | GitHub Copilot | Refreshed TEST venv's editable CORE installation from stale 1.0.1 metadata to local source 2.0.1 using pip install --no-deps -e ../refuaAutomationCore. Verified pip show and focused BDD collection: 39 selected, 106 deselected, no collection errors. Automation-login preflight still reports AUTOMATION_SECRET missing. No test/auth source changes or UI execution. |
+
+| 2026-09-24 | GitHub Copilot | User confirmed TEST account 4444401. Executed CORE check_local_login.py 4444401 --headless with TEST_ENV=test and TEST_APP=meditek. Exited 1 before contacting the server because AUTOMATION_SECRET is missing. Account confirmation resolved; authentication verification and live rerun remain blocked. |
+
+| 2026-09-27 | GitHub Copilot | Completed separate senior-dba skill creation for Copilot and Claude. Includes read-only schema/FK/relationship discovery, direct DB beforeAll feature seeding, explicit TEST/PREPROD and per-run user guards, three Israel working-day-adjusted future dates, transaction/parallel ownership controls, best-effort soft-delete cleanup and recovery warnings, and Meditik-first/CPR GO adapter ownership. Both skill files are identical and passed frontmatter/content validation. No supplied credentials were stored, no DB access occurred, and no runtime/test coverage changed. |
+
+| 2026-09-27 | GitHub Copilot | Read-only TEST DB connectivity check via CORE DatabaseManager with `.env.test`: CONNECTED (db `meditik`, schema `public`, PostgreSQL 16.8). Schemas: `public` 43 tables, `history` 31 tables. Database/schema now verified for TEST. No writes, no code changes. |
+
+| 2026-09-27 | GitHub Copilot | Built DB seeding tooling. `tools/db_discover_schema.py` (read-only catalog map, JSON at `docs/db/meditik_schema_test.json`); `refua_tests/utils/meditik_seed.py` (guards, IL working-day dates, transactional seed of user_request + prescription_request / sick_days_request, manifest in ~/.refua_seeds, per-user lock, best-effort cleanup); `tools/db_seed_meditik.py` CLI (plan/seed/cleanup/leftovers); module fixture `meditik_seeded_requests` + marker `meditik_seed`; `holidays` in requirements; `SEED_ALLOWED_PERSONAL_NUMBERS=4444401` added to ignored .env.test. Findings: no medicines catalog in Meditik DB (external source); no soft-delete columns anywhere (history triggers archive on DELETE). Plan mode validated on TEST; PREPROD blocked. NO live seed executed yet — awaiting user decision on cleanup mode (report vs delete-owned) and dataset/date semantics. |
+
+| 2026-09-27 | GitHub Copilot | Extended seeding to all 11 request types (datasets per type + `all`; referral 1-4, prescription 5, refunds 6/7 parent-only, insoles 8, retroactive ER 9, sick days 10, optics 11) and added `verify` command. Rolled-back trial inserted 33 then 0 remained. LIVE TEST seed run `1388dc91b378`: 33 requests committed (user_request ids 2005113-2005145), `verify` 33/33 OK. User chose to KEEP the rows; per-user lock stays until `cleanup --env test --run-id 1388dc91b378 [--mode delete-owned]`. Guards verified: lock blocks second seed, unapproved user rejected, leftovers lists 33. |
+
+| 2026-09-27 | GitHub Copilot | Auto-seeding wired: new `refua_tests/conftest.py` session autouse fixture `meditik_seed_session` (covers tests/ and bdd/) seeds dataset `all` (3 per type, 33 rows) before every run; `meditik_seeded_requests` fixture exposes the manifest. Settings in ignored .env.test: MEDITIK_SEED_ENV=test, MEDITIK_SEED_DATASET=all, MEDITIK_SEED_CLEANUP=report (rows kept per user choice), TEST_PERSONAL_NUMBER=4444401. Removed old module fixture + `meditik_seed` marker. Released lock of run 1388dc91b378 (rows kept). Verified with a temporary test (deleted): run fd0963ca25c8 seeded 11 types x3. 66 seeded rows now exist for 4444401 and grow by 33 per run while cleanup=report. |
+
+| 2026-09-27 | GitHub Copilot | Seed user is now per execution: root `conftest.py` adds `--personal-number` (sets TEST_PERSONAL_NUMBER, so automation login uses the same user). Removed fixed TEST_PERSONAL_NUMBER from .env.test; SEED_ALLOWED_PERSONAL_NUMBERS supports ranges, now `4444400-4444499`. person_id is resolved from the user's own earlier requests (blocked if 0 or >1, e.g. 4444407 has 2). Live check `--personal-number 4444410`: run 83335b990813 seeded 11 types x3 for 4444410 (rows kept). |
+
+| 2026-09-27 | GitHub Copilot | User's daily flow: login via /automation/login/:personalNumber + x-automation-secret, personal number changes per day. `--personal-number` now also defaults TEST_AUTH_METHOD=automation, so login and seed use the same person. Open: AUTOMATION_SECRET still not configured (not verified live); a new daily person with no earlier user_request cannot be mapped to patient_person_id; allowlist range 4444400-4444499 must cover daily numbers. Saved session file has no origins (token-less). |
 
 ## PROJECT QUICK REFERENCE (static — rarely changes)
 

@@ -83,16 +83,59 @@ class MeditikIds:
     LAB_RESULTS_ROW_PREFIX = "meditik-lab-results-row-"
     LAB_RESULTS_BTN_DETAILS_PREFIX = "meditik-lab-results-btn-details-"
 
+    # --- Medicines & Prescriptions (תרופות ומרשמים) — tabbed /medicines page ---
+    # Source: MediTik_Medicines_Prescriptions_BDD_E2E_TestCases workbook
+    # (MEDICINES-001..024). Three categories: My Prescriptions (active),
+    # Permanent Medicines, Previous Prescriptions (expired).
+    # NOTE: the workbook defines empty-state elements ONLY for My Prescriptions.
+    MEDICINES_TABBED_PATH = "/medicines"
+    MEDICINES_TABS_HEADER = "meditik-tabs-header"
+    MEDICINES_TAB_ACTIVE = "active-medicines-tab"
+    MEDICINES_TAB_PERMANENT = "permanent-medicines-tab"
+    MEDICINES_TAB_EXPIRED = "expired-medicines-tab"
+    MEDICINES_PANEL_ACTIVE = "meditik-tabs-panel-active-medicines"
+    MEDICINES_PANEL_PERMANENT = "meditik-tabs-panel-permanent-medicines"
+    MEDICINES_PANEL_EXPIRED = "meditik-tabs-panel-expired-medicines"
+    # Tab-strip scroll affordances (referenced by clarification-pending cases).
+    MEDICINES_TAB_SCROLL_RIGHT_ICON = "KeyboardArrowRightIcon"
+    MEDICINES_TAB_SCROLL_LEFT_ICON = "KeyboardArrowLeftIcon"
+
     # --- Medicines ---
     MEDICINES_PAGE = "meditik-medicines-page"
     MEDICINES_ROW_PREFIX = "meditik-medicines-row-"
     MEDICINES_BTN_DETAILS_PREFIX = "meditik-medicines-btn-details-"
+
+    # --- Referrals (הפניות) — tabbed /referrals page ---
+    # Source: MediTik_Referrals_BDD_E2E_TestCases workbook (REFERRALS-001..024).
+    # My Referrals / Waiting for Approval / Past Referrals tabs + a shared
+    # empty state that MUST be scoped to the active panel (REFERRALS-024).
+    REFERRALS_TABBED_PATH = "/referrals"
+    REFERRALS_TABS_HEADER = "meditik-tabs-header"
+    REFERRALS_TAB_MINE = "my-referrals-tab"
+    REFERRALS_TAB_WAITING_APPROVAL = "referrals-waiting-for-approval-tab"
+    REFERRALS_TAB_PAST = "past-referrals-tab"
+    REFERRALS_PANEL_MINE = "meditik-tabs-panel-my-referrals"
+    REFERRALS_PANEL_WAITING_APPROVAL = (
+        "meditik-tabs-panel-referrals-waiting-for-approval"
+    )
+    REFERRALS_PANEL_PAST = "meditik-tabs-panel-past-referrals"
 
     # --- Referrals ---
     REFERRALS_PAGE = "meditik-referrals-page"
     REFERRALS_ROW_PREFIX = "meditik-referrals-row-"
     REFERRALS_BTN_DETAILS_PREFIX = "meditik-referrals-btn-details-"
     REFERRALS_BTN_SUPPLIER_CHANGE_PREFIX = "meditik-referrals-btn-supplier-change-"
+
+    # --- Sick Days (ימי מחלה) — /sick-days module page ---
+    # Source: Sick_days workbook (SICK-DAYS-001..020). This page is NOT tabbed:
+    # its coverage centres on a page-level empty state that must resolve to
+    # exactly one match. SICK-DAYS-002 specifies the exact Hebrew copy and its
+    # Error/Validation column requires failing when the text differs, so unlike
+    # the English-copy workbooks this string is a HARD assertion.
+    SICK_DAYS_MODULE_PATH = "/sick-days"
+    SICK_DAYS_EMPTY_STATE_TITLE = "meditik-empty-state-title"
+    SICK_DAYS_EMPTY_STATE_ICON = "meditik-empty-state-icon"
+    SICK_DAYS_EXPECTED_EMPTY_TEXT = "ימי מחלה שיתקבלו עבורך יופיעו כאן"
 
     # --- Sick Days ---
     SICK_DAYS_PAGE = "meditik-sick-days-page"
@@ -104,6 +147,14 @@ class MeditikIds:
     EXEMPTIONS_ROW_PREFIX = "meditik-exemptions-row-"
     EXEMPTIONS_BTN_DETAILS_PREFIX = "meditik-exemptions-btn-details-"
 
+    # --- Vaccinations (חיסונים) — /vaccinations module page ---
+    # Source: Vaccinations workbook (VACC-001..020). Case-for-case twin of the
+    # Sick_days workbook: same non-tabbed empty-state shape, same Ready set,
+    # same "fail if duplicated or hidden" rules. Shares the empty-state testids
+    # and is implemented as a configuration of EmptyStateModulePage.
+    VACCINATIONS_MODULE_PATH = "/vaccinations"
+    VACCINATIONS_EXPECTED_EMPTY_TEXT = "חיסונים שביצעת יופיעו כאן"
+
     # --- Vaccinations ---
     VACCINATIONS_PAGE = "meditik-vaccinations-page"
     VACCINATIONS_ROW_PREFIX = "meditik-vaccinations-row-"
@@ -114,6 +165,93 @@ class MeditikIds:
     # --- Urgent Care ---
     URGENT_CARE_PAGE = "meditik-urgent-care-page"
     URGENT_CARE_BTN_START = "meditik-urgent-care-btn-start"
+
+    # --- My Requests (הבקשות שלי) — tabbed /user-requests page ---
+    # Source: My_Requset_Test_cases.xlsx (elements.json grounded). These ids
+    # describe the tabbed "My Requests" screen (New / Approved / Declined) and
+    # its shared empty-state, distinct from the legacy action page below.
+    MY_REQUESTS_PATH = "/user-requests"
+
+    # Navbar (shared shell) — reused here for My Requests coverage.
+    MY_REQUESTS_NAVBAR_TOOLBAR = "meditik-navbar-toolbar"
+    MY_REQUESTS_NAVBAR_BTN_HAMBURGER = "meditik-navbar-btn-hamburger"
+    MY_REQUESTS_NAVBAR_IMG_HAMBURGER = "meditik-navbar-img-hamburger"
+    MY_REQUESTS_NAVBAR_BTN_LOGO = "meditik-navbar-btn-logo"
+    MY_REQUESTS_NAVBAR_IMG_LOGO = "meditik-navbar-img-logo"
+    MY_REQUESTS_NAVBAR_TABS_PORTAL = "meditik-navbar-tabs-portal"
+
+    # Tabs header + per-status tabs and their panels.
+    MY_REQUESTS_TABS_HEADER = "meditik-tabs-header"
+    MY_REQUESTS_TAB_ACTIVE = "active-requests-tab"
+    MY_REQUESTS_TAB_APPROVED = "approved-requests-tab"
+    MY_REQUESTS_TAB_DECLINED = "declined-requests-tab"
+    MY_REQUESTS_PANEL_ACTIVE = "meditik-tabs-panel-active-requests"
+    MY_REQUESTS_PANEL_APPROVED = "meditik-tabs-panel-approved-requests"
+    MY_REQUESTS_PANEL_DECLINED = "meditik-tabs-panel-declined-requests"
+
+    # Virtual list card locator template. The mapping captured it as
+    # "0-user-requests-list-{index}"; ``{index}`` is substituted per card and
+    # the leading segment is the panel/virtual-list group.
+    MY_REQUESTS_LIST_CARD_TEMPLATE = "0-user-requests-list-{index}"
+    MY_REQUESTS_LIST_CARD_PREFIX = "0-user-requests-list-"
+
+    # Scoped empty state (shared component — must be scoped to the active panel).
+    MY_REQUESTS_EMPTY_STATE_ICON = "meditik-empty-state-icon"
+    MY_REQUESTS_EMPTY_STATE_TITLE = "meditik-empty-state-title"
+    MY_REQUESTS_EMPTY_STATE_LINK = "meditik-empty-state-link"
+
+    # Home widget for My Requests.
+    MY_REQUESTS_HOME_PAGE = "meditik-home-page"
+    MY_REQUESTS_HOME_BTN_WIDGET = "meditik-home-btn-user-requests-widget"
+    MY_REQUESTS_HOME_WIDGET_ARROW = "meditik-home-widget-arrow-user-requests-widget"
+    MY_REQUESTS_WIDGET_EMPTY_STATE = "user-requests-widget-empty-state"
+    MY_REQUESTS_WIDGET_EMPTY_STATE_EXTRA_INFO = (
+        "meditik-card-user-requests-widget-empty-state-extra-info"
+    )
+
+    # Speed dial (quick actions) on My Requests.
+    MY_REQUESTS_SPEED_DIAL_TRIGGER = "meditik-speed-dial-btn-trigger"
+    MY_REQUESTS_SPEED_DIAL_FAB = "meditik-speed-dial-btn-fab"
+    MY_REQUESTS_SPEED_DIAL_ADD_ICON = "AddIcon"
+
+    # --- My Appointments (התורים שלי) — tabbed /zimun-torim page ---
+    # Source: My Appointments workbook (APPT-001..034, elements.json grounded).
+    # Upcoming / Waiting Lists / Past Appointments tabs + shared empty state,
+    # a Past-appointments card list, a filter entry and a booking link.
+    MY_APPOINTMENTS_PATH = "/zimun-torim"
+    MY_APPOINTMENTS_PAGE = "meditik-appointments-page"
+
+    # Tabs header + per-category tabs and their panels. NOTE: the Upcoming tab
+    # reuses the shared active-requests testids (confirmed in the workbook).
+    MY_APPOINTMENTS_TABS_HEADER = "meditik-tabs-header"
+    MY_APPOINTMENTS_TAB_UPCOMING = "active-requests-tab"
+    MY_APPOINTMENTS_TAB_WAITING_LISTS = "waiting-lists-tab"
+    MY_APPOINTMENTS_TAB_PAST = "past-appointments-tab"
+    MY_APPOINTMENTS_PANEL_UPCOMING = "meditik-tabs-panel-active-requests"
+    MY_APPOINTMENTS_PANEL_WAITING_LISTS = "meditik-tabs-panel-waiting-lists"
+    MY_APPOINTMENTS_PANEL_PAST = "meditik-tabs-panel-past-appointments"
+
+    # Past-appointments virtual list card + its extra-info card.
+    MY_APPOINTMENTS_PAST_CARD_TEMPLATE = "past-appointments-list-{index}"
+    MY_APPOINTMENTS_PAST_CARD_PREFIX = "past-appointments-list-"
+    MY_APPOINTMENTS_PAST_CARD_EXTRA_INFO_TEMPLATE = (
+        "meditik-card-past-appointments-list-{index}-extra-info"
+    )
+
+    # Booking entry + filter (clarification-pending behaviour, ids are grounded).
+    MY_APPOINTMENTS_LINK_BOOK = "meditik-appointments-link-book-appointment"
+    MY_APPOINTMENTS_FILTER_BTN_OPEN = "meditik-filter-btn-open"
+    MY_APPOINTMENTS_FILTER_LABEL = "meditik-filter-label"
+
+    # Home future-appointments widget.
+    MY_APPOINTMENTS_HOME_BTN_WIDGET = "meditik-home-btn-future-appointments-widget"
+    MY_APPOINTMENTS_HOME_WIDGET_ARROW = (
+        "meditik-home-widget-arrow-future-appointments-widget"
+    )
+    MY_APPOINTMENTS_WIDGET_EMPTY_STATE = "future-appointments-widget-empty-state"
+    MY_APPOINTMENTS_WIDGET_EMPTY_STATE_EXTRA_INFO = (
+        "meditik-card-future-appointments-widget-empty-state-extra-info"
+    )
 
     # --- User Requests ---
     USER_REQUESTS_PAGE = "meditik-user-requests-page"

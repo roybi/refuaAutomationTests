@@ -11,6 +11,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from urllib.parse import urlparse
 
 import pytest
@@ -283,6 +284,47 @@ def _soft_notes_session_log(auth_state_session):
     print(f"\n[soft-warnings] {len(notes)} note(s) → {log_path}")
 
 
+def _automation_storage_state():
+    from playwright.sync_api import sync_playwright
+
+    manager = get_env_manager()
+    if manager.current_env.value != "test":
+        raise RuntimeError("Automation login is enabled only for TEST in this repository.")
+    personal_number = os.getenv("TEST_PERSONAL_NUMBER", "").strip()
+    if not personal_number or not personal_number.isascii() or not personal_number.isdigit():
+        raise RuntimeError("Set TEST_PERSONAL_NUMBER to the approved numeric TEST account.")
+    if not manager.get_automation_secret():
+        raise RuntimeError("AUTOMATION_SECRET is required for automation login.")
+
+    login_url = manager.get_automation_login_url(personal_number, manager.current_env)
+    expected_host = urlparse(login_url).netloc
+    headless = os.getenv("AUTH_CHECK_HEADLESS", "false").lower() == "true"
+    with sync_playwright() as playwright:
+        browser = getattr(playwright, manager.get_browser_type()).launch(headless=headless)
+        try:
+            context = browser.new_context(
+                locale="he-IL", timezone_id="Asia/Jerusalem", service_workers="block"
+            )
+            page = context.new_page()
+            manager.apply_automation_secret_header(page)
+            response = page.goto(login_url, wait_until="domcontentloaded", timeout=180000)
+            if response is None or response.status >= 400:
+                raise RuntimeError("Automation login returned an unsuccessful HTTP response.")
+            page.wait_for_url(
+                lambda url: urlparse(url).netloc == expected_host
+                and urlparse(url).path == "/home",
+                timeout=60000,
+            )
+            page.get_by_test_id("meditik-home-page").wait_for(state="visible", timeout=60000)
+            return context.storage_state()
+        except Exception as error:
+            raise RuntimeError(
+                f"TEST automation login did not establish a visible home dashboard ({type(error).__name__})."
+            ) from None
+        finally:
+            browser.close()
+
+
 @pytest.fixture(scope="session", autouse=True)
 def auth_state_session():
     """BEFORE ALL / AFTER ALL for the captured MEDITEK session.
@@ -299,7 +341,25 @@ def auth_state_session():
 
     AFTER ALL (teardown, runs once after the last test):
       Re-check the file and warn if it expired while the suite was running.
+
+    TEST_AUTH_METHOD=automation instead creates a temporary session through
+    CORE's URL/header login using TEST_PERSONAL_NUMBER and AUTOMATION_SECRET.
     """
+    auth_method = os.getenv("TEST_AUTH_METHOD", "session_state")
+    if auth_method not in {"session_state", "automation"}:
+        pytest.exit("TEST_AUTH_METHOD must be session_state or automation.", returncode=1)
+    if auth_method == "automation":
+        try:
+            _check_environment_is_up()
+            storage_state = _automation_storage_state()
+        except RuntimeError as error:
+            pytest.exit(str(error), returncode=1)
+        with TemporaryDirectory(prefix="refua-automation-") as session_dir:
+            session_path = Path(session_dir) / "storage_state.json"
+            session_path.write_text(json.dumps(storage_state), encoding="utf-8")
+            yield session_path
+        return
+
     try:
         _check_environment_is_up()
         _ensure_auth_state()
@@ -353,6 +413,27 @@ def browser_page(auth_state_session, request):
         yield page
         context.close()
         browser.close()
+
+
+@pytest.fixture(scope="session")
+def db():
+    """DatabaseManager for pre/post-test data validation queries against the AWS DB.
+
+    Locally, this connects over the AWS VPN using ORM_DB_HOST/USER/PASSWORD/DATABASE/
+    SCHEMA and DISABLE_SSL in .env.<env>. On the AWS VPS runner it's reachable directly;
+    set ORM_DB_SECRET_ARN there instead to load credentials from AWS Secrets Manager
+    via the instance's IAM role. Skips (not fails) the test if no DB config/driver
+    is available.
+    """
+    from refua_core.config.database import (DatabaseManager,
+                                            DatabaseNotConfiguredError)
+
+    manager = DatabaseManager()
+    try:
+        manager._resolve_credentials()  # fail fast with a clear message if unconfigured
+    except DatabaseNotConfiguredError as error:
+        pytest.skip(f"DB not configured: {error}")
+    yield manager
 
 
 def pytest_configure(config):

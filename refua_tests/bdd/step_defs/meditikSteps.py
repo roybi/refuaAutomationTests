@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import allure
 import pytest
 from pytest_bdd import given, parsers, then, when
 
@@ -77,6 +78,7 @@ def bdd_context():
 
 
 @given(parsers.parse('an authenticated "{application}" application user is on the home page'))
+@allure.step("Given an authenticated application user is on the home page")
 def authenticated_user_is_home(application, browser_page, bdd_context):
     if application != "meditik":
         pytest.skip(f"No BDD adapter is implemented yet for application: {application}")
@@ -102,37 +104,44 @@ def _form_for_path(context, form_path):
 
 
 @then("the Meditik home widgets are displayed")
+@allure.step("Then the Meditik home widgets are displayed")
 def home_widgets_are_displayed(bdd_context):
     MeditekHomePage(_page(bdd_context)).assert_widgets_present()
 
 
 @then("the Meditik home speed dial provides its actions")
+@allure.step("Then the Meditik home speed dial provides its actions")
 def home_speed_dial_actions_are_available(bdd_context):
     MeditekHomePage(_page(bdd_context)).assert_speed_dial_actions()
 
 
 @when("the user opens the doctor request call to action")
+@allure.step("When the user opens the doctor request call to action")
 def open_doctor_request_cta(bdd_context):
     MeditekHomePage(_page(bdd_context)).assert_send_doctor_request_cta()
 
 
 @then("the All Actions page is displayed")
+@allure.step("Then the All Actions page is displayed")
 def all_actions_page_is_displayed(bdd_context):
     assert "/all-actions" in _page(bdd_context).url
 
 
 @then("the last update timestamp is displayed")
+@allure.step("Then the last update timestamp is displayed")
 def last_update_timestamp_is_displayed(bdd_context):
     MeditekHomePage(_page(bdd_context)).assert_last_update_time()
 
 
 @when(parsers.parse('the user opens the "{widget}" home widget'))
+@allure.step("When the user opens a home widget")
 def open_home_widget(widget, bdd_context):
     test_id = HOME_WIDGETS[widget]
     MeditekHomePage(_page(bdd_context)).open_widget(test_id)
 
 
 @then(parsers.parse('the browser is on "{path}"'))
+@allure.step("Then the browser is on the expected path")
 def browser_is_on_path(path, bdd_context):
     page = _page(bdd_context)
     page.wait_for_url(f"**{path}**", timeout=60000)
@@ -140,6 +149,7 @@ def browser_is_on_path(path, bdd_context):
 
 
 @when(parsers.parse('the user opens the Meditik content page "{path}"'))
+@allure.step("When the user opens a Meditik content page")
 def open_meditik_content_page(path, bdd_context):
     page = _page(bdd_context)
     shell = MeditekBasePage(page)
@@ -153,6 +163,7 @@ def open_meditik_content_page(path, bdd_context):
 
 
 @then("that page provides the expected speed-dial actions")
+@allure.step("Then that page provides the expected speed-dial actions")
 def content_page_speed_dial_actions_are_available(bdd_context):
     page = _page(bdd_context)
     path = bdd_context["content_path"]
@@ -163,6 +174,7 @@ def content_page_speed_dial_actions_are_available(bdd_context):
 
 
 @when(parsers.parse('the user opens the "{destination}" Meditik side-menu destination'))
+@allure.step("When the user opens a Meditik side-menu destination")
 def open_menu_destination(destination, bdd_context):
     assert destination in MENU_DESTINATIONS, f"Unknown Meditik destination: {destination}"
     MENU_DESTINATIONS[destination](_page(bdd_context))
@@ -170,51 +182,61 @@ def open_menu_destination(destination, bdd_context):
 
 
 @then(parsers.parse('the "{destination}" Meditik destination content is loaded'))
+@allure.step("Then the Meditik destination content is loaded")
 def menu_destination_content_is_loaded(destination, bdd_context):
     assert bdd_context["destination"] == destination
 
 
 @when(parsers.parse('the user opens the "{form_path}" request form from All Actions'))
+@allure.step("When the user opens a request form from All Actions")
 def open_request_form(form_path, bdd_context):
     _form_for_path(bdd_context, form_path).open_from_all_actions(session_ready=True)
 
 
 @then("the request form is loaded")
+@allure.step("Then the request form is loaded")
 def request_form_is_loaded(bdd_context):
     bdd_context["form"].assert_form_loaded()
 
 
 @then("all required request form controls are visible")
+@allure.step("Then all required request form controls are visible")
 def request_form_controls_are_visible(bdd_context):
     bdd_context["form"].assert_required_controls_visible()
 
 
 @then("non-submit request form controls are interactive")
+@allure.step("Then non-submit request form controls are interactive")
 def request_form_controls_are_interactive(bdd_context):
     bdd_context["form"].assert_input_controls_interactive()
 
 
 @then("all required request form content is displayed")
+@allure.step("Then all required request form content is displayed")
 def request_form_content_is_displayed(bdd_context):
     bdd_context["form"].assert_required_content_present()
 
 
 @then("the request form accepts a valid phone number")
+@allure.step("Then the request form accepts a valid phone number")
 def request_form_accepts_valid_phone(bdd_context):
     bdd_context["form"].assert_valid_phone_input()
 
 
 @then("the request form rejects an invalid phone number")
+@allure.step("Then the request form rejects an invalid phone number")
 def request_form_rejects_invalid_phone(bdd_context):
     bdd_context["form"].assert_invalid_phone_input()
 
 
 @then("the request form additional controls are usable")
+@allure.step("Then the request form additional controls are usable")
 def request_form_extra_controls_are_usable(bdd_context):
     bdd_context["form"].assert_extra_controls_are_usable()
 
 
 @when("the user opens Urgent Care from All Actions")
+@allure.step("When the user opens Urgent Care from All Actions")
 def open_urgent_care_from_all_actions(bdd_context):
     page = _page(bdd_context)
     shell = MeditekBasePage(page)
@@ -228,6 +250,7 @@ def open_urgent_care_from_all_actions(bdd_context):
 
 
 @then("the Urgent Care page is loaded")
+@allure.step("Then the Urgent Care page is loaded")
 def urgent_care_page_is_loaded(bdd_context):
     page = _page(bdd_context)
     assert "/urgent-care" in page.url
