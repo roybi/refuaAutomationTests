@@ -2,8 +2,8 @@
 
 import pytest
 
-from refua_tests.tests.conftest import (auth_state_session,  # noqa: F401
-                                        browser_page)
+from refua_tests.tests.conftest import (app_session,  # noqa: F401
+                                        auth_state_session, browser_page)
 
 
 def _bdd_trace(request):

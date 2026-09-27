@@ -17,11 +17,7 @@ Run:
     pytest refua_tests/tests/meditikRequestFormsSanity.py -v
 """
 
-import json
-
 import pytest
-from playwright.sync_api import sync_playwright
-from refua_core.config.environment import get_env_manager
 
 from refua_tests.pages.automationIds import MeditikIds as Ids
 from refua_tests.pages.common.popUpInfo import PopUpInfo
@@ -36,34 +32,13 @@ SPECIAL_REQUEST_FORMS = tuple(
 
 
 @pytest.fixture(scope="class")
-def forms_page(auth_state_session, request):
-    # One browser context shared across the whole class — login cost is paid only once.
-    with auth_state_session.open("r", encoding="utf-8") as auth_state:
-        session_data = json.load(auth_state)
-    # Unwrap "storage_state" so Playwright sees the cookies and MSAL tokens directly.
-    storage_state = session_data.get("storage_state", session_data)
-
-    env_mgr = get_env_manager()
-    browser_name = env_mgr.get_browser_type()
-    headless = bool(request.config.getoption("--headless", default=False))
-
-    with sync_playwright() as playwright:
-        browser = getattr(playwright, browser_name).launch(headless=headless)
-        context = browser.new_context(
-            storage_state=storage_state,
-            locale="he-IL",
-            timezone_id="Asia/Jerusalem",
-        )
-        page = context.new_page()
-        # Same as menu suite: install before any navigation.
-        PopUpInfo.install_auto_dismiss(page)
-        shell = MeditekBasePage(page)
-        shell.open_home()
-        shell.ensure_logged_in()
-        shell.dismiss_blocking_dialogs()
-        yield page
-        context.close()
-        browser.close()
+def forms_page(app_session):
+    page = app_session.ensure_page()
+    shell = MeditekBasePage(page)
+    shell.open_home()
+    shell.ensure_logged_in()
+    shell.dismiss_blocking_dialogs()
+    yield page
 
 
 @pytest.fixture(autouse=True)

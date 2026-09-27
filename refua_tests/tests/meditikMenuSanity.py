@@ -17,11 +17,7 @@ Run:
     pytest refua_tests/tests/meditikMenuSanity.py -v
 """
 
-import json
-
 import pytest
-from playwright.sync_api import sync_playwright
-from refua_core.config.environment import get_env_manager
 
 from refua_tests.pages.allActionsPage import AllActionsPage
 from refua_tests.pages.common.popUpInfo import PopUpInfo
@@ -37,37 +33,14 @@ from refua_tests.pages.myRequestsPage import MyRequestsPage
 
 
 @pytest.fixture(scope="class")
-def menu_sanity_page(auth_state_session, request):
-    """One Chromium context for the whole menu-sanity class."""
-    # scope="class" means one browser/context is shared across all 14 tests — faster than opening a new browser per test.
-    with auth_state_session.open("r", encoding="utf-8") as auth_state:
-        session_data = json.load(auth_state)
-    # The session file wraps Playwright's storage under "storage_state"; unwrap so cookies/MSAL tokens load correctly.
-    storage_state = session_data.get("storage_state", session_data)
-
-    env_mgr = get_env_manager()
-    browser_name = env_mgr.get_browser_type()
-    headless = bool(request.config.getoption("--headless", default=False))
-
-    with sync_playwright() as playwright:
-        browser = getattr(playwright, browser_name).launch(headless=headless)
-        context = browser.new_context(
-            storage_state=storage_state,
-            locale="he-IL",       # ensures Hebrew RTL layout matches production
-            timezone_id="Asia/Jerusalem",
-        )
-        page = context.new_page()
-        # Install before any navigation so the PWA install banner is dismissed automatically.
-        PopUpInfo.install_auto_dismiss(page)
-        shell = MeditekBasePage(page)
-        shell.open_home()
-        shell.ensure_logged_in()  # verifies MSAL tokens worked; triggers re-login if the session expired
-        shell.dismiss_blocking_dialogs()
-
-        yield page
-
-        context.close()
-        browser.close()
+def menu_sanity_page(app_session):
+    """The run's shared tab, opened on the authenticated home page for the menu-sanity class."""
+    page = app_session.ensure_page()
+    shell = MeditekBasePage(page)
+    shell.open_home()
+    shell.ensure_logged_in()
+    shell.dismiss_blocking_dialogs()
+    yield page
 
 
 @pytest.fixture(autouse=True)

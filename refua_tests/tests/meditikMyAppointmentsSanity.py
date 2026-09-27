@@ -19,11 +19,7 @@ Run:
     pytest refua_tests/tests/meditikMyAppointmentsSanity.py -v
 """
 
-import json
-
 import pytest
-from playwright.sync_api import sync_playwright
-from refua_core.config.environment import get_env_manager
 
 from refua_tests.pages.common.popUpInfo import PopUpInfo
 from refua_tests.pages.meditikBasePage import MeditekBasePage
@@ -32,32 +28,13 @@ from refua_tests.pages.myAppointmentsTabbedPage import (DEFAULT_TAB_KEY,
 
 
 @pytest.fixture(scope="class")
-def my_appointments_page(auth_state_session, request):
-    # One browser context shared across the class — avoids re-login per test.
-    with auth_state_session.open("r", encoding="utf-8") as auth_state:
-        session_data = json.load(auth_state)
-    storage_state = session_data.get("storage_state", session_data)
-
-    env_mgr = get_env_manager()
-    browser_name = env_mgr.get_browser_type()
-    headless = bool(request.config.getoption("--headless", default=False))
-
-    with sync_playwright() as playwright:
-        browser = getattr(playwright, browser_name).launch(headless=headless)
-        context = browser.new_context(
-            storage_state=storage_state,
-            locale="he-IL",
-            timezone_id="Asia/Jerusalem",
-        )
-        page = context.new_page()
-        PopUpInfo.install_auto_dismiss(page)
-        shell = MeditekBasePage(page)
-        shell.open_home()
-        shell.ensure_logged_in()
-        shell.dismiss_blocking_dialogs()
-        yield page
-        context.close()
-        browser.close()
+def my_appointments_page(app_session):
+    page = app_session.ensure_page()
+    shell = MeditekBasePage(page)
+    shell.open_home()
+    shell.ensure_logged_in()
+    shell.dismiss_blocking_dialogs()
+    yield page
 
 
 @pytest.fixture(autouse=True)

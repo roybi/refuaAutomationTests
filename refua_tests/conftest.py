@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session", autouse=True)
-def meditik_seed_session():
+def meditik_seed_session(auth_state_session):
     """BEFORE ALL: seed 3 requests of every Meditik request type. AFTER ALL: cleanup per MEDITIK_SEED_CLEANUP.
 
     Per execution: --personal-number 4444410 (or TEST_PERSONAL_NUMBER); it must match
