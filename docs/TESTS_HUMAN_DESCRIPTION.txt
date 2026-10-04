@@ -4,9 +4,9 @@ MEDITEK AUTOMATION TESTS - HUMAN DESCRIPTION
 Purpose
 -------
 This document explains in human words what each automated test checks.
-The tests use a saved authenticated browser session, open the MEDITEK web
-application in Chromium, perform the user flow, and verify that the expected
-screen or control is present.
+The tests log in once per run (automation login with --personal-number, or a
+saved authenticated session), open the MEDITEK web application in Chromium,
+perform the user flow, and verify that the expected screen or control is present.
 
 The tests do not submit medical requests or change patient data. Request-form
 tests only open the form and verify its structure.
@@ -17,12 +17,16 @@ Test suites
 - meditikMenuSanity.py: navigation from the side menu.
 - meditikRequestFormsSanity.py: request forms opened from the All Actions page.
 
+The workbook-driven suites (My Requests, My Appointments, Scheduling, Referrals,
+New Referral, Medicines, Sick Days, Vaccinations, Medical Profile, Visit
+Summaries) are described case by case in docs/setup/<MODULE>_CASES.json and
+mapped to tests in docs/setup/TEST_CASE_TRACKER.csv.
+
 Common behavior
 ---------------
-- A class fixture opens one browser context and reuses it for the tests in that
-  class.
-- The saved authentication state avoids repeating Microsoft login and 2FA for
-  every test.
+- One browser and one authenticated tab are shared by the whole run; class
+  fixtures reuse that tab.
+- Login happens once, so Microsoft login and 2FA are never repeated per test.
 - Overlays and blocking dialogs are dismissed before the main check.
 - After a test, the browser is returned to Home or All Actions so the next test
   starts from a known location.

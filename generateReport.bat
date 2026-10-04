@@ -18,8 +18,8 @@ if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Report generation failed
     echo.
     echo Alternative methods:
-    echo   1. python -m refua_tests.reports.generate_report
-    echo   2. python -m refua_tests.reports.serve_allure
+    echo   1. python -m refua_tests.reports.generateReport
+    echo   2. python -m refua_tests.reports.serveAllure
     echo.
     pause
 )

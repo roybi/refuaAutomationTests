@@ -232,7 +232,7 @@ TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure/results -v
 - Document test procedures
 
 **Key Files to Review**:
-- `ARCHITECTURE.md` - Test structure and patterns
+- `docs/architecture/ARCHITECTURE.md` - Test structure and patterns
 - `refua_tests/tests/conftest.py` - Shared fixtures
 - `refua_tests/fixtures/test_data.py` - Data strategies
 - `pytest.ini` - Configuration and markers
@@ -511,7 +511,7 @@ python -m refua_core.scripts.capture_session --env test --user your_name
 
 ## Documentation
 
-- **Detailed Architecture**: See `ARCHITECTURE.md`
+- **Detailed Architecture**: See `docs/architecture/ARCHITECTURE.md`
 - **Framework Documentation**: See `refuaAutomationCore/ARCHITECTURE.md`
 - **Framework API**: See `refuaAutomationCore/CLAUDE.md`
 - **Quick Reference**: See `refuaAutomationCore/PARAMETER_GUIDE.md`
@@ -528,6 +528,6 @@ python -m refua_core.scripts.capture_session --env test --user your_name
 ---
 
 **Questions?** Refer to:
-- `ARCHITECTURE.md` - Test structure and patterns
+- `docs/architecture/ARCHITECTURE.md` - Test structure and patterns
 - `README.md` - Quick start guide
 - Framework repo `CLAUDE.md` - Framework documentation

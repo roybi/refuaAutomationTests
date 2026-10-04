@@ -1,524 +1,56 @@
-# Authentication State Setup Guide
+# Authentication Setup
 
-**Comprehensive Guide for 2FA Authentication Bypass using JSON State Files**
+The suite supports two authentication modes, chosen by `TEST_AUTH_METHOD`. Both are handled by the `auth_state_session` fixture in `refua_tests/tests/conftest.py`, and both feed a single shared browser tab (`app_session`) used by pytest and BDD tests alike.
 
----
+| | `automation` | `session_state` (default) |
+|---|---|---|
+| Environments | TEST only | test / preprod / prod |
+| How | Opens `/automation/login/:personalNumber` once per run | Injects a captured Playwright storage state (cookies + MSAL tokens) |
+| Needs | `--personal-number` (or `TEST_PERSONAL_NUMBER`), `AUTOMATION_SECRET` | A valid session file, or a manual login + 2FA |
+| 2FA | Not involved | Once per capture |
 
-## Overview
+## Automation login (recommended on TEST)
 
-This guide explains how to configure and use authentication state JSON files for 2FA bypass across different environments (test, preprod, production) and deployment scenarios (local development, Docker, CI/CD).
-
-## Quick Setup
-
-### 1. Place Your Auth State Files
-
-Organize your authentication state files in the following structure:
-
-```
-C:\_Dev\python\skipp_2FA_auth\
-└── auth_states\
-    ├── auth_state_test_chromium_latest.json
-    ├── auth_state_test_firefox_latest.json
-    ├── auth_state_test_webkit_latest.json
-    ├── auth_state_preprod_chromium_latest.json
-    ├── auth_state_preprod_firefox_latest.json
-    ├── auth_state_preprod_webkit_latest.json
-    ├── auth_state_prod_chromium_latest.json
-    ├── auth_state_prod_firefox_latest.json
-    └── auth_state_prod_webkit_latest.json
+```powershell
+$env:TEST_ENV = "test"
+venv\Scripts\pytest.exe --personal-number <approved digits>
 ```
 
-### 2. Configure Environment Variables
+- `--personal-number` (root `conftest.py`) sets `TEST_PERSONAL_NUMBER` and defaults `TEST_AUTH_METHOD=automation`.
+- The same personal number is the DB seed user (see [ARCHITECTURE.md](../architecture/ARCHITECTURE.md#meditik-db-seeding)).
+- `AUTOMATION_SECRET` comes from `.env.test` (resolved by the framework's `EnvironmentManager`).
+- Before any test: the environment health check runs, the number must be ASCII digits, and the secret must exist - otherwise the run exits immediately.
+- The login must land on `/home` with `meditik-home-page` visible within 60s.
+- The session lives only in the loaded app tab, so tests navigate in-app (history navigation) instead of opening new pages.
 
-Update your `.env.*` files with the auth state file paths:
+## Captured session
 
-**`.env.test`:**
-```bash
-TEST_AUTH_STATE_FILE=C:\_Dev\python\skipp_2FA_auth\auth_states\auth_state_test_chromium_latest.json
+```dotenv
+# .env.test
+TEST_AUTH_METHOD=session_state
+TEST_AUTH_STATE_FILE=~/.refua_sessions/auth_state_meditek_test_chromium_latest.json   # default; ~ and $VARS expand
+AUTH_CHECK_HEADLESS=false   # true for CI/background validation
 ```
 
-**`.env.preprod`:**
-```bash
-PREPROD_AUTH_STATE_FILE=C:\_Dev\python\skipp_2FA_auth\auth_states\auth_state_preprod_chromium_latest.json
+Before all tests the file is validated: exists, parses, not expired, captured on the app host, and a live check confirms it bypasses 2FA. If invalid, `..\refuaAutomationCore\scripts\capture_session.py` runs (manual login + Authenticator approval) and the file is re-validated. After all tests a warning is printed if the session expired mid-run.
+
+Capture manually:
+
+```powershell
+cd ..\refuaAutomationCore
+..\refuaAutomationTests\venv\Scripts\python.exe scripts\capture_session.py --env test --app meditek --browser chromium
 ```
 
-**`.env.prod`:**
-```bash
-PROD_AUTH_STATE_FILE=C:\_Dev\python\skipp_2FA_auth\auth_states\auth_state_prod_chromium_latest.json
-```
-
-### 3. Run Tests
-
-Tests will automatically use the configured auth state files:
-
-```bash
-# Test environment
-TEST_ENV=test pytest refua_tests/tests/ -v
-
-# Preprod environment
-TEST_ENV=preprod pytest refua_tests/tests/ -v
-
-# Production environment (read-only)
-TEST_ENV=prod pytest refua_tests/tests/ -m smoke -v
-```
-
----
-
-## Environment Variable Configuration
-
-### Priority Order
-
-The framework resolves auth state files using this priority:
-
-1. **{ENV}_AUTH_STATE_FILE** - Specific auth state file for environment
-   ```bash
-   TEST_AUTH_STATE_FILE=/path/to/auth_state_test_chromium.json
-   ```
-
-2. **{ENV}_AUTH_STATE_{BROWSER}** - Browser-specific auth state file
-   ```bash
-   TEST_AUTH_STATE_CHROMIUM=/path/to/auth_state_test_chromium.json
-   TEST_AUTH_STATE_FIREFOX=/path/to/auth_state_test_firefox.json
-   ```
-
-3. **Default** - Uses session directory (fallback)
-   ```bash
-   # ~/.refua_sessions/auth_state_test_chromium_latest.json
-   ```
-
-### Variable Naming Convention
-
-For each environment, use these variable names:
-
-| Environment | Variable | Example |
-|-------------|----------|---------|
-| **test** | `TEST_AUTH_STATE_FILE` | `TEST_AUTH_STATE_FILE=C:\auth_states\auth_state_test_chromium.json` |
-| **preprod** | `PREPROD_AUTH_STATE_FILE` | `PREPROD_AUTH_STATE_FILE=C:\auth_states\auth_state_preprod_chromium.json` |
-| **prod** | `PROD_AUTH_STATE_FILE` | `PROD_AUTH_STATE_FILE=C:\auth_states\auth_state_prod_chromium.json` |
-
-### Path Expansion
-
-The framework supports path expansion features:
-
-#### Home Directory Expansion
-```bash
-# Expands ~ to user's home directory
-TEST_AUTH_STATE_FILE=~/auth_states/auth_state_test_chromium_latest.json
-```
-
-#### Environment Variable Substitution
-```bash
-# Uses environment variable substitution
-TEST_AUTH_STATE_FILE=${AUTH_STATES_DIR}/auth_state_test_chromium_latest.json
-TEST_AUTH_STATE_FILE=$AUTH_STATES_DIR/auth_state_test_chromium_latest.json
-```
-
-#### Absolute Paths
-```bash
-# Windows
-TEST_AUTH_STATE_FILE=C:\_Dev\python\skipp_2FA_auth\auth_states\auth_state_test_chromium_latest.json
-
-# Linux/Mac
-TEST_AUTH_STATE_FILE=/opt/auth_states/auth_state_test_chromium_latest.json
-```
-
----
-
-## Docker Setup
-
-### Using Environment Variables in Docker
-
-For Docker deployments, use environment variable substitution:
-
-**docker-compose.yml:**
-```yaml
-version: '3.8'
-
-services:
-  test-runner:
-    image: test-automation:latest
-    environment:
-      TEST_ENV: test
-      AUTH_STATES_DIR: /app/auth_states
-      TEST_AUTH_STATE_FILE: ${AUTH_STATES_DIR}/auth_state_test_chromium_latest.json
-      PREPROD_AUTH_STATE_FILE: ${AUTH_STATES_DIR}/auth_state_preprod_chromium_latest.json
-      PROD_AUTH_STATE_FILE: ${AUTH_STATES_DIR}/auth_state_prod_chromium_latest.json
-    volumes:
-      - ./auth_states:/app/auth_states:ro
-      - ./tests:/app/tests
-```
-
-**Dockerfile:**
-```dockerfile
-FROM python:3.12-slim
-
-WORKDIR /app
-
-# Install dependencies
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-# Copy test code
-COPY refua_tests/ refua_tests/
-COPY pytest.ini .
-COPY .env.test .
-
-# Default environment
-ENV TEST_ENV=test
-ENV AUTH_STATES_DIR=/app/auth_states
-
-# Run tests
-CMD ["pytest", "refua_tests/tests/", "-v", "--tb=short"]
-```
-
-### Docker Path Examples
-
-In Docker containers, use `/app/` or `/workspace/` paths:
-
-**docker-compose.yml (alternative):**
-```yaml
-services:
-  test-runner:
-    image: test-automation:latest
-    environment:
-      TEST_ENV: test
-      TEST_AUTH_STATE_FILE: /app/auth_states/auth_state_test_chromium_latest.json
-      PREPROD_AUTH_STATE_FILE: /app/auth_states/auth_state_preprod_chromium_latest.json
-      PROD_AUTH_STATE_FILE: /app/auth_states/auth_state_prod_chromium_latest.json
-    volumes:
-      - ./auth_states:/app/auth_states:ro
-```
-
----
-
-## Local Development Setup
-
-### Windows Development
-
-**Create `.env.local.test` for local overrides:**
-```bash
-# Local auth states (Windows path)
-TEST_AUTH_STATE_FILE=C:\_Dev\python\skipp_2FA_auth\auth_states\auth_state_test_chromium_latest.json
-
-# Or use home directory expansion
-# TEST_AUTH_STATE_FILE=~/skipp_2FA_auth/auth_states/auth_state_test_chromium_latest.json
-```
-
-**Run tests:**
-```bash
-TEST_ENV=test pytest refua_tests/tests/ -v
-```
-
-### Linux/Mac Development
-
-**Create `.env.local.test` for local overrides:**
-```bash
-# Local auth states (Linux/Mac path)
-TEST_AUTH_STATE_FILE=/opt/auth_states/auth_state_test_chromium_latest.json
-
-# Or use home directory expansion
-TEST_AUTH_STATE_FILE=~/auth_states/auth_state_test_chromium_latest.json
-```
-
-**Run tests:**
-```bash
-TEST_ENV=test pytest refua_tests/tests/ -v
-```
-
----
-
-## Browser-Specific Auth States
-
-### Using Different Browsers
-
-If you have browser-specific auth state files, configure them separately:
-
-**.env.test:**
-```bash
-# General auth state (used by default)
-TEST_AUTH_STATE_FILE=C:\auth_states\auth_state_test_chromium_latest.json
-
-# Browser-specific overrides
-TEST_AUTH_STATE_CHROMIUM=C:\auth_states\auth_state_test_chromium_latest.json
-TEST_AUTH_STATE_FIREFOX=C:\auth_states\auth_state_test_firefox_latest.json
-TEST_AUTH_STATE_WEBKIT=C:\auth_states\auth_state_test_webkit_latest.json
-```
-
-### Running Tests with Different Browsers
-
-```bash
-# Run with Chromium (default)
-TEST_ENV=test pytest refua_tests/tests/ -v
-
-# Run with Firefox
-TEST_ENV=test BROWSER=firefox pytest refua_tests/tests/ -v
-
-# Run with WebKit
-TEST_ENV=test BROWSER=webkit pytest refua_tests/tests/ -v
-```
-
----
-
-## Auth State File Format
-
-The auth state JSON file contains Playwright storage state with cookies and localStorage:
-
-```json
-{
-  "cookies": [
-    {
-      "name": "session_id",
-      "value": "abc123...",
-      "domain": ".meditik.app",
-      "path": "/",
-      "expires": 1735689600,
-      "httpOnly": true,
-      "secure": true,
-      "sameSite": "Strict"
-    }
-  ],
-  "origins": [
-    {
-      "origin": "https://meditik.app",
-      "localStorage": [
-        {
-          "name": "auth_token",
-          "value": "eyJhbGciOiJIUzI1NiIs..."
-        },
-        {
-          "name": "user_id",
-          "value": "user123"
-        }
-      ]
-    }
-  ],
-  "metadata": {
-    "captured_at": "2025-01-15T10:30:00Z",
-    "expires_at": "2025-01-22T10:30:00Z",
-    "environment": "test",
-    "browser": "chromium"
-  }
-}
-```
-
-### Capturing New Auth State Files
-
-Use the session capture script:
-
-```bash
-# For test environment
-python -m refua_core.scripts.capture_session --env test --user john.doe --browser chromium
-
-# For preprod environment
-python -m refua_core.scripts.capture_session --env preprod --user qa_user --browser chromium
-
-# For production environment (read-only)
-python -m refua_core.scripts.capture_session --env prod --user readonly_user --browser chromium
-```
-
----
-
-## CI/CD Integration
-
-### GitHub Actions
-
-**.github/workflows/test.yml:**
-```yaml
-name: Run Tests
-
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          playwright install
-
-      - name: Download auth states from secret
-        env:
-          AUTH_STATES: ${{ secrets.AUTH_STATES_JSON }}
-        run: |
-          mkdir -p auth_states
-          echo "$AUTH_STATES" | base64 -d > auth_states/auth_state_test_chromium_latest.json
-
-      - name: Run tests
-        env:
-          TEST_ENV: test
-          TEST_AUTH_STATE_FILE: auth_states/auth_state_test_chromium_latest.json
-        run: pytest refua_tests/tests/ -v --tb=short
-
-      - name: Upload artifacts
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: test-artifacts
-          path: test-artifacts/
-```
-
-### GitLab CI
-
-**.gitlab-ci.yml:**
-```yaml
-test:
-  image: python:3.12
-  script:
-    - pip install -r requirements.txt
-    - playwright install
-    - mkdir -p auth_states
-    - echo "$AUTH_STATE_TEST" | base64 -d > auth_states/auth_state_test_chromium_latest.json
-    - TEST_ENV=test TEST_AUTH_STATE_FILE=auth_states/auth_state_test_chromium_latest.json pytest refua_tests/tests/ -v
-  variables:
-    AUTH_STATE_TEST: $AUTH_STATE_TEST_B64  # Base64-encoded auth state file
-  artifacts:
-    paths:
-      - test-artifacts/
-    when: always
-```
-
----
+Sessions expire after a few days; the default output is `~\.refua_sessions\auth_state_meditek_<env>_<browser>_latest.json`.
 
 ## Troubleshooting
 
-### Auth State File Not Found
-
-**Error:** `SessionFileNotFoundError: Session file not found`
-
-**Solution:**
-1. Verify the file path is correct: `TEST_AUTH_STATE_FILE=<path>`
-2. Check file exists: `ls -la /path/to/auth_state_test_chromium_latest.json`
-3. Verify environment variable is set: `echo $TEST_AUTH_STATE_FILE`
-
-### Auth State File Expired
-
-**Error:** `SessionExpiredError: Session expired at...`
-
-**Solution:**
-1. Re-capture the auth state file:
-   ```bash
-   python -m refua_core.scripts.capture_session --env test --user your_name
-   ```
-2. Update the auth state file in the configured location
-
-### Path Expansion Issues
-
-**Error:** `FileNotFoundError: [Errno 2] No such file or directory`
-
-**Solution:**
-1. Use absolute paths instead of environment variables for debugging
-2. Test path expansion: `echo $AUTH_STATES_DIR`
-3. Verify directory permissions: `ls -ld /path/to/auth_states`
-
-### Docker Mount Issues
-
-**Error:** `Permission denied` or `No such file or directory`
-
-**Solution:**
-1. Check volume mounts in docker-compose.yml
-2. Verify auth_states directory exists locally
-3. Check file permissions: `chmod 644 auth_states/*.json`
-4. Use absolute paths in Docker: `/app/auth_states/...`
-
----
-
-## Best Practices
-
-### Security
-
-- ✅ Store auth state files outside the project
-- ✅ Add auth_states directory to `.gitignore`
-- ✅ Use environment variables for sensitive paths
-- ✅ Restrict file permissions: `chmod 600 auth_state_*.json`
-- ✅ Use read-only volume mounts in Docker: `:ro`
-- ✅ Store auth states in CI/CD secrets, not in code
-
-### Organization
-
-- ✅ Separate auth state files per environment
-- ✅ Use consistent naming: `auth_state_{env}_{browser}_latest.json`
-- ✅ Document auth state locations in team wiki
-- ✅ Keep auth states updated (check expiration dates)
-- ✅ Use relative paths where possible
-- ✅ Document Docker paths in README
-
-### Maintenance
-
-- ✅ Capture new auth states before they expire
-- ✅ Monitor session TTL in logs
-- ✅ Re-capture if authentication requirements change
-- ✅ Version auth state files if needed
-- ✅ Test auth states locally before deployment
-- ✅ Alert team when auth states are refreshed
-
----
-
-## Examples
-
-### Example 1: Local Development (Windows)
-
-**`.env.test`:**
-```bash
-TEST_BASE_URL=https://test.meditik.app
-TEST_API_ENDPOINT=https://api-test.meditik.app
-TEST_AUTH_STATE_FILE=C:\Users\YourName\auth_states\auth_state_test_chromium_latest.json
-TEST_SKIP_2FA=true
-```
-
-**Run command:**
-```bash
-TEST_ENV=test pytest refua_tests/tests/ -v
-```
-
-### Example 2: Docker Deployment
-
-**docker-compose.yml:**
-```yaml
-services:
-  tests:
-    build: .
-    environment:
-      TEST_ENV: test
-      TEST_AUTH_STATE_FILE: /app/auth_states/auth_state_test_chromium_latest.json
-    volumes:
-      - /path/to/local/auth_states:/app/auth_states:ro
-```
-
-**Run:**
-```bash
-docker-compose up tests
-```
-
-### Example 3: CI/CD Pipeline
-
-**GitHub Actions:**
-```bash
-- name: Run tests with auth state
-  env:
-    TEST_ENV: test
-    TEST_AUTH_STATE_FILE: /tmp/auth_states/auth_state_test_chromium_latest.json
-  run: |
-    mkdir -p /tmp/auth_states
-    # Load auth state from CI/CD secret
-    echo "${{ secrets.AUTH_STATE_TEST }}" > /tmp/auth_states/auth_state_test_chromium_latest.json
-    pytest refua_tests/tests/ -v
-```
-
----
-
-## See Also
-
-- Framework Documentation: `refuaAutomationCore/ARCHITECTURE.md`
-- Test Architecture: `ARCHITECTURE.md`
-- Test Guide: `CLAUDE.md`
-- Framework API: `refuaAutomationCore/CLAUDE.md`
-
----
-
-**Questions?** Refer to the complete framework documentation in refuaAutomationCore repository.
+| Message | Cause / fix |
+|---|---|
+| `TEST_AUTH_METHOD must be session_state or automation.` | Typo in the variable |
+| `Automation login is enabled only for TEST in this repository.` | Use `TEST_ENV=test` or switch to `session_state` |
+| `Set TEST_PERSONAL_NUMBER to the approved numeric TEST account.` | Pass `--personal-number <digits>` |
+| `AUTOMATION_SECRET is required for automation login.` | Add it to `.env.test` |
+| `TEST automation login did not establish a visible home dashboard` | Wrong number / secret, or app down - open the login URL manually |
+| `Auth state was captured, but it still redirects to Microsoft/2FA` | Captured session is not honoured by the app - use automation login |
+| `capture_session.py was not found` | `refuaAutomationCore` must be a sibling folder of this repo |
