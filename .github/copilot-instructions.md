@@ -24,4 +24,4 @@ This repository is worked on by multiple LLM agents (GitHub Copilot and Claude C
 - **Run tests**: `TEST_ENV=test pytest refua_tests/tests/ -v`
 - **Commits**: `test: <description>` / `fix: <description>`; push after validated changes.
 
-Full details: see `CLAUDE.md` and `ARCHITECTURE.md` in the repo root.
+Full details: see `CLAUDE.md`, `README.md` and `docs/architecture/ARCHITECTURE.md`.

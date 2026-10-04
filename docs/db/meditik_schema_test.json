@@ -1,0 +1,6359 @@
+{
+  "server": {
+    "db": "meditik",
+    "usr": "meditikadmin",
+    "version": "16.8",
+    "port": 5432
+  },
+  "schemas": [
+    "public",
+    "history"
+  ],
+  "tables": {
+    "history.attachment": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('attachment_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "hatch_id",
+          "type": "uuid",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "hatch_name",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "state_change_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "attachment_state_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.attachment_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "hatch_upload_counter",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [],
+      "approx_rows": 1455
+    },
+    "history.attachment_state": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('attachment_state_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "comments",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.attachment_state_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": -1
+    },
+    "history.environment_variable": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "value",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.environment_variable_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 113
+    },
+    "history.er_facility": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('er_facility_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.er_facility_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 45
+    },
+    "history.er_referral_reason": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('er_referral_reason_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.er_referral_reason_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": -1
+    },
+    "history.er_referral_source": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('er_referral_source_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.er_referral_source_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": -1
+    },
+    "history.error_in_file": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('error_in_file_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "error_desc",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "error_code",
+          "type": "integer",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "sync_monitor_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.error_in_file_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [],
+      "approx_rows": -1
+    },
+    "history.external_json": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('history.external_json_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "json",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "message_sent_id",
+          "type": "integer",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "external_vendor_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "name": "FK_61660ee6eb73c66e9e17cd888ed",
+          "columns": [
+            "external_vendor_id"
+          ],
+          "ref_table": "public.external_vendor",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (external_vendor_id) REFERENCES external_vendor(id)"
+        },
+        {
+          "name": "FK_b07e6036400c5d251176f3b2572",
+          "columns": [
+            "message_sent_id"
+          ],
+          "ref_table": "public.message_sent",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (message_sent_id) REFERENCES message_sent(id)"
+        }
+      ],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [],
+      "approx_rows": -1
+    },
+    "history.external_vendor": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('history.external_vendor_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": -1
+    },
+    "history.feedback": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('feedback_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "grade",
+          "type": "numeric",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "text",
+          "type": "character varying",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.feedback_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [
+        "CHECK (((grade >= (1)::numeric) AND (grade <= (5)::numeric)))"
+      ],
+      "triggers": [],
+      "soft_delete_candidates": [],
+      "approx_rows": 97
+    },
+    "history.file_sync_monitor": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('file_sync_monitor_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "file_name",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "hatch_id",
+          "type": "uuid",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.file_sync_monitor_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "external_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.file_sync_monitor_external_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_to_red",
+          "type": "boolean",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_synced_to_red",
+          "type": "boolean",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_synced_to_altor",
+          "type": "boolean",
+          "nullable": false,
+          "default": "false",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "save_to_red_ack_name",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "sync_to_altor_ack_name",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [],
+      "approx_rows": 17548
+    },
+    "history.insoles_chain": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('insoles_chain_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.insoles_chain_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 6
+    },
+    "history.insoles_request": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('insoles_request_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "insoles_chain_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.insoles_request_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [],
+      "approx_rows": -1
+    },
+    "history.insoles_type": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('insoles_type_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.insoles_type_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 3
+    },
+    "history.message_sent": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('message_sent_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "json",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "patient_military_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "message_state_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "message_type_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.message_sent_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [],
+      "approx_rows": 69
+    },
+    "history.message_state": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('message_state_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.message_state_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": -1
+    },
+    "history.message_type": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('message_type_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "mh_format_id",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.message_type_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": -1
+    },
+    "history.optic_chain": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('optic_chain_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.optic_chain_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 13
+    },
+    "history.optic_request": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('optic_request_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "optic_chain_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.optic_request_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [],
+      "approx_rows": 545
+    },
+    "history.prescription_request": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('prescription_request_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "prescription_name",
+          "type": "character varying",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "prescription_type_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.prescription_request_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [],
+      "approx_rows": 2
+    },
+    "history.prescription_type": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('prescription_type_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.prescription_type_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": -1
+    },
+    "history.recommendation": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('recommendation_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "recommendation_id",
+          "type": "numeric",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "recommendation_icon",
+          "type": "text",
+          "nullable": false,
+          "default": "'DEFAULT-ICON.svg'::text",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.recommendation_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [],
+      "approx_rows": 16
+    },
+    "history.referral_request": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('referral_request_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "required_service",
+          "type": "character varying",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "referral_number",
+          "type": "integer",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "required_medical_facility",
+          "type": "character varying",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.referral_request_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [],
+      "approx_rows": 3
+    },
+    "history.request_error_in_file": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('request_error_in_file_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "error_desc",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "error_code",
+          "type": "integer",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "sync_monitor_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.request_error_in_file_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [],
+      "approx_rows": -1
+    },
+    "history.request_in_file": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('request_in_file_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "sync_monitor_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.request_in_file_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [],
+      "approx_rows": 3
+    },
+    "history.request_state": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('request_state_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "user_text",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "comments",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.request_state_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 17
+    },
+    "history.request_type": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('request_type_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "altor_code",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.request_type_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 19
+    },
+    "history.retroactive_commitment_request": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('retroactive_commitment_request_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "referral_number",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "visit_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "facility_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "referral_reason_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "referral_source_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.retroactive_commitment_request_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [],
+      "approx_rows": -1
+    },
+    "history.sick_days_request": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('sick_days_request_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "end_date",
+          "type": "date",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.sick_days_request_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [],
+      "approx_rows": -1
+    },
+    "history.system_message": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.system_message_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 11818
+    },
+    "history.user_request": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('user_request_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "patient_person_id",
+          "type": "character varying",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "patient_military_id",
+          "type": "integer",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_text",
+          "type": "character varying",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_xml",
+          "type": "xml",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_type_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_state_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "history_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('history.user_request_history_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "clinic_answer",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "answer_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "hatch_upload_counter",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "hatch_last_upload_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "history_id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [],
+      "approx_rows": 5198944
+    },
+    "public.action_in_menu": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('action_in_menu_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "order",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "event_name",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "icon",
+          "type": "text",
+          "nullable": false,
+          "default": "'icons/summary.svg'::text",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "action_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "menu_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "name": "FK_1ebc95e4f4eaea2765ac1b4158c",
+          "columns": [
+            "action_id"
+          ],
+          "ref_table": "public.menu_action",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (action_id) REFERENCES menu_action(id)"
+        },
+        {
+          "name": "FK_9d30716c903a120d2a9632023af",
+          "columns": [
+            "menu_id"
+          ],
+          "ref_table": "public.menu",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (menu_id) REFERENCES menu(id)"
+        }
+      ],
+      "unique": [
+        [
+          "order",
+          "menu_id"
+        ],
+        [
+          "action_id",
+          "menu_id"
+        ]
+      ],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER action_in_menu_update_metadata_fields BEFORE UPDATE ON public.action_in_menu FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 97
+    },
+    "public.announcement": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('announcement_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "announcement_title",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "announcement_text",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "path",
+          "type": "text",
+          "nullable": false,
+          "default": "'/'::text",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "end_date",
+          "type": "date",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_full_screen",
+          "type": "boolean",
+          "nullable": false,
+          "default": "false",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "cancel_text",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "cancel_link",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "confirm_text",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "confirm_link",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "relevent_service_types",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "icon",
+          "type": "text",
+          "nullable": false,
+          "default": "'logo192.svg'::text",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "display_order",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "celebration",
+          "type": "boolean",
+          "nullable": false,
+          "default": "false",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_show_once",
+          "type": "boolean",
+          "nullable": false,
+          "default": "false",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER announcement_update_metadata_fields BEFORE UPDATE ON public.announcement FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": -1
+    },
+    "public.attachment": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('attachment_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "hatch_id",
+          "type": "uuid",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "hatch_name",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "state_change_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "attachment_state_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "hatch_upload_counter",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "name": "FK_5ca1e8ff86024d14d1d4c64c2eb",
+          "columns": [
+            "attachment_state_id"
+          ],
+          "ref_table": "public.attachment_state",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (attachment_state_id) REFERENCES attachment_state(id)"
+        },
+        {
+          "name": "FK_7248eaf6d1b7e18a863b7e2c17e",
+          "columns": [
+            "request_id"
+          ],
+          "ref_table": "public.user_request",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (request_id) REFERENCES user_request(id)"
+        }
+      ],
+      "unique": [
+        [
+          "request_id"
+        ],
+        [
+          "hatch_id"
+        ]
+      ],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER attachment_history_trigger AFTER DELETE OR UPDATE ON public.attachment FOR EACH ROW EXECUTE FUNCTION insert_to_history('attachment')",
+        "CREATE TRIGGER attachment_update_metadata_fields BEFORE UPDATE ON public.attachment FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [],
+      "approx_rows": 1396
+    },
+    "public.attachment_state": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('attachment_state_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "comments",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER attachment_state_history_trigger AFTER DELETE OR UPDATE ON public.attachment_state FOR EACH ROW EXECUTE FUNCTION insert_to_history('attachment_state')",
+        "CREATE TRIGGER attachment_state_update_metadata_fields BEFORE UPDATE ON public.attachment_state FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 8
+    },
+    "public.dms_persistent_objects": {
+      "columns": [
+        {
+          "name": "table_name",
+          "type": "character varying",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "obj_name",
+          "type": "character varying",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "obj_type",
+          "type": "character",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_stmt",
+          "type": "character varying",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "task_id",
+          "type": "uuid",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [],
+      "approx_rows": -1
+    },
+    "public.dms_replication_progress": {
+      "columns": [
+        {
+          "name": "committed_lsn",
+          "type": "pg_lsn",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "update_time",
+          "type": "timestamp without time zone",
+          "nullable": true,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "task_id",
+          "type": "uuid",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER tg_maintain_dms_replication_progress_queue BEFORE INSERT ON public.dms_replication_progress FOR EACH ROW EXECUTE FUNCTION maintain_dms_replication_progress_queue()"
+      ],
+      "soft_delete_candidates": [],
+      "approx_rows": -1
+    },
+    "public.environment_variable": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('environment_variable_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "value",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [
+        [
+          "name"
+        ]
+      ],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER environment_variable_history_trigger AFTER DELETE OR UPDATE ON public.environment_variable FOR EACH ROW EXECUTE FUNCTION insert_to_history('environment_variable')",
+        "CREATE TRIGGER environment_variable_update_metadata_fields BEFORE UPDATE ON public.environment_variable FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 72
+    },
+    "public.er_facility": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('er_facility_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER er_facility_history_trigger AFTER DELETE OR UPDATE ON public.er_facility FOR EACH ROW EXECUTE FUNCTION insert_to_history('er_facility')",
+        "CREATE TRIGGER er_facility_update_metadata_fields BEFORE UPDATE ON public.er_facility FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 38
+    },
+    "public.er_referral_reason": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('er_referral_reason_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER er_referral_reason_history_trigger AFTER DELETE OR UPDATE ON public.er_referral_reason FOR EACH ROW EXECUTE FUNCTION insert_to_history('er_referral_reason')",
+        "CREATE TRIGGER er_referral_reason_update_metadata_fields BEFORE UPDATE ON public.er_referral_reason FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 19
+    },
+    "public.er_referral_source": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('er_referral_source_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER er_referral_source_history_trigger AFTER DELETE OR UPDATE ON public.er_referral_source FOR EACH ROW EXECUTE FUNCTION insert_to_history('er_referral_source')",
+        "CREATE TRIGGER er_referral_source_update_metadata_fields BEFORE UPDATE ON public.er_referral_source FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 3
+    },
+    "public.error_in_file": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('error_in_file_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "error_desc",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "error_code",
+          "type": "integer",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "sync_monitor_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "name": "FK_20052ee11445715e01330b93093",
+          "columns": [
+            "sync_monitor_id"
+          ],
+          "ref_table": "public.file_sync_monitor",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (sync_monitor_id) REFERENCES file_sync_monitor(id)"
+        }
+      ],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER error_in_file_history_trigger AFTER DELETE OR UPDATE ON public.error_in_file FOR EACH ROW EXECUTE FUNCTION insert_to_history('error_in_file')",
+        "CREATE TRIGGER error_in_file_update_metadata_fields BEFORE UPDATE ON public.error_in_file FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [],
+      "approx_rows": -1
+    },
+    "public.external_json": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('external_json_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "json",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "message_sent_id",
+          "type": "integer",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "external_vendor_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "name": "FK_61660ee6eb73c66e9e17cd888ed",
+          "columns": [
+            "external_vendor_id"
+          ],
+          "ref_table": "public.external_vendor",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (external_vendor_id) REFERENCES external_vendor(id)"
+        },
+        {
+          "name": "FK_b07e6036400c5d251176f3b2572",
+          "columns": [
+            "message_sent_id"
+          ],
+          "ref_table": "public.message_sent",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (message_sent_id) REFERENCES message_sent(id)"
+        }
+      ],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [],
+      "approx_rows": -1
+    },
+    "public.external_vendor": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('external_vendor_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": -1
+    },
+    "public.feedback": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('feedback_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "grade",
+          "type": "numeric",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "text",
+          "type": "character varying",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [
+        "CHECK (((grade >= (1)::numeric) AND (grade <= (5)::numeric)))"
+      ],
+      "triggers": [
+        "CREATE TRIGGER feedback_history_trigger AFTER DELETE OR UPDATE ON public.feedback FOR EACH ROW EXECUTE FUNCTION insert_to_history('feedback')",
+        "CREATE TRIGGER feedback_update_metadata_fields BEFORE UPDATE ON public.feedback FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [],
+      "approx_rows": 144
+    },
+    "public.file_sync_monitor": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('file_sync_monitor_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "file_name",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "hatch_id",
+          "type": "uuid",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "external_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('file_sync_monitor_external_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_to_red",
+          "type": "boolean",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_synced_to_red",
+          "type": "boolean",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_synced_to_altor",
+          "type": "boolean",
+          "nullable": false,
+          "default": "false",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "save_to_red_ack_name",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "sync_to_altor_ack_name",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [
+        [
+          "external_id"
+        ]
+      ],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER file_sync_monitor_history_trigger AFTER DELETE OR UPDATE ON public.file_sync_monitor FOR EACH ROW EXECUTE FUNCTION insert_to_history('file_sync_monitor')",
+        "CREATE TRIGGER file_sync_monitor_update_metadata_fields BEFORE UPDATE ON public.file_sync_monitor FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [],
+      "approx_rows": 690
+    },
+    "public.insoles_chain": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('insoles_chain_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER insoles_chain_history_trigger AFTER DELETE OR UPDATE ON public.insoles_chain FOR EACH ROW EXECUTE FUNCTION insert_to_history('insoles_chain')",
+        "CREATE TRIGGER insoles_chain_update_metadata_fields BEFORE UPDATE ON public.insoles_chain FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 2
+    },
+    "public.insoles_request": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('insoles_request_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "insoles_chain_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "name": "FK_bd1428ef3c7e12f8eea1685eaee",
+          "columns": [
+            "request_id"
+          ],
+          "ref_table": "public.user_request",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (request_id) REFERENCES user_request(id)"
+        },
+        {
+          "name": "FK_e3726b2e94bc27b0aa0ac280cfc",
+          "columns": [
+            "insoles_chain_id"
+          ],
+          "ref_table": "public.insoles_chain",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (insoles_chain_id) REFERENCES insoles_chain(id)"
+        }
+      ],
+      "unique": [
+        [
+          "request_id"
+        ]
+      ],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER insoles_request_history_trigger AFTER DELETE OR UPDATE ON public.insoles_request FOR EACH ROW EXECUTE FUNCTION insert_to_history('insoles_request')",
+        "CREATE TRIGGER insoles_request_update_metadata_fields BEFORE UPDATE ON public.insoles_request FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [],
+      "approx_rows": 235
+    },
+    "public.insoles_type": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('insoles_type_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER insoles_type_history_trigger AFTER DELETE OR UPDATE ON public.insoles_type FOR EACH ROW EXECUTE FUNCTION insert_to_history('insoles_type')",
+        "CREATE TRIGGER insoles_type_update_metadata_fields BEFORE UPDATE ON public.insoles_type FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 3
+    },
+    "public.menu": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('menu_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "location_in_app",
+          "type": "text",
+          "nullable": false,
+          "default": "''::text",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "num_of_components_per_row",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER menu_update_metadata_fields BEFORE UPDATE ON public.menu FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()",
+        "CREATE TRIGGER trigger_validate_menu_row_limit BEFORE INSERT OR UPDATE ON public.menu FOR EACH ROW EXECUTE FUNCTION validate_menu_actions_per_row()"
+      ],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 22
+    },
+    "public.menu_action": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('menu_action_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "label",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "path",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_external",
+          "type": "boolean",
+          "nullable": false,
+          "default": "false",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "new_banner_end_date",
+          "type": "date",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_soon",
+          "type": "boolean",
+          "nullable": false,
+          "default": "false",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_current_url_needed",
+          "type": "boolean",
+          "nullable": false,
+          "default": "false",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER menu_action_update_metadata_fields BEFORE UPDATE ON public.menu_action FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 41
+    },
+    "public.message_sent": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('message_sent_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "json",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "patient_military_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "message_state_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "message_type_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "name": "FK_7c44a0d8ed56d278e13aafdd192",
+          "columns": [
+            "message_type_id"
+          ],
+          "ref_table": "public.message_type",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (message_type_id) REFERENCES message_type(id)"
+        },
+        {
+          "name": "FK_83441b043937e4394a5f5d44a42",
+          "columns": [
+            "message_state_id"
+          ],
+          "ref_table": "public.message_state",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (message_state_id) REFERENCES message_state(id)"
+        },
+        {
+          "name": "FK_8f743a2a84c1f9ba8937abe338b",
+          "columns": [
+            "request_id"
+          ],
+          "ref_table": "public.user_request",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (request_id) REFERENCES user_request(id)"
+        }
+      ],
+      "unique": [
+        [
+          "request_id"
+        ]
+      ],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER message_sent_history_trigger AFTER DELETE OR UPDATE ON public.message_sent FOR EACH ROW EXECUTE FUNCTION insert_to_history('message_sent')",
+        "CREATE TRIGGER message_sent_update_metadata_fields BEFORE UPDATE ON public.message_sent FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [],
+      "approx_rows": 130
+    },
+    "public.message_state": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('message_state_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER message_state_history_trigger AFTER DELETE OR UPDATE ON public.message_state FOR EACH ROW EXECUTE FUNCTION insert_to_history('message_state')",
+        "CREATE TRIGGER message_state_update_metadata_fields BEFORE UPDATE ON public.message_state FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 11
+    },
+    "public.message_type": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('message_type_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "mh_format_id",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER message_type_history_trigger AFTER DELETE OR UPDATE ON public.message_type FOR EACH ROW EXECUTE FUNCTION insert_to_history('message_type')",
+        "CREATE TRIGGER message_type_update_metadata_fields BEFORE UPDATE ON public.message_type FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 2
+    },
+    "public.migrations": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('migrations_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "timestamp",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [],
+      "approx_rows": 29
+    },
+    "public.optic_chain": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('optic_chain_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER optic_chain_history_trigger AFTER DELETE OR UPDATE ON public.optic_chain FOR EACH ROW EXECUTE FUNCTION insert_to_history('optic_chain')",
+        "CREATE TRIGGER optic_chain_update_metadata_fields BEFORE UPDATE ON public.optic_chain FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 1
+    },
+    "public.optic_request": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('optic_request_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "optic_chain_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "name": "FK_6489b6713d46cc06ea8506d45aa",
+          "columns": [
+            "request_id"
+          ],
+          "ref_table": "public.user_request",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (request_id) REFERENCES user_request(id)"
+        },
+        {
+          "name": "FK_a937d94e6d73e563d101b95eab7",
+          "columns": [
+            "optic_chain_id"
+          ],
+          "ref_table": "public.optic_chain",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (optic_chain_id) REFERENCES optic_chain(id)"
+        }
+      ],
+      "unique": [
+        [
+          "request_id"
+        ]
+      ],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER optic_request_history_trigger AFTER DELETE OR UPDATE ON public.optic_request FOR EACH ROW EXECUTE FUNCTION insert_to_history('optic_request')",
+        "CREATE TRIGGER optic_request_update_metadata_fields BEFORE UPDATE ON public.optic_request FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [],
+      "approx_rows": 307
+    },
+    "public.prescription_request": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('prescription_request_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "prescription_name",
+          "type": "character varying",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "prescription_type_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "name": "FK_32ffc516924c6eb9422339275ec",
+          "columns": [
+            "prescription_type_id"
+          ],
+          "ref_table": "public.prescription_type",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (prescription_type_id) REFERENCES prescription_type(id)"
+        },
+        {
+          "name": "FK_5dbbd0fb797e6d0d3dd866a243e",
+          "columns": [
+            "request_id"
+          ],
+          "ref_table": "public.user_request",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (request_id) REFERENCES user_request(id)"
+        }
+      ],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER prescription_request_history_trigger AFTER DELETE OR UPDATE ON public.prescription_request FOR EACH ROW EXECUTE FUNCTION insert_to_history('prescription_request')",
+        "CREATE TRIGGER prescription_request_update_metadata_fields BEFORE UPDATE ON public.prescription_request FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [],
+      "approx_rows": 1589
+    },
+    "public.prescription_type": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('prescription_type_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER prescription_type_history_trigger AFTER DELETE OR UPDATE ON public.prescription_type FOR EACH ROW EXECUTE FUNCTION insert_to_history('prescription_type')",
+        "CREATE TRIGGER prescription_type_update_metadata_fields BEFORE UPDATE ON public.prescription_type FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 3
+    },
+    "public.recommendation": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('recommendation_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "recommendation_id",
+          "type": "numeric",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "recommendation_icon",
+          "type": "text",
+          "nullable": false,
+          "default": "'DEFAULT-ICON.svg'::text",
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [
+        [
+          "recommendation_id"
+        ]
+      ],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER recommendation_history_trigger AFTER DELETE OR UPDATE ON public.recommendation FOR EACH ROW EXECUTE FUNCTION insert_to_history('recommendation')",
+        "CREATE TRIGGER recommendation_update_metadata_fields BEFORE UPDATE ON public.recommendation FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [],
+      "approx_rows": 5
+    },
+    "public.referral_request": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('referral_request_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "required_service",
+          "type": "character varying",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "referral_number",
+          "type": "integer",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "required_medical_facility",
+          "type": "character varying",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "name": "FK_48f8b29ff189cc90f5d12d86d21",
+          "columns": [
+            "request_id"
+          ],
+          "ref_table": "public.user_request",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (request_id) REFERENCES user_request(id)"
+        }
+      ],
+      "unique": [
+        [
+          "request_id"
+        ]
+      ],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER referral_request_history_trigger AFTER DELETE OR UPDATE ON public.referral_request FOR EACH ROW EXECUTE FUNCTION insert_to_history('referral_request')",
+        "CREATE TRIGGER referral_request_update_metadata_fields BEFORE UPDATE ON public.referral_request FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [],
+      "approx_rows": 1315
+    },
+    "public.request_error_in_file": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('request_error_in_file_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "error_desc",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "error_code",
+          "type": "integer",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "sync_monitor_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "name": "FK_9dae6b3ee020bf061907db84861",
+          "columns": [
+            "request_id"
+          ],
+          "ref_table": "public.user_request",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (request_id) REFERENCES user_request(id)"
+        },
+        {
+          "name": "FK_aa64e662688d7f64a5efe329ea3",
+          "columns": [
+            "sync_monitor_id"
+          ],
+          "ref_table": "public.file_sync_monitor",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (sync_monitor_id) REFERENCES file_sync_monitor(id)"
+        }
+      ],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER request_error_in_file_history_trigger AFTER DELETE OR UPDATE ON public.request_error_in_file FOR EACH ROW EXECUTE FUNCTION insert_to_history('request_error_in_file')",
+        "CREATE TRIGGER request_error_in_file_update_metadata_fields BEFORE UPDATE ON public.request_error_in_file FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [],
+      "approx_rows": 3799
+    },
+    "public.request_in_file": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('request_in_file_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "sync_monitor_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "name": "FK_5981aa8218142f525a05616bf97",
+          "columns": [
+            "sync_monitor_id"
+          ],
+          "ref_table": "public.file_sync_monitor",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (sync_monitor_id) REFERENCES file_sync_monitor(id)"
+        },
+        {
+          "name": "FK_ebd234f9eb419cc906992e21d66",
+          "columns": [
+            "request_id"
+          ],
+          "ref_table": "public.user_request",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (request_id) REFERENCES user_request(id)"
+        }
+      ],
+      "unique": [
+        [
+          "request_id",
+          "sync_monitor_id"
+        ]
+      ],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER request_in_file_history_trigger AFTER DELETE OR UPDATE ON public.request_in_file FOR EACH ROW EXECUTE FUNCTION insert_to_history('request_in_file')",
+        "CREATE TRIGGER request_in_file_update_metadata_fields BEFORE UPDATE ON public.request_in_file FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [],
+      "approx_rows": 7969
+    },
+    "public.request_state": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('request_state_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "user_text",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "comments",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER request_state_history_trigger AFTER DELETE OR UPDATE ON public.request_state FOR EACH ROW EXECUTE FUNCTION insert_to_history('request_state')",
+        "CREATE TRIGGER request_state_update_metadata_fields BEFORE UPDATE ON public.request_state FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 9
+    },
+    "public.request_type": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('request_type_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "altor_code",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER request_type_history_trigger AFTER DELETE OR UPDATE ON public.request_type FOR EACH ROW EXECUTE FUNCTION insert_to_history('request_type')",
+        "CREATE TRIGGER request_type_update_metadata_fields BEFORE UPDATE ON public.request_type FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 11
+    },
+    "public.restricted_action": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('restricted_action_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "military_service_type_id",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "action_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "name": "FK_014f11f0fadc6a46dcadb7e91b1",
+          "columns": [
+            "action_id"
+          ],
+          "ref_table": "public.menu_action",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (action_id) REFERENCES menu_action(id)"
+        }
+      ],
+      "unique": [
+        [
+          "military_service_type_id",
+          "action_id"
+        ]
+      ],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER restricted_action_update_metadata_fields BEFORE UPDATE ON public.restricted_action FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [],
+      "approx_rows": 7
+    },
+    "public.retroactive_commitment_request": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('retroactive_commitment_request_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "referral_number",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "visit_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "facility_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "referral_reason_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "referral_source_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "name": "FK_13a788c74a0fe5f5d0791194c21",
+          "columns": [
+            "referral_source_id"
+          ],
+          "ref_table": "public.er_referral_source",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (referral_source_id) REFERENCES er_referral_source(id)"
+        },
+        {
+          "name": "FK_7ffd70577c95f0f263007b743b1",
+          "columns": [
+            "request_id"
+          ],
+          "ref_table": "public.user_request",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (request_id) REFERENCES user_request(id)"
+        },
+        {
+          "name": "FK_8e49268943660756d0360474809",
+          "columns": [
+            "facility_id"
+          ],
+          "ref_table": "public.er_facility",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (facility_id) REFERENCES er_facility(id)"
+        },
+        {
+          "name": "FK_a899e837cadd9c1cd1d4a825dd9",
+          "columns": [
+            "referral_reason_id"
+          ],
+          "ref_table": "public.er_referral_reason",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (referral_reason_id) REFERENCES er_referral_reason(id)"
+        }
+      ],
+      "unique": [
+        [
+          "request_id"
+        ]
+      ],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER retroactive_commitment_request_history_trigger AFTER DELETE OR UPDATE ON public.retroactive_commitment_request FOR EACH ROW EXECUTE FUNCTION insert_to_history('retroactive_commitment_request')",
+        "CREATE TRIGGER retroactive_commitment_request_update_metadata_fields BEFORE UPDATE ON public.retroactive_commitment_request FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [],
+      "approx_rows": 228
+    },
+    "public.screen_mapping": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('screen_mapping_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "screen_name",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "screen_url",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [
+        [
+          "screen_url"
+        ]
+      ],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER screen_mapping_update_metadata_fields BEFORE UPDATE ON public.screen_mapping FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [],
+      "approx_rows": -1
+    },
+    "public.sick_days_request": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('sick_days_request_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "end_date",
+          "type": "date",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "name": "FK_426397fb0657facb95bf4d08367",
+          "columns": [
+            "request_id"
+          ],
+          "ref_table": "public.user_request",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (request_id) REFERENCES user_request(id)"
+        }
+      ],
+      "unique": [
+        [
+          "request_id"
+        ]
+      ],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER sick_days_request_history_trigger AFTER DELETE OR UPDATE ON public.sick_days_request FOR EACH ROW EXECUTE FUNCTION insert_to_history('sick_days_request')",
+        "CREATE TRIGGER sick_days_request_update_metadata_fields BEFORE UPDATE ON public.sick_days_request FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [],
+      "approx_rows": 437
+    },
+    "public.system_message": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('system_message_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER system_message_history_trigger AFTER DELETE OR UPDATE ON public.system_message FOR EACH ROW EXECUTE FUNCTION insert_to_history('system_message')",
+        "CREATE TRIGGER system_message_update_metadata_fields BEFORE UPDATE ON public.system_message FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [
+        "is_active"
+      ],
+      "approx_rows": 451
+    },
+    "public.typeorm_metadata": {
+      "columns": [
+        {
+          "name": "type",
+          "type": "character varying",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "database",
+          "type": "character varying",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "schema",
+          "type": "character varying",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "table",
+          "type": "character varying",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "value",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [],
+      "fks": [],
+      "unique": [],
+      "checks": [],
+      "triggers": [],
+      "soft_delete_candidates": [],
+      "approx_rows": -1
+    },
+    "public.user_request": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('user_request_id_seq'::regclass)",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_user",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "version_number",
+          "type": "integer",
+          "nullable": false,
+          "default": "1",
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "patient_person_id",
+          "type": "character varying",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "patient_military_id",
+          "type": "integer",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_text",
+          "type": "character varying",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_xml",
+          "type": "xml",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_type_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_state_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "request_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "clinic_answer",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "answer_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "hatch_upload_counter",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "identity": false,
+          "generated": false
+        },
+        {
+          "name": "hatch_last_upload_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": null,
+          "identity": false,
+          "generated": false
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "name": "FK_0cad737a58d1de73244b6755e90",
+          "columns": [
+            "request_state_id"
+          ],
+          "ref_table": "public.request_state",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (request_state_id) REFERENCES request_state(id)"
+        },
+        {
+          "name": "FK_f1b1ae4afd97800a81a5d691f4b",
+          "columns": [
+            "request_type_id"
+          ],
+          "ref_table": "public.request_type",
+          "ref_columns": [
+            "id"
+          ],
+          "definition": "FOREIGN KEY (request_type_id) REFERENCES request_type(id)"
+        }
+      ],
+      "unique": [],
+      "checks": [],
+      "triggers": [
+        "CREATE TRIGGER user_request_history_trigger AFTER DELETE OR UPDATE ON public.user_request FOR EACH ROW EXECUTE FUNCTION insert_to_history('user_request')",
+        "CREATE TRIGGER user_request_update_metadata_fields BEFORE UPDATE ON public.user_request FOR EACH ROW EXECUTE FUNCTION update_metadata_fields()"
+      ],
+      "soft_delete_candidates": [],
+      "approx_rows": 4422
+    }
+  },
+  "insert_order": [
+    "history.attachment",
+    "history.attachment_state",
+    "history.environment_variable",
+    "history.er_facility",
+    "history.er_referral_reason",
+    "history.er_referral_source",
+    "history.error_in_file",
+    "history.external_vendor",
+    "history.feedback",
+    "history.file_sync_monitor",
+    "history.insoles_chain",
+    "history.insoles_request",
+    "history.insoles_type",
+    "history.message_sent",
+    "history.message_state",
+    "history.message_type",
+    "history.optic_chain",
+    "history.optic_request",
+    "history.prescription_request",
+    "history.prescription_type",
+    "history.recommendation",
+    "history.referral_request",
+    "history.request_error_in_file",
+    "history.request_in_file",
+    "history.request_state",
+    "history.request_type",
+    "history.retroactive_commitment_request",
+    "history.sick_days_request",
+    "history.system_message",
+    "history.user_request",
+    "public.announcement",
+    "public.attachment_state",
+    "public.dms_persistent_objects",
+    "public.dms_replication_progress",
+    "public.environment_variable",
+    "public.er_facility",
+    "public.er_referral_reason",
+    "public.er_referral_source",
+    "public.external_vendor",
+    "public.feedback",
+    "public.file_sync_monitor",
+    "public.insoles_chain",
+    "public.insoles_type",
+    "public.menu",
+    "public.menu_action",
+    "public.message_state",
+    "public.message_type",
+    "public.migrations",
+    "public.optic_chain",
+    "public.prescription_type",
+    "public.recommendation",
+    "public.request_state",
+    "public.request_type",
+    "public.screen_mapping",
+    "public.system_message",
+    "public.typeorm_metadata",
+    "public.error_in_file",
+    "public.action_in_menu",
+    "public.restricted_action",
+    "public.user_request",
+    "public.attachment",
+    "public.insoles_request",
+    "public.message_sent",
+    "public.optic_request",
+    "public.prescription_request",
+    "public.referral_request",
+    "public.request_error_in_file",
+    "public.request_in_file",
+    "public.retroactive_commitment_request",
+    "public.sick_days_request",
+    "history.external_json",
+    "public.external_json"
+  ]
+}
