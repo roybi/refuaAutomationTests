@@ -64,7 +64,8 @@ def report_soft_note(message: str, *, name: str = "Soft note (label/copy)") -> N
         with allure.step(f"⚠ {message}"):
             pass
     except Exception:
-        print(f"[SOFT NOTE] {message}")
+        # warnings.warn above already surfaces the note; avoid echoing it to stdout.
+        pass
 
 
 def publish_soft_notes_to_allure(notes: list[str]) -> None:

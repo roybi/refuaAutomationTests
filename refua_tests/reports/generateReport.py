@@ -4,6 +4,7 @@ Workaround for spaces in Windows username path
 """
 import subprocess
 import os
+import shutil
 import webbrowser
 from pathlib import Path
 
@@ -28,9 +29,14 @@ def generate_allure_report():
     # Allure binary path
     allure_bin = Path(appdata) / "npm" / "node_modules" / "allure-commandline" / "bin" / "allure"
 
-    if not allure_bin.exists():
+    if not allure_bin.is_file():
         print(f"[ERROR] Allure not found at: {allure_bin}")
         print("Install with: npm install -g allure-commandline")
+        return False
+
+    node_bin = shutil.which("node")
+    if not node_bin:
+        print("[ERROR] Node.js not found on PATH")
         return False
 
     print(f"[OK] Found allure: {allure_bin}")
@@ -39,17 +45,18 @@ def generate_allure_report():
     print("\n[INFO] Generating Allure HTML report...")
     try:
         cmd = [
-            "node",
-            str(allure_bin),
+            node_bin,
+            str(allure_bin.resolve()),
             "generate",
-            str(allure_results),
+            str(allure_results.resolve()),
             "-o",
-            str(allure_report),
+            str(allure_report.resolve()),
             "--clean"
         ]
 
         result = subprocess.run(
             cmd,
+            shell=False,
             check=True,
             capture_output=True,
             text=True

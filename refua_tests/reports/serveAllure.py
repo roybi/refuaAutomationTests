@@ -4,6 +4,7 @@ Direct invocation bypassing npm wrapper bug
 """
 import subprocess
 import os
+import shutil
 import time
 import webbrowser
 from pathlib import Path
@@ -19,8 +20,13 @@ def serve_allure_report():
     allure_bin = Path(appdata) / "npm" / "node_modules" / "allure-commandline" / "bin" / "allure"
     allure_results = project_root / "allure" / "results"
 
-    if not allure_bin.exists():
+    if not allure_bin.is_file():
         print("[ERROR] Allure not found. Install with: npm install -g allure-commandline")
+        return False
+
+    node_bin = shutil.which("node")
+    if not node_bin:
+        print("[ERROR] Node.js not found on PATH")
         return False
 
     if not allure_results.exists():
@@ -43,15 +49,16 @@ def serve_allure_report():
     try:
         # Call node directly with properly quoted paths
         cmd = [
-            "node",
-            str(allure_bin),
+            node_bin,
+            str(allure_bin.resolve()),
             "serve",
-            str(allure_results.absolute())
+            str(allure_results.resolve())
         ]
 
         # Start the process
         process = subprocess.Popen(
             cmd,
+            shell=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,

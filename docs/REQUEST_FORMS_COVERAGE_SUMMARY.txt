@@ -43,7 +43,7 @@ For each Allure/test run, monitor these columns:
 | Required test ids | Every declared `data-testid` is attached |
 | Visibility | Every declared control is visible |
 | Interactivity | Non-submit controls are enabled |
-| Valid phone | `0501234567` is retained and not invalid |
+| Valid phone | A valid-format 10-digit mobile number is retained and not invalid |
 | Invalid phone | `123` produces an invalid state or visible error |
 | Required content | All declared labels/text are present |
 | Form-specific controls | Sick Days and Dentist controls can be interacted with |
@@ -83,7 +83,7 @@ Each form receives these six parametrized tests:
 
 5. test_request_form_accepts_valid_phone_input[form]
    Type: Positive input validation
-   Checks: enters the valid-format phone value 0501234567, verifies the value is
+   Checks: enters a valid-format 10-digit mobile number, verifies the value is
    retained, and verifies the field is not marked invalid.
 
 6. test_request_form_rejects_invalid_phone_input[form]
