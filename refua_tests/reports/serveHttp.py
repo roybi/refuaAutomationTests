@@ -3,10 +3,11 @@ Serve Allure Report via HTTP Server
 Fixes CORS and file:// protocol issues that cause missing images/icons
 """
 import http.server
+import os
 import socketserver
 import webbrowser
-import os
 from pathlib import Path
+
 
 def serve_report(port=8000):
     """Start HTTP server for Allure report"""

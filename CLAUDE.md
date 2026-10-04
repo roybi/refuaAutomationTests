@@ -6,12 +6,14 @@ This file provides guidance to Claude Code when working with the refuaAutomation
 
 This repository is worked on by multiple LLM agents (Claude Code and GitHub Copilot).
 **At the start of every session, read `AGENT_HANDOFF.md` in the repo root.**
+
 - If its `STATUS` is `IN_PROGRESS`, continue from the `RESUME POINT` — do NOT restart the task.
 - Follow the PROTOCOL rules in that file: update the checklist and WORK LOG as you work, and fill in the RESUME POINT before you stop.
 
 ## Project Overview
 
 **refuaAutomationTests** is the test automation implementation for the MEDITEK medical application. This repository contains:
+
 - Test cases organized by feature
 - Page objects using the Page Object Model pattern
 - Test fixtures and test data factories
@@ -66,6 +68,7 @@ refuaAutomationTests/           (This repo - test implementation)
 ### Test Code
 
 #### `refua_tests/pages/` - Page Object Models
+
 - **Purpose**: Encapsulate UI element interactions
 - **Pattern**: Page Object Model (POM)
 - **Inheritance**: Inherit from `refua_core.pages.BasePage`
@@ -73,6 +76,7 @@ refuaAutomationTests/           (This repo - test implementation)
 - **Naming**: `<feature>_page.py`
 
 **Example Structure**:
+
 ```python
 # refua_tests/pages/login_page.py
 from playwright.sync_api import Page, Locator
@@ -89,6 +93,7 @@ class LoginPage(BasePage):
 ```
 
 #### `refua_tests/tests/` - Test Cases
+
 - **Purpose**: Test implementations for features
 - **Base Class**: Inherit from `refua_core.core.BaseTest`
 - **Organization**: One file per feature
@@ -96,6 +101,7 @@ class LoginPage(BasePage):
 - **Markers**: Use `@pytest.mark` for categorization
 
 **Example Structure**:
+
 ```python
 # refua_tests/tests/test_authentication.py
 import pytest
@@ -110,11 +116,13 @@ class TestAuthentication(BaseTest):
 ```
 
 #### `refua_tests/tests/conftest.py` - Pytest Fixtures
+
 - **Purpose**: Shared fixtures for tests
 - **Scope**: Can be function, class, module, or session
 - **Usage**: Used via pytest parameters
 
 **Example**:
+
 ```python
 # refua_tests/tests/conftest.py
 import pytest
@@ -127,11 +135,13 @@ def test_user():
 ```
 
 #### `refua_tests/fixtures/test_data.py` - Test Data Factories
+
 - **Purpose**: Generate test data for tests
 - **Pattern**: Factory pattern for reusability
 - **Usage**: Called from tests or fixtures
 
 **Example**:
+
 ```python
 # refua_tests/fixtures/test_data.py
 from dataclasses import dataclass
@@ -148,30 +158,36 @@ def create_test_user(email: str = None) -> UserData:
 ### Configuration Files
 
 #### `.env.test`, `.env.preprod`, `.env.prod`
+
 - **Purpose**: Environment-specific credentials
 - **Security**: Never commit to version control
 - **Usage**: Loaded by `EnvironmentManager` from framework
 - **Variables**: User emails, passwords, API endpoints
 
 #### `pytest.ini`
+
 - **Purpose**: Pytest configuration
 - **Defines**: Test markers, timeout, logging, paths
 - **Usage**: Automatically loaded by pytest
 
 #### `requirements.txt`
+
 - **Purpose**: Python package dependencies
 - **Key Dependency**: `refua-automation-core` framework
 - **Usage**: `pip install -r requirements.txt`
 
 #### `CLAUDE.md` (this file)
+
 - **Purpose**: Guidance for Claude Code
 - **Usage**: Context for AI assistance
 
 #### `ARCHITECTURE.md`
+
 - **Purpose**: Detailed architecture documentation
 - **Contents**: Test structure, patterns, best practices
 
 #### `README.md`
+
 - **Purpose**: Test repository overview
 - **Contents**: Quick start, setup instructions
 
@@ -182,6 +198,7 @@ def create_test_user(email: str = None) -> UserData:
 **Your Focus**: Write and maintain tests
 
 **Setup**:
+
 ```bash
 git clone https://github.com/org/refuaAutomationTests.git
 cd refuaAutomationTests
@@ -192,17 +209,20 @@ playwright install
 ```
 
 **Capture Session** (once per environment):
+
 ```bash
 python -m refua_core.scripts.capture_session --env test --user your_name
 # Complete 2FA manually when prompted
 ```
 
 **Write Tests**:
+
 1. Create page object: `refua_tests/pages/<feature>_page.py`
 2. Create test file: `refua_tests/tests/test_<feature>.py`
 3. Add test data: `refua_tests/fixtures/test_data.py`
 
 **Run Tests**:
+
 ```bash
 # Run all tests
 TEST_ENV=test pytest refua_tests/tests/ -v
@@ -215,6 +235,7 @@ TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure/results -v
 ```
 
 **CI Integration**:
+
 - Repository will auto-run tests on push
 - Tests execute with TEST_ENV=test
 - Results reported in pull requests
@@ -224,6 +245,7 @@ TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure/results -v
 **Your Focus**: Architecture, patterns, test strategy
 
 **Responsibilities**:
+
 - Design test architecture and organization
 - Define test markers and categories
 - Establish page object patterns
@@ -232,12 +254,14 @@ TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure/results -v
 - Document test procedures
 
 **Key Files to Review**:
+
 - `docs/architecture/ARCHITECTURE.md` - Test structure and patterns
 - `refua_tests/tests/conftest.py` - Shared fixtures
 - `refua_tests/fixtures/test_data.py` - Data strategies
 - `pytest.ini` - Configuration and markers
 
 **Common Tasks**:
+
 - Add new test markers in `pytest.ini`
 - Create test data factories in `fixtures/test_data.py`
 - Design page object hierarchy
@@ -248,12 +272,14 @@ TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure/results -v
 **Your Focus**: Test execution infrastructure
 
 **Key Files**:
+
 - `.github/workflows/` - CI/CD pipelines
 - `pytest.ini` - Test execution settings
 - `requirements.txt` - Dependencies
 - `.env.test` - Test credentials (via secrets)
 
 **CI Pipeline Template**:
+
 ```yaml
 - name: Run tests
   run: |
@@ -269,6 +295,7 @@ TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure/results -v
 ## Setup & Installation
 
 ### Prerequisites
+
 - Python 3.9+
 - Git
 - Virtual environment
@@ -276,29 +303,34 @@ TEST_ENV=test pytest refua_tests/tests/ --alluredir=./allure/results -v
 ### Installation Steps
 
 1. **Clone Repository**:
+
    ```bash
    git clone https://github.com/org/refuaAutomationTests.git
    cd refuaAutomationTests
    ```
 
 2. **Create Virtual Environment**:
+
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
 3. **Install Dependencies**:
+
    ```bash
    pip install -r requirements.txt
    playwright install
    ```
 
 4. **Verify Installation**:
+
    ```bash
    python -c "from refua_core.config.environment import EnvironmentManager; print('Framework installed OK')"
    ```
 
 5. **Create Session Directory**:
+
    ```bash
    mkdir -p ~/.refua_sessions
    ```
@@ -374,21 +406,25 @@ TEST_ENV=test pytest refua_tests/tests/ --html=report.html -v
 ## Development Workflow
 
 ### Create Feature Branch
+
 ```bash
 git checkout -b feature/test-new-feature
 ```
 
 ### Write Tests
+
 1. Create page object: `refua_tests/pages/<feature>_page.py`
 2. Create test file: `refua_tests/tests/test_<feature>.py`
 3. Add fixtures if needed: `refua_tests/fixtures/test_data.py`
 
 ### Run Tests Locally
+
 ```bash
 TEST_ENV=test pytest refua_tests/tests/test_feature.py -v
 ```
 
 ### Commit Changes
+
 ```bash
 git add refua_tests/
 git commit -m "test: add tests for feature"
@@ -396,6 +432,7 @@ git push origin feature/test-new-feature
 ```
 
 ### Create Pull Request
+
 - Tests run automatically in CI
 - Provide test coverage information
 - Document test scenarios
@@ -403,11 +440,13 @@ git push origin feature/test-new-feature
 ## Environment Variables
 
 ### Required
+
 ```bash
 TEST_ENV=test|preprod|prod    # Target environment (required)
 ```
 
 ### Optional
+
 ```bash
 SKIP_2FA=true|false            # Use session bypass (default: true)
 DEVICE=desktop|iphone|android  # Device profile (default: desktop)
@@ -450,12 +489,14 @@ refuaAutomationTests/
 ## Common Tasks
 
 ### Add New Test
+
 1. Create page object in `refua_tests/pages/<feature>_page.py`
 2. Create test in `refua_tests/tests/test_<feature>.py`
 3. Create test data in `refua_tests/fixtures/test_data.py`
 4. Run: `TEST_ENV=test pytest refua_tests/tests/test_<feature>.py -v`
 
 ### Add New Page Object
+
 1. Create file: `refua_tests/pages/<feature>_page.py`
 2. Inherit from `BasePage` (from base_page.py)
 3. Define locators using @property
@@ -463,11 +504,13 @@ refuaAutomationTests/
 5. Use in tests
 
 ### Add Test Marker
+
 1. Edit `pytest.ini`
 2. Add marker in `[pytest]` markers section
 3. Use in tests: `@pytest.mark.my_marker`
 
 ### Debug Test
+
 ```bash
 # Run with verbose output
 TEST_ENV=test pytest refua_tests/tests/test_file.py::TestClass::test_method -vv -s
@@ -485,6 +528,7 @@ TEST_ENV=test pytest --lf refua_tests/tests/
 ## Troubleshooting
 
 ### Framework Not Found
+
 ```bash
 # Verify installation
 python -c "from refua_core.config.environment import EnvironmentManager; print('OK')"
@@ -494,17 +538,20 @@ pip install refua-automation-core
 ```
 
 ### Session Expired
+
 ```bash
 # Recapture session
 python -m refua_core.scripts.capture_session --env test --user your_name
 ```
 
 ### Tests Timeout
+
 - Check `pytest.ini` timeout setting
 - Increase for slow operations: `timeout = 600`
 - Add explicit waits in page objects
 
 ### Import Errors
+
 - Ensure virtual environment is activated
 - Verify `requirements.txt` is installed
 - Check `PYTHONPATH` if using local framework
@@ -528,6 +575,7 @@ python -m refua_core.scripts.capture_session --env test --user your_name
 ---
 
 **Questions?** Refer to:
+
 - `docs/architecture/ARCHITECTURE.md` - Test structure and patterns
 - `README.md` - Quick start guide
 - Framework repo `CLAUDE.md` - Framework documentation

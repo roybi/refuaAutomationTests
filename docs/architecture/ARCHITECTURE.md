@@ -10,17 +10,17 @@ refuaAutomationTests (this repo: page objects, tests, BDD, workbook catalogs, DB
 
 ## Layers
 
-| Layer | Location | Responsibility |
-|---|---|---|
-| Options / env | `conftest.py` (root) | `--personal-number` -> `TEST_PERSONAL_NUMBER`, selects automation login |
-| Suite fixtures | `refua_tests/conftest.py` | Session-wide Meditik DB seed (before all / after all) |
+| Layer          | Location                                                       | Responsibility                                                                    |
+| -------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Options / env  | `conftest.py` (root)                                           | `--personal-number` -> `TEST_PERSONAL_NUMBER`, selects automation login           |
+| Suite fixtures | `refua_tests/conftest.py`                                      | Session-wide Meditik DB seed (before all / after all)                             |
 | Auth + browser | `refua_tests/tests/conftest.py`, `refua_tests/bdd/conftest.py` | Auth check, single shared `app_session` browser/tab, artifacts, soft-note summary |
-| Page objects | `refua_tests/pages/` | Screens, locators by `data-testid`, assertions helpers |
-| Tests | `refua_tests/tests/` | `meditik*Sanity.py` (Ready cases), `test_*_pending.py` (Pending cases + guard) |
-| BDD | `refua_tests/bdd/` | `features/*.feature`, `step_defs/*Steps.py`, `test_*_bdd.py` collectors |
-| Data | `docs/setup/*_CASES.json`, `refua_tests/utils/meditik_seed.py` | Workbook catalogs; direct-DB seeding |
-| Tools | `tools/` | Seed CLI, schema discovery, workbook -> JSON, pending feature generator |
-| Reports | `refua_tests/reports/`, `generateReport.bat`, `viewReport.bat` | Allure generate/serve |
+| Page objects   | `refua_tests/pages/`                                           | Screens, locators by `data-testid`, assertions helpers                            |
+| Tests          | `refua_tests/tests/`                                           | `meditik*Sanity.py` (Ready cases), `test_*_pending.py` (Pending cases + guard)    |
+| BDD            | `refua_tests/bdd/`                                             | `features/*.feature`, `step_defs/*Steps.py`, `test_*_bdd.py` collectors           |
+| Data           | `docs/setup/*_CASES.json`, `refua_tests/utils/meditik_seed.py` | Workbook catalogs; direct-DB seeding                                              |
+| Tools          | `tools/`                                                       | Seed CLI, schema discovery, workbook -> JSON, pending feature generator           |
+| Reports        | `refua_tests/reports/`, `generateReport.bat`, `viewReport.bat` | Allure generate/serve                                                             |
 
 ## Run lifecycle
 

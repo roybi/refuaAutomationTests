@@ -85,12 +85,12 @@ venv\Scripts\python.exe tools\db_seed_meditik.py cleanup   --env test --run-id <
 
 ## Troubleshooting
 
-| Symptom | Fix |
-|---|---|
-| `Auth state was captured, but it still redirects to Microsoft/2FA` | Use automation login (`--personal-number`), or delete the session file and recapture |
-| `Set TEST_PERSONAL_NUMBER to the approved numeric TEST account` | Pass `--personal-number <digits>` |
-| `AUTOMATION_SECRET is required` | Add it to `.env.test` |
-| `Meditik DB seed skipped (...)` warning | Check `MEDITIK_SEED_ENV`, `SEED_ALLOWED_PERSONAL_NUMBERS`, DB access; run `leftovers` for a stuck lock |
-| Pending tests "skipped" | Expected - reason is the workbook Clarification Status |
-| Guard test fails | Workbook marked a case Ready: implement it (sanity + BDD) and update the tracker |
-| `--strict-markers` error | Register the marker in `pytest.ini` |
+| Symptom                                                            | Fix                                                                                                    |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| `Auth state was captured, but it still redirects to Microsoft/2FA` | Use automation login (`--personal-number`), or delete the session file and recapture                   |
+| `Set TEST_PERSONAL_NUMBER to the approved numeric TEST account`    | Pass `--personal-number <digits>`                                                                      |
+| `AUTOMATION_SECRET is required`                                    | Add it to `.env.test`                                                                                  |
+| `Meditik DB seed skipped (...)` warning                            | Check `MEDITIK_SEED_ENV`, `SEED_ALLOWED_PERSONAL_NUMBERS`, DB access; run `leftovers` for a stuck lock |
+| Pending tests "skipped"                                            | Expected - reason is the workbook Clarification Status                                                 |
+| Guard test fails                                                   | Workbook marked a case Ready: implement it (sanity + BDD) and update the tracker                       |
+| `--strict-markers` error                                           | Register the marker in `pytest.ini`                                                                    |

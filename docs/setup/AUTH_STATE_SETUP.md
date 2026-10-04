@@ -2,12 +2,12 @@
 
 The suite supports two authentication modes, chosen by `TEST_AUTH_METHOD`. Both are handled by the `auth_state_session` fixture in `refua_tests/tests/conftest.py`, and both feed a single shared browser tab (`app_session`) used by pytest and BDD tests alike.
 
-| | `automation` | `session_state` (default) |
-|---|---|---|
-| Environments | TEST only | test / preprod / prod |
-| How | Opens `/automation/login/:personalNumber` once per run | Injects a captured Playwright storage state (cookies + MSAL tokens) |
-| Needs | `--personal-number` (or `TEST_PERSONAL_NUMBER`), `AUTOMATION_SECRET` | A valid session file, or a manual login + 2FA |
-| 2FA | Not involved | Once per capture |
+|              | `automation`                                                         | `session_state` (default)                                           |
+| ------------ | -------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Environments | TEST only                                                            | test / preprod / prod                                               |
+| How          | Opens `/automation/login/:personalNumber` once per run               | Injects a captured Playwright storage state (cookies + MSAL tokens) |
+| Needs        | `--personal-number` (or `TEST_PERSONAL_NUMBER`), `AUTOMATION_SECRET` | A valid session file, or a manual login + 2FA                       |
+| 2FA          | Not involved                                                         | Once per capture                                                    |
 
 ## Automation login (recommended on TEST)
 
@@ -45,12 +45,12 @@ Sessions expire after a few days; the default output is `~\.refua_sessions\auth_
 
 ## Troubleshooting
 
-| Message | Cause / fix |
-|---|---|
-| `TEST_AUTH_METHOD must be session_state or automation.` | Typo in the variable |
-| `Automation login is enabled only for TEST in this repository.` | Use `TEST_ENV=test` or switch to `session_state` |
-| `Set TEST_PERSONAL_NUMBER to the approved numeric TEST account.` | Pass `--personal-number <digits>` |
-| `AUTOMATION_SECRET is required for automation login.` | Add it to `.env.test` |
-| `TEST automation login did not establish a visible home dashboard` | Wrong number / secret, or app down - open the login URL manually |
+| Message                                                            | Cause / fix                                                        |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `TEST_AUTH_METHOD must be session_state or automation.`            | Typo in the variable                                               |
+| `Automation login is enabled only for TEST in this repository.`    | Use `TEST_ENV=test` or switch to `session_state`                   |
+| `Set TEST_PERSONAL_NUMBER to the approved numeric TEST account.`   | Pass `--personal-number <digits>`                                  |
+| `AUTOMATION_SECRET is required for automation login.`              | Add it to `.env.test`                                              |
+| `TEST automation login did not establish a visible home dashboard` | Wrong number / secret, or app down - open the login URL manually   |
 | `Auth state was captured, but it still redirects to Microsoft/2FA` | Captured session is not honoured by the app - use automation login |
-| `capture_session.py was not found` | `refuaAutomationCore` must be a sibling folder of this repo |
+| `capture_session.py was not found`                                 | `refuaAutomationCore` must be a sibling folder of this repo        |
