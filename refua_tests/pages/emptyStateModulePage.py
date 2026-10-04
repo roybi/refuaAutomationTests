@@ -46,16 +46,22 @@ class EmptyStateModulePage(MeditekBasePage):
     Subclasses MUST set MODULE_NAME, PATH and EXPECTED_EMPTY_TEXT.
     PAGE_TEST_ID is optional — some modules expose a page-root testid, others
     are identified by the toolbar plus the route.
+    MENU_LABEL is optional and only needed for the "reached through application
+    navigation" cases (e.g. VSUM-011).
+    ROW_PREFIX is optional and only used to prove the EMPTY branch really has
+    no records (e.g. VSUM-008's "no list card or phantom record").
     """
 
     MODULE_NAME: str = ""
     PATH: str = ""
     PAGE_TEST_ID: str = ""
     EXPECTED_EMPTY_TEXT: str = ""
+    MENU_LABEL: str = ""
+    ROW_PREFIX: str = ""
 
     # Shared empty-state testids (identical across these modules).
-    EMPTY_STATE_TITLE_ID: str = Ids.SICK_DAYS_EMPTY_STATE_TITLE
-    EMPTY_STATE_ICON_ID: str = Ids.SICK_DAYS_EMPTY_STATE_ICON
+    EMPTY_STATE_TITLE_ID: str = Ids.EMPTY_STATE_TITLE
+    EMPTY_STATE_ICON_ID: str = Ids.EMPTY_STATE_ICON
 
     def __init__(self, page: Page):
         super().__init__(page)
@@ -65,17 +71,14 @@ class EmptyStateModulePage(MeditekBasePage):
         self.page_root = (
             page.get_by_test_id(self.PAGE_TEST_ID) if self.PAGE_TEST_ID else None
         )
-        self.navbar_toolbar = page.get_by_test_id(Ids.MY_REQUESTS_NAVBAR_TOOLBAR)
-        self.navbar_hamburger = page.get_by_test_id(
-            Ids.MY_REQUESTS_NAVBAR_BTN_HAMBURGER
-        )
-        self.navbar_logo = page.get_by_test_id(Ids.MY_REQUESTS_NAVBAR_BTN_LOGO)
+        self.navbar_toolbar = page.get_by_test_id(Ids.NAVBAR_TOOLBAR)
+        self.navbar_hamburger = page.get_by_test_id(Ids.NAVBAR_BTN_HAMBURGER)
+        self.navbar_logo = page.get_by_test_id(Ids.NAVBAR_BTN_LOGO)
         self.empty_state_title = page.get_by_test_id(self.EMPTY_STATE_TITLE_ID)
         self.empty_state_icon = page.get_by_test_id(self.EMPTY_STATE_ICON_ID)
-        self.speed_dial_fab = page.get_by_test_id(Ids.MY_REQUESTS_SPEED_DIAL_FAB)
-        self.speed_dial_trigger = page.get_by_test_id(
-            Ids.MY_REQUESTS_SPEED_DIAL_TRIGGER
-        )
+        self.speed_dial_fab = page.get_by_test_id(Ids.SPEED_DIAL_FAB)
+        self.speed_dial_trigger = page.get_by_test_id(Ids.SPEED_DIAL_TRIGGER)
+        self.speed_dial_add_icon = page.get_by_test_id(Ids.SPEED_DIAL_ADD_ICON)
 
     # ------------------------------------------------------------------ #
     # Navigation
@@ -85,6 +88,21 @@ class EmptyStateModulePage(MeditekBasePage):
         base = self.env_manager.get_base_url().rstrip("/")
         target = base.replace("/home", "") + self.PATH
         self.page.goto(target, wait_until="domcontentloaded", timeout=timeout)
+        self.dismiss_blocking_dialogs()
+        return self
+
+    def open_via_application_menu(self, timeout: int = 60000):
+        """Reach the route through the side menu instead of a direct URL.
+
+        Needed by the "reached through application navigation" cases. The hard
+        check stays the menu item's data-testid (MeditekBasePage maps label ->
+        testid); the Hebrew label is only soft-checked.
+        """
+        assert self.MENU_LABEL, (
+            f"{type(self).__name__} must define MENU_LABEL to navigate via the menu"
+        )
+        self.navigate_via_menu(self.MENU_LABEL)
+        self.page.wait_for_url(f"**{self.PATH}**", timeout=timeout)
         self.dismiss_blocking_dialogs()
         return self
 
@@ -137,7 +155,7 @@ class EmptyStateModulePage(MeditekBasePage):
     def assert_page_shell(self, timeout: int = 30000):
         """Toolbar and empty-state title are displayed, each uniquely."""
         self._assert_unique_and_visible(
-            self.navbar_toolbar, Ids.MY_REQUESTS_NAVBAR_TOOLBAR, timeout
+            self.navbar_toolbar, Ids.NAVBAR_TOOLBAR, timeout
         )
         self._assert_unique_and_visible(
             self.empty_state_title, self.EMPTY_STATE_TITLE_ID, timeout
@@ -192,13 +210,66 @@ class EmptyStateModulePage(MeditekBasePage):
         )
         return self
 
+    def assert_quick_action_control(self, timeout: int = 30000):
+        """Trigger, FAB and add icon each resolve exactly once and are usable.
+
+        Grounded by VSUM-004, whose validation column rejects a duplicate
+        actionable locator. Deliberately does NOT open the control or assert
+        which actions it contains — the individual action ids are not supplied
+        by these module workbooks.
+        """
+        for locator, name in (
+            (self.speed_dial_trigger, Ids.SPEED_DIAL_TRIGGER),
+            (self.speed_dial_fab, Ids.SPEED_DIAL_FAB),
+            (self.speed_dial_add_icon, Ids.SPEED_DIAL_ADD_ICON),
+        ):
+            self._assert_unique_and_visible(locator, name, timeout)
+
+        actionable = (
+            self.speed_dial_fab
+            if self.speed_dial_fab.count() > 0
+            else self.speed_dial_trigger
+        )
+        assert actionable.first.is_enabled(timeout=timeout), (
+            f"{self.MODULE_NAME}: the quick-action control is visible but disabled"
+        )
+        return self
+
+    def assert_complete_empty_state(self, timeout: int = 15000):
+        """Icon AND exact title shown once, with no list card or phantom record.
+
+        This is the zero-result case (VSUM-008): the empty branch must be
+        complete, and the page must not simultaneously render a record.
+        """
+        self.assert_empty_state_icon(timeout=timeout)
+        self.assert_empty_state_text(timeout=timeout)
+
+        if self.ROW_PREFIX:
+            rows = self.page.locator(f'[data-testid^="{self.ROW_PREFIX}"]')
+            assert rows.count() == 0, (
+                f"{self.MODULE_NAME}: the empty state is displayed but "
+                f"{rows.count()} row(s) matching {self.ROW_PREFIX!r} are also "
+                f"rendered — phantom record"
+            )
+
+        # Legacy list cards (pre-row-testid rollout) must not coexist either.
+        cards = self.page.locator("[id$='-card-title']")
+        visible_cards = [
+            index for index in range(cards.count()) if cards.nth(index).is_visible()
+        ]
+        assert not visible_cards, (
+            f"{self.MODULE_NAME}: the empty state is displayed but "
+            f"{len(visible_cards)} list card(s) are visible — phantom record"
+        )
+        return self
+
     def assert_single_page_instance(self, timeout: int = 15000):
         """After refresh: one route and one empty state — no duplicated UI."""
         assert self.PATH in self.page.url, (
             f"Expected to remain on {self.PATH} after refresh, got {self.page.url}"
         )
         self._assert_unique_and_visible(
-            self.navbar_toolbar, Ids.MY_REQUESTS_NAVBAR_TOOLBAR, timeout
+            self.navbar_toolbar, Ids.NAVBAR_TOOLBAR, timeout
         )
         self._assert_unique_and_visible(
             self.empty_state_title, self.EMPTY_STATE_TITLE_ID, timeout

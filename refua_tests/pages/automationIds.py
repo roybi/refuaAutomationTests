@@ -11,9 +11,12 @@ class MeditikIds:
     # --- Navbar ---
     NAVBAR_TOOLBAR = "meditik-navbar-toolbar"
     NAVBAR_BTN_HAMBURGER = "meditik-navbar-btn-hamburger"
+    NAVBAR_IMG_HAMBURGER = "meditik-navbar-img-hamburger"
     NAVBAR_BTN_BACK = "meditik-navbar-btn-back"
     NAVBAR_BTN_HOME = "meditik-navbar-btn-home"
     NAVBAR_BTN_LOGO = "meditik-navbar-btn-logo"
+    NAVBAR_IMG_LOGO = "meditik-navbar-img-logo"
+    NAVBAR_TABS_PORTAL = "meditik-navbar-tabs-portal"
     NAVBAR_BTN_CLOSE_MENU = "meditik-navbar-btn-close-menu"
     NAVBAR_DRAWER_MENU = "meditik-navbar-drawer-menu"
     NAVBAR_BTN_ADMIN_ANNOUNCEMENTS = "meditik-navbar-btn-admin-announcements"
@@ -126,6 +129,22 @@ class MeditikIds:
     REFERRALS_BTN_DETAILS_PREFIX = "meditik-referrals-btn-details-"
     REFERRALS_BTN_SUPPLIER_CHANGE_PREFIX = "meditik-referrals-btn-supplier-change-"
 
+    # --- Visit Summaries (סיכומי ביקור) — /appointments module page ---
+    # Source: Visit_Summaries_Test_Cases_1.xlsx. Same non-tabbed empty-state
+    # shape as Sick Days and Vaccinations, so the page object is a
+    # configuration of EmptyStateModulePage rather than a new implementation.
+    #
+    # NOTE THE ROUTE: Visit Summaries lives at /appointments, which is NOT the
+    # My Appointments screen (/zimun-torim). The workbook's Key Notes state the
+    # URL explicitly; do not "correct" it to /visit-summaries.
+    #
+    # The workbook's Limitations line is why 8 of 14 cases are blocked: "no
+    # visit-summary list item, viewer, search, filter, download, or share
+    # data-testid was present in the supplied inventory" — the populated-list
+    # surface is ungrounded, so only the empty state and chrome are testable.
+    VISIT_SUMMARIES_MODULE_PATH = "/appointments"
+    VISIT_SUMMARIES_EXPECTED_EMPTY_TEXT = "סיכומי ביקור יופיעו כאן לאחר מפגשים רפואיים"
+
     # --- Sick Days (ימי מחלה) — /sick-days module page ---
     # Source: Sick_days workbook (SICK-DAYS-001..020). This page is NOT tabbed:
     # its coverage centres on a page-level empty state that must resolve to
@@ -159,8 +178,25 @@ class MeditikIds:
     VACCINATIONS_PAGE = "meditik-vaccinations-page"
     VACCINATIONS_ROW_PREFIX = "meditik-vaccinations-row-"
 
-    # --- Medical Profile ---
+    # --- Medical Profile (פרופיל רפואי) — /medical-profile page ---
+    # Source: Medical_Profile_Test_Cases_1.xlsx. That workbook's Coverage
+    # Summary states plainly that "the supplied inventory does not expose
+    # dedicated Medical Profile content fields or cards" — the only grounded
+    # ids are the shared application shell (navbar, menu, logo, tabs portal)
+    # and the global quick-action control. Every content-level expectation is
+    # therefore a clarification-blocked case, NOT a missing page object.
     MEDICAL_PROFILE_PAGE = "meditik-medical-profile-page"
+    MEDICAL_PROFILE_PATH = "/medical-profile"
+    # The chrome this workbook grounds, named per case for traceability.
+    MEDICAL_PROFILE_NAVBAR_TOOLBAR = NAVBAR_TOOLBAR
+    MEDICAL_PROFILE_NAVBAR_BTN_HAMBURGER = NAVBAR_BTN_HAMBURGER
+    MEDICAL_PROFILE_NAVBAR_IMG_HAMBURGER = NAVBAR_IMG_HAMBURGER
+    MEDICAL_PROFILE_NAVBAR_BTN_LOGO = NAVBAR_BTN_LOGO
+    MEDICAL_PROFILE_NAVBAR_IMG_LOGO = NAVBAR_IMG_LOGO
+    MEDICAL_PROFILE_NAVBAR_TABS_PORTAL = NAVBAR_TABS_PORTAL
+    MEDICAL_PROFILE_SPEED_DIAL_TRIGGER = "meditik-speed-dial-btn-trigger"
+    MEDICAL_PROFILE_SPEED_DIAL_FAB = "meditik-speed-dial-btn-fab"
+    MEDICAL_PROFILE_SPEED_DIAL_ADD_ICON = "AddIcon"
 
     # --- Urgent Care ---
     URGENT_CARE_PAGE = "meditik-urgent-care-page"
@@ -286,6 +322,8 @@ class MeditikIds:
 
     # --- Speed Dial ---
     SPEED_DIAL_TRIGGER = "meditik-speed-dial-btn-trigger"
+    SPEED_DIAL_FAB = "meditik-speed-dial-btn-fab"
+    SPEED_DIAL_ADD_ICON = "AddIcon"
     SPEED_DIAL_ACTION_PREFIX = "meditik-speed-dial-btn-"
     # Stable action ids (numeric) observed on test env
     SPEED_DIAL_BOOK_APPOINTMENT = "meditik-speed-dial-btn-15"
@@ -310,6 +348,12 @@ class MeditikIds:
     NAVIGATION_BTN_MOOVIT = "meditik-navigation-btn-moovit"
 
     # --- Shared ---
+    # The empty-state pair is genuinely shared across MediTik modules (Sick
+    # Days, Vaccinations, Visit Summaries, the tabbed screens' scoped states).
+    # The per-module SICK_DAYS_* / MY_REQUESTS_* aliases below carry the same
+    # literals and are kept for the suites that already reference them.
+    EMPTY_STATE_TITLE = "meditik-empty-state-title"
+    EMPTY_STATE_ICON = "meditik-empty-state-icon"
     INPUT_PHONE_NUMBER = "meditik-input-phone-number"
     PREV_NEXT_BTN_BACK = "meditik-prev-next-btn-back"
     PREV_NEXT_BTN_NEXT = "meditik-prev-next-btn-next"
