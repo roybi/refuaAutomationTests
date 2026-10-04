@@ -2,12 +2,13 @@
 Allure Report Server
 Direct invocation bypassing npm wrapper bug
 """
-import subprocess
 import os
 import shutil
+import subprocess
 import time
 import webbrowser
 from pathlib import Path
+
 
 def serve_allure_report():
     """Start Allure server and open browser"""

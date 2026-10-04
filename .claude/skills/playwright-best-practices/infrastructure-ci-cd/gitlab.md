@@ -260,7 +260,7 @@ e2e:integration:
       alias: cache
   variables:
     CI: "true"
-    DATABASE_URL: $TEST_DATABASE_URL  # masked CI/CD variable; host = db
+    DATABASE_URL: $TEST_DATABASE_URL # masked CI/CD variable; host = db
     REDIS_URL: "redis://cache:6379"
     POSTGRES_PASSWORD: "postgres"
     POSTGRES_DB: "testdb"
@@ -320,7 +320,7 @@ Set up the schedule in **CI/CD > Schedules**: `0 3 * * 1-5` (3 AM UTC, weekdays)
 
 | Anti-Pattern                                         | Problem                                                            | Do This Instead                                                           |
 | ---------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------- |
-| Not using the Playwright Docker image                | Installing browsers every run adds 1-2 minutes                     | Use `mcr.microsoft.com/playwright:v1.48.0-noble` as base image                   |
+| Not using the Playwright Docker image                | Installing browsers every run adds 1-2 minutes                     | Use `mcr.microsoft.com/playwright:v1.48.0-noble` as base image            |
 | `artifacts: when: on_failure` only                   | No report when tests pass; can't verify results                    | Use `when: always` to capture reports regardless                          |
 | No `expire_in` on artifacts                          | Artifacts accumulate and consume storage                           | Set `expire_in: 14 days` for reports, `1 hour` for intermediate artifacts |
 | Hardcoding `CI_NODE_TOTAL` in shard flag             | Breaks when you change `parallel:` value                           | Use `--shard=$CI_NODE_INDEX/$CI_NODE_TOTAL`                               |
@@ -379,7 +379,7 @@ services:
     alias: db
 
 variables:
-  DATABASE_URL: $TEST_DATABASE_URL  # masked CI/CD variable; host = db (not localhost)
+  DATABASE_URL: $TEST_DATABASE_URL # masked CI/CD variable; host = db (not localhost)
 ```
 
 ### Merged report is empty after sharded run

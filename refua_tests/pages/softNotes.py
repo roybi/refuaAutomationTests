@@ -73,8 +73,9 @@ def publish_soft_notes_to_allure(notes: list[str]) -> None:
     if not notes:
         return
     try:
-        import allure
         from allure_commons.types import Severity
+
+        import allure
 
         summary = "\n".join(f"• {n}" for n in notes)
         allure.attach(

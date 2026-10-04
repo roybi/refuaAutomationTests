@@ -2,11 +2,12 @@
 Generate Allure HTML Report
 Workaround for spaces in Windows username path
 """
-import subprocess
 import os
 import shutil
+import subprocess
 import webbrowser
 from pathlib import Path
+
 
 def generate_allure_report():
     """Generate Allure HTML report and open in browser"""
