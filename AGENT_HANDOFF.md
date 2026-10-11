@@ -168,6 +168,67 @@ Next action (when resumed): either (a) get a fresh manual login in the integrate
 
 | 2026-09-27 | GitHub Copilot | Found automation session is in-memory only: any full page load (goto/reload) of the app logs out (probe: same-tab goto /home -> login screen). AppSession now wraps page.goto/reload for app URLs into history.pushState+popstate, re-running automation login when logged out. app_session + automation env check cached on request.config so tests/ and bdd/ share ONE browser (fixed "Sync API inside asyncio loop"). Seed fixture now depends on auth_state_session (seed only after env check). Result: meditikReferralsSanity 5 passed (3 empty-state skipped: data present). BDD referrals not yet run: TEST returned HTTP 429 (rate limit) after repeated runs. Seed runs today for 4444401 (rows kept): 1388dc91b378, 95a8920a6c3e, b4b9908017db, c7afb930bbd0, ebc49ca9a8e4, af7820324820. Next: wait for 429 to clear, rerun -m referrals, check /user-requests for seeded rows. |
 
+## SEPARATE TASK: Azure Excel Import Workflow (2026-10-11)
+
+**STATUS**: `BLOCKED` (awaiting PR merge for hosted workflow verification)
+**LAST AGENT**: `GitHub Copilot`
+**LAST UPDATED**: `2026-10-11`
+**BRANCH**: `feature/upload-test-plan-to-azure` (PR route approved after main rejection)
+
+The earlier workbook/application task remains BLOCKED and is unchanged.
+
+### Plan and definition of done
+
+- [x] Inspect repository instructions and obtain approval to publish to main.
+- [x] Integrate the standalone importer, isolated dependencies, tests, and workflow.
+- [x] Pass focused unit tests, compilation, and workbook dry-run.
+- [x] Commit/push to a feature branch and open PR #3 after main rejected direct push.
+- [ ] After PR merge, verify the GitHub workflow with synthetic data only.
+
+### Resume point
+
+Integration is complete under `tools/azure_test_importer/` and
+`.github/workflows/upload-test-plan-to-azure.yml`. All 38 isolated unit tests,
+Python compilation, workflow syntax, and the actual validation step against
+`example.xlsx` passed. PR: https://github.com/DigitalIDF/refuaAutomationTests/pull/3
+Required security workflows and CodeQL blocked the direct main push (GH013);
+the user approved creating this branch and PR, not bypassing protections.
+After merge, dispatch the workflow with `tools/azure_test_importer/example.xlsx`,
+plan `Importer_Verification`, sheet `Test_Cases`, and `dry_run=true`.
+The workflow must reach the default branch before manual dispatch is available.
+Repository secret listing did not find `AZURE_DEVOPS_PAT`; live runs require
+private secret setup by the user. No real workbook uploads, application pytest
+runs, DB seeding, or Azure writes. Hosted verification has not run yet.
+
+### Work log (append only)
+
+- 2026-10-11: Inspected main and repository instructions; admin access verified.
+	User explicitly approved direct push to main. Added the manual workflow and
+	dedicated tool documentation, preserving existing root dependencies and tests.
+- 2026-10-11: Imported the existing tool verbatim with isolated dependencies,
+	adjusted workflow/test paths, added a root documentation link and a synthetic
+	one-case workbook. All 35 unittest cases and the integrated workflow's actual
+	workbook-validation step passed; no application fixtures or Azure API writes.
+- 2026-10-11: Committed implementation as `e155785`. Direct main push was rejected
+	by required organization security workflows and CodeQL rules. With explicit
+	user approval, pushed `feature/upload-test-plan-to-azure` and opened PR #3.
+	Hosted dry-run is deferred until merge; the same check passed locally.
+- 2026-10-11: Addressed Code Scanning alerts #15-18: upgraded requests to 2.33.0
+	for CVE-2026-25645, switched XML test parsing to defusedxml, and replaced test
+	execution of YAML Python strings with direct calls to `workflow_runner.py`.
+	Workflow steps now call that module's validate/upload/summary entry points.
+	All 37 tests passed in an isolated environment, including a real no-PAT CLI
+	dry-run; compilation, dependency consistency, and editor diagnostics passed.
+	No alert dismissals or scanner exclusions were added. GitHub's rescan will
+	determine alert closure. The user's separately edited local importer is intact.
+
+- 2026-10-11: Removed workflow subprocess calls after the rescan cleared alerts
+  #15-18 but reported WS-I013-PYTHON-00141 as alerts #19-20. The workflow now calls
+  `importer.main(arguments)` directly and persists only importer arguments, not
+  executable commands. Existing CLI usage remains compatible; importer failures
+  still fail the workflow. All 38 tests, compilation, and editor checks passed.
+  Publishing this follow-up to PR #3 for another required security scan.
+
 ## PROJECT QUICK REFERENCE (static — rarely changes)
 
 - **Project**: refuaAutomationTests — Playwright/pytest test automation for the MEDITEK medical app.
