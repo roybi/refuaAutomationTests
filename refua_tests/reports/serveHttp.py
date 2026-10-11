@@ -3,10 +3,11 @@ Serve Allure Report via HTTP Server
 Fixes CORS and file:// protocol issues that cause missing images/icons
 """
 import http.server
+import os
 import socketserver
 import webbrowser
-import os
 from pathlib import Path
+
 
 def serve_report(port=8000):
     """Start HTTP server for Allure report"""
@@ -17,7 +18,7 @@ def serve_report(port=8000):
 
     if not report_dir.exists():
         print("[ERROR] allure/report folder not found")
-        print("Run: python -m refua_tests.reports.generate_report_java first")
+        print("Run: python -m refua_tests.reports.generateReportJava first")
         return False
 
     # Save current directory
@@ -58,7 +59,7 @@ def serve_report(port=8000):
     except OSError as e:
         if "address already in use" in str(e).lower():
             print(f"[ERROR] Port {port} is already in use")
-            print(f"Try: python -m refua_tests.reports.serve_http --port 8001")
+            print(f"Try: python -m refua_tests.reports.serveHttp --port {port + 1}")
         else:
             print(f"[ERROR] {e}")
         return False

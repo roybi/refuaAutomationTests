@@ -1,130 +1,67 @@
-﻿# Quick Start - BDD Testing
+# BDD Quick Start (pytest-bdd)
 
-## Installation
+BDD scenarios mirror the pytest sanity suites **1:1 per workbook case** and run on the same shared, authenticated browser tab.
 
-```bash
-# Install dependencies (includes pytest-bdd)
-pip install -r requirements.txt
+## Layout
+
+```
+refua_tests/bdd/
+├── conftest.py                 # shared app_session, known_issue handling, Allure step trace
+├── features/
+│   ├── meditik_<module>.feature            # Ready cases (executable)
+│   ├── meditik_<module>_pending.feature    # Pending cases (generated, skipped)
+│   └── mainPage.feature                    # Legacy framework smoke feature
+├── step_defs/
+│   ├── meditikSteps.py         # Shared: bdd_context fixture, Background, home, menu, request forms
+│   └── <module>Steps.py        # medicines, myRequests, myAppointments, referrals, scheduling,
+│                               # sickDays, vaccinations, medicalProfile, visitSummaries
+├── test_meditik_bdd.py         # scenarios() for every Ready feature
+├── test_<module>_pending_bdd.py
+├── test_workbook_pending_bdd.py
+└── test_main_page_bdd.py
 ```
 
-## Run BDD Tests
+## Run
 
-### Basic Commands
-
-```bash
-# Run all BDD tests
-TEST_ENV=test python -m pytest refua_tests/bdd/test_meditik_bdd.py -v
-
-# Run Meditik scenarios only
-TEST_ENV=test python -m pytest refua_tests/bdd/ -m meditik -v
-
-# Run one Meditik area
-TEST_ENV=test python -m pytest refua_tests/bdd/ -m "meditik and request_forms" -v
-
-# Exclude known product issues
-TEST_ENV=test python -m pytest refua_tests/bdd/ -m "meditik and not known_issue" -v
+```powershell
+$env:TEST_ENV = "test"
+venv\Scripts\pytest.exe refua_tests\bdd --personal-number <PN>                       # all BDD
+venv\Scripts\pytest.exe refua_tests\bdd\test_meditik_bdd.py --personal-number <PN>   # Ready scenarios only
+venv\Scripts\pytest.exe refua_tests\bdd -m "meditik and medicines" --personal-number <PN>
+venv\Scripts\pytest.exe refua_tests\bdd -m "meditik and not known_issue" --personal-number <PN>
 ```
 
-Tags are application-aware: `@meditik` selects Meditik scenarios, while
-`@cprgo` is reserved for future CPRGO scenarios. Area tags include `@home`,
-`@menu`, and `@request_forms`.
+Tags: `@bdd @meditik` plus one module tag (`@home`, `@menu`, `@request_forms`, `@my_requests`, `@my_appointments`, `@scheduling`, `@referrals`, `@new_referral`, `@medicines`, `@sick_days`, `@vaccinations`, `@medical_profile`, `@visit_summaries`). `@cprgo` is reserved for a future application. Every tag must be registered in `pytest.ini`.
 
-### With Reporting
+Each executed Given/When/Then is attached to the Allure result as `BDD scenario action` with its status.
 
-```bash
-# Generate Allure report
-TEST_ENV=test python -m pytest refua_tests/bdd/ -m meditik --alluredir=allure/results -v
-python -m refua_tests.reports.generate_report_java
-python -m refua_tests.reports.serve_http
-```
+## Adding a Ready case
 
-Every executed Given/When/Then step is attached to the scenario's Allure result
-as `BDD scenario action`, including the action status. This lets a report reader
-see which Gherkin actions completed before a failure.
+1. Implement the sanity test in `refua_tests/tests/meditik<Module>Sanity.py` (page object first).
+2. Add the scenario to `features/meditik_<module>.feature`, titled with the case id:
 
-## Run Both Test Types
+   ```gherkin
+   Scenario: VSUM-001 - Open the Visit Summaries page
+     When the user navigates to the Visit Summaries page
+     Then the Visit Summaries toolbar and empty-state title are displayed
+   ```
 
-```bash
-# Run traditional + BDD tests together
-TEST_ENV=test python -m pytest refua_tests/ -v
+3. Add steps in `step_defs/<module>Steps.py`, reusing the same page object. Steps receive `bdd_context`; keep app-specific steps out of shared files.
 
-# Traditional only
-TEST_ENV=test python -m pytest refua_tests/tests/ -v
+   ```python
+   @given("the user navigates to the Visit Summaries page")
+   @when("the user navigates to the Visit Summaries page")
+   def navigate_to_visit_summaries(bdd_context):
+       summaries = _summaries(bdd_context)
+       summaries.open_direct()
+       summaries.wait_until_loaded()
+   ```
 
-# BDD only
-TEST_ENV=test python -m pytest refua_tests/bdd/ -v
-```
+4. New feature file -> add `scenarios("features/...")` and the step-module import to `test_meditik_bdd.py`.
+5. Remove the case from the pending feature and update `docs/setup/TEST_CASE_TRACKER.csv`. To regenerate a pending feature from its catalog:
 
-## Current Meditik BDD Coverage
+   ```powershell
+   venv\Scripts\python.exe tools\generate_pending_feature.py docs\setup\<MODULE>_CASES.json refua_tests\bdd\features\meditik_<module>_pending.feature --feature-name "<name>" --tags "@bdd @meditik @<module>" --case-label "<PREFIX>"
+   ```
 
-`test_meditik_bdd.py` loads **69 scenarios**, matching the Home, side-menu, and
-request-form pytest coverage. The feature files are:
-
-- `meditik_home.feature`
-- `meditik_menu.feature`
-- `meditik_request_forms.feature`
-
-New pytest UI coverage must include a matching executable BDD scenario and
-step definition. Keep application-specific steps separate so future CPRGO
-features can use `@cprgo` and their own adapter without Meditik coupling.
-
-## Creating New BDD Tests
-
-### 1. Create Feature File
-
-`refua_tests/bdd/features/login.feature`:
-
-```gherkin
-Feature: User Login
-  As a user
-  I want to log in to the system
-  So that I can access my account
-
-  @smoke @authentication
-  Scenario: Successful login with valid credentials
-    Given I am on the login page
-    When I enter email "user@test.com" and password "password123"
-    And I click the login button
-    Then I should be redirected to "/dashboard"
-    And I should see my username displayed
-```
-
-### 2. Create Step Definitions
-
-`refua_tests/bdd/step_defs/login_steps.py`:
-
-```python
-from pytest_bdd import given, when, then, parsers, scenarios
-from refua_tests.pages.login_page import LoginPage
-
-# Load scenarios
-scenarios('../features/login.feature')
-
-@given("I am on the login page")
-def on_login_page(setup_browser):
-    login_page = LoginPage(setup_browser)
-    login_page.goto("/login")
-
-@when(parsers.parse('I enter email "{email}" and password "{password}"'))
-def enter_credentials(context, email, password):
-    # Implementation
-    pass
-```
-
-### 3. Run Tests
-
-```bash
-TEST_ENV=test pytest refua_tests/bdd/features/login.feature -v
-```
-
-## Documentation
-
-- **Full BDD Guide**: `refua_tests/bdd/README.md`
-- **Architecture**: `ARCHITECTURE.md` (see BDD Testing section)
-- **Summary**: `documents/BDD_IMPLEMENTATION_SUMMARY.md`
-
-## See Also
-
-- Traditional tests: `refua_tests/tests/`
-- Reports: `refua_tests/reports/README.md`
-- pytest-bdd docs: https://pytest-bdd.readthedocs.io/
+Pending cases stay as skipped scenarios with the workbook Clarification Status; never add steps that assert unapproved behaviour. See [WORKBOOK_V2.md](WORKBOOK_V2.md) for the original workbook intake.

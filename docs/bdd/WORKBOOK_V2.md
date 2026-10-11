@@ -22,8 +22,10 @@ the pending BDD feature uses only registered `bdd` and `meditik` tags.
 ## Approved Decisions
 
 - Target TEST using isolated synthetic data; submissions and cleanup authorized.
-- API contracts, data-model mappings, and seeding/cleanup procedures are not
-  available. Cases depending on them remain blocked.
+- API contracts and data-model mappings are not available. Cases depending on
+  them remain blocked. Direct-DB seeding/cleanup for Meditik requests now exists
+  (`refua_tests/utils/meditik_seed.py`, `tools/db_seed_meditik.py`) and can unblock
+  cases that only needed synthetic request data.
 - Undefined business rules are deferred, not inferred from observed behavior.
 - Browser-level network interception is approved for failure simulation. It
   must not be presented as real downstream failure or persistence verification.
