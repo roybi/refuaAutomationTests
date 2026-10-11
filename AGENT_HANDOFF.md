@@ -170,7 +170,7 @@ Next action (when resumed): either (a) get a fresh manual login in the integrate
 
 ## SEPARATE TASK: Azure Excel Import Workflow (2026-10-11)
 
-**STATUS**: `IN_PROGRESS` (local upload and personal PAT extension ready for publication)
+**STATUS**: `BLOCKED` (PR #4 awaiting required checks and merge)
 **LAST AGENT**: `GitHub Copilot`
 **LAST UPDATED**: `2026-10-11`
 **BRANCH**: `copilot/azure-local-upload` (PR route approved after main rejection)
@@ -187,7 +187,7 @@ The earlier workbook/application task remains BLOCKED and is unchanged.
 - [x] Add native local file selection and temporary draft-release workbook transport.
 - [x] Require a masked personal PAT prompt for each live run, using a unique temporary GitHub secret.
 - [x] Validate 69 isolated tests, actionlint, and editor diagnostics without real credentials or remote writes.
-- [ ] Publish the local-upload extension PR and review required repository checks.
+- [x] Publish the local-upload extension PR and inspect required repository checks.
 
 ### Resume point
 
@@ -205,8 +205,11 @@ No shared PAT fallback. Live use requires repository secret-management permissio
 and the protected default branch. Abrupt interruption can leave resources; the
 README documents manual cleanup and PAT revocation.
 
-Next action: commit/push this branch and open a PR to DigitalIDF/main, then review
-required scans without bypasses. 69 unit tests, actionlint, and editor diagnostics
+PR #4: https://github.com/DigitalIDF/refuaAutomationTests/pull/4 (feature commit ca8c7f9).
+Next action: review required scans and merge through normal protection rules;
+CodeQL, ScanLi, VersionCheck, and Dependabot checks were still running at the last
+inspection, with no reported failures. Do not publish the older duplicate
+importer worktree. 69 unit tests, actionlint, Python compilation, and editor diagnostics
 passed. No real PAT was collected; GitHub upload/secret APIs are mocked in tests;
 no real workbook upload, workflow dispatch, Azure writes, or Meditik DB/UI runs
 were performed. Earlier worktrees and unrelated changes are preserved.
@@ -249,6 +252,12 @@ were performed. Earlier worktrees and unrelated changes are preserved.
 	GitHub CLI authenticated HTTPS worked after ordinary HTTPS/SSH fetch failures.
 	No secrets were requested in chat or included in files, dispatch inputs, or
 	release assets. Publication is via copilot/azure-local-upload PR, not main bypass.
+
+	- 2026-10-11: Committed the local-upload/personal-PAT extension as ca8c7f9,
+	  pushed copilot/azure-local-upload to DigitalIDF, and opened PR #4 against main.
+	  Initial required-check inspection found passing/pending checks and no failures.
+	  PR is not merged; hosted local-upload execution and real Azure authentication
+	  remain unverified. No user PAT was collected or stored during development.
 
 ## PROJECT QUICK REFERENCE (static — rarely changes)
 
