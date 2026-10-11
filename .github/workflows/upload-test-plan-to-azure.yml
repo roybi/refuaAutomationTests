@@ -1,11 +1,16 @@
 name: Upload Test Plan to Azure
+run-name: "Azure import - ${{ inputs.upload_id || inputs.plan_name }}"
 
 on:
   workflow_dispatch:
     inputs:
       excel_path:
-        description: "Excel path in this repository, e.g. uploads/Visit_Summaries_Test_Cases.xlsx"
-        required: true
+        description: "Repository path for validation only; use local_upload.py to choose a PC file"
+        required: false
+        type: string
+      upload_id:
+        description: "Temporary upload ID, filled automatically by local_upload.py"
+        required: false
         type: string
       plan_name:
         description: "Azure Test Plan name (AUTO_ is added automatically)"
@@ -48,8 +53,12 @@ jobs:
     name: Validate and import test cases
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write
     env:
       EXCEL_PATH: ${{ inputs.excel_path }}
+      UPLOAD_ID: ${{ inputs.upload_id }}
+      VALIDATION_ONLY: ${{ inputs.dry_run }}
       PLAN_NAME: ${{ inputs.plan_name }}
       SHEET_NAME: ${{ inputs.sheet_name }}
       AZURE_ORGANIZATION: ${{ inputs.organization }}
@@ -73,13 +82,21 @@ jobs:
         run: python -m pip install --disable-pip-version-check -r tools/azure_test_importer/requirements.txt
 
       - name: Validate workbook
+        env:
+          GH_TOKEN: ${{ inputs.upload_id != '' && github.token || '' }}
         run: python tools/azure_test_importer/workflow_runner.py validate
 
       - name: Upload test plan to Azure
         if: ${{ !inputs.dry_run }}
         env:
-          AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
+          AZURE_DEVOPS_PAT: ${{ secrets[format('AZURE_IMPORT_PAT_{0}', inputs.upload_id)] }}
         run: python tools/azure_test_importer/workflow_runner.py upload
+
+      - name: Delete temporary workbook upload
+        if: ${{ always() && inputs.upload_id != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/azure_test_importer/workflow_runner.py cleanup
 
       - name: Write run summary
         if: ${{ always() }}
