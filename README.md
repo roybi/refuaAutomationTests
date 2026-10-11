@@ -28,6 +28,15 @@ refuaAutomationTests (Tests) ← Application Test Implementation
 
 The test repository **depends on** the framework, not the other way around.
 
+## Import Excel Test Cases Into Azure
+
+Use **Actions > Azure - Import Excel test cases** to create or update Azure DevOps
+Test Cases from an uploaded workbook. The action accepts a repository file path
+and uses `AZURE_DEVOPS_PAT` from a selected GitHub Environment. It defaults to
+Excel-only validation; uncheck **dry_run** to make Azure changes.
+
+See the [upload, PAT setup, and execution guide](docs/guides/AZURE_TEST_CASE_IMPORT.md).
+
 ## Quick Start
 
 ### 1. Clone and Setup
