@@ -170,10 +170,10 @@ Next action (when resumed): either (a) get a fresh manual login in the integrate
 
 ## SEPARATE TASK: Azure Excel Import Workflow (2026-10-11)
 
-**STATUS**: `IN_PROGRESS`
+**STATUS**: `BLOCKED` (awaiting PR merge for hosted workflow verification)
 **LAST AGENT**: `GitHub Copilot`
 **LAST UPDATED**: `2026-10-11`
-**BRANCH**: `main` (direct push explicitly approved by user)
+**BRANCH**: `feature/upload-test-plan-to-azure` (PR route approved after main rejection)
 
 The earlier workbook/application task remains BLOCKED and is unchanged.
 
@@ -182,17 +182,23 @@ The earlier workbook/application task remains BLOCKED and is unchanged.
 - [x] Inspect repository instructions and obtain approval to publish to main.
 - [x] Integrate the standalone importer, isolated dependencies, tests, and workflow.
 - [x] Pass focused unit tests, compilation, and workbook dry-run.
-- [ ] Commit/push to main and verify the GitHub workflow with synthetic data only.
+- [x] Commit/push to a feature branch and open PR #3 after main rejected direct push.
+- [ ] After PR merge, verify the GitHub workflow with synthetic data only.
 
 ### Resume point
 
 Integration is complete under `tools/azure_test_importer/` and
 `.github/workflows/upload-test-plan-to-azure.yml`. All 35 isolated unit tests,
 Python compilation, workflow syntax, and the actual validation step against
-`example.xlsx` passed. Next: commit/push the scoped changes to main and dispatch
-the workflow with that sample and `dry_run=true`. Repository secret listing did
-not find `AZURE_DEVOPS_PAT`; live runs require private secret setup by the user.
-No real workbook uploads, application pytest runs, DB seeding, or Azure writes.
+`example.xlsx` passed. PR: https://github.com/DigitalIDF/refuaAutomationTests/pull/3
+Required security workflows and CodeQL blocked the direct main push (GH013);
+the user approved creating this branch and PR, not bypassing protections.
+After merge, dispatch the workflow with `tools/azure_test_importer/example.xlsx`,
+plan `Importer_Verification`, sheet `Test_Cases`, and `dry_run=true`.
+The workflow must reach the default branch before manual dispatch is available.
+Repository secret listing did not find `AZURE_DEVOPS_PAT`; live runs require
+private secret setup by the user. No real workbook uploads, application pytest
+runs, DB seeding, or Azure writes. Hosted verification has not run yet.
 
 ### Work log (append only)
 
@@ -203,6 +209,10 @@ No real workbook uploads, application pytest runs, DB seeding, or Azure writes.
 	adjusted workflow/test paths, added a root documentation link and a synthetic
 	one-case workbook. All 35 unittest cases and the integrated workflow's actual
 	workbook-validation step passed; no application fixtures or Azure API writes.
+- 2026-10-11: Committed implementation as `e155785`. Direct main push was rejected
+	by required organization security workflows and CodeQL rules. With explicit
+	user approval, pushed `feature/upload-test-plan-to-azure` and opened PR #3.
+	Hosted dry-run is deferred until merge; the same check passed locally.
 
 ## PROJECT QUICK REFERENCE (static — rarely changes)
 
