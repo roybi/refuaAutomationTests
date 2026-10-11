@@ -15,7 +15,8 @@ def meditik_seed_session(auth_state_session):
 
     Per execution: --personal-number 4444410 (or TEST_PERSONAL_NUMBER); it must match
     SEED_ALLOWED_PERSONAL_NUMBERS (numbers/ranges). Configured in .env.<env>: MEDITIK_SEED_ENV
-    (must equal TEST_ENV), optional MEDITIK_SEED_DATASET (default "all") and
+    (must equal TEST_ENV), optional MEDITIK_SEED_DATASET (default "all"), MEDITIK_SEED_STATE
+    ("saved", "approved" or "both", default "both") and
     MEDITIK_SEED_CLEANUP ("report" keeps rows, "delete-owned" removes them). A blocked or
     failed seed is reported as a warning and yields None; it never fails the suite.
     """
@@ -39,8 +40,9 @@ def meditik_seed_session(auth_state_session):
         return
 
     dataset = os.getenv("MEDITIK_SEED_DATASET", "all")
+    state = os.getenv("MEDITIK_SEED_STATE", "both")
     try:
-        manifest = ms.seed(seed_env, os.getenv("TEST_PERSONAL_NUMBER", ""), dataset)
+        manifest = ms.seed(seed_env, os.getenv("TEST_PERSONAL_NUMBER", ""), dataset, state)
     except Exception as error:  # noqa: BLE001 - seeding problems must not abort unrelated tests
         message = f"Meditik DB seed skipped ({type(error).__name__}: {error})"
         logger.warning(message)

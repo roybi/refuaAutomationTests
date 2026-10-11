@@ -13,6 +13,15 @@ Verified relationships (TEST, schema public, 2026-09-27, see tools/db_discover_s
 Medicines/prescription catalog data is NOT stored in this DB (it comes from external systems),
 so only request entities can be seeded here.
 
+States: every kind is seeded as "saved" (state 1, New tab); kinds in APPROVABLE_TYPES are also
+seeded as "approved" (state 6, Approved tab) with answer_time + clinic_answer, matching real
+approved rows on TEST (2026-10-06). Child rows are identical for both states.
+
+request_xml (the message the app sends on): MESER/MESSER_METUPAL/PARIT_REFUI with one
+NATUN_REFUI (N_ORDER, N_KOD_NAME, N_TEXT) per field plus P_ID=request id, P_SUG, P_ORDER=1 and
+P_DATE=request_time (Israel, dd/mm/yyyy HH:MM:SS). Field codes per type were read from real TEST
+rows (2026-10-06): the free text is request_text and the 0/1 flag means "has attachments".
+
 No table in this graph has a soft-delete column. Cleanup is therefore "report" by default;
 "delete-owned" removes only this run's exact IDs (AFTER DELETE triggers archive them to history.*).
 """
@@ -28,6 +37,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
+from xml.sax.saxutils import escape
 from zoneinfo import ZoneInfo
 
 from dotenv import dotenv_values
@@ -41,6 +51,12 @@ VERIFIED_TARGETS = {"test": {"database": "meditik", "schema": "public"}}
 ALLOWED_ENVS = ("test", "preprod")
 
 REQUEST_STATE_SAVED = 1  # INITIAL_REQUEST_STATE; shown in the lobby "new requests" tab
+REQUEST_STATE_APPROVED = 6  # "אושרה" / "הבקשה אושרה"; shown in the "approved requests" tab
+APPROVED_CLINIC_ANSWER = "אישור"
+# Types that have approved requests on TEST; 2, 3 (referral change/cancel) and 7 (refund) have none.
+APPROVABLE_TYPES = frozenset({1, 4, 5, 6, 8, 9, 10, 11})
+STATE_IDS = {"saved": REQUEST_STATE_SAVED, "approved": REQUEST_STATE_APPROVED}
+STATES = ("saved", "approved", "both")
 PRESCRIPTION_TYPE_OTHER = 3
 INSOLES_CHAIN_TEST = 2  # "בדיקה"
 OPTIC_CHAIN_TEST = 2  # "אופטיקה בדיקה"
@@ -62,6 +78,27 @@ REQUEST_KINDS: dict[str, tuple[int, Optional[str]]] = {
 CHILD_TABLES = tuple(sorted({t for _, t in REQUEST_KINDS.values() if t}))
 DEPENDENT_TABLES = CHILD_TABLES + ("attachment", "message_sent", "request_in_file", "request_error_in_file")
 
+# request_type_id -> (P_SUG, [(N_KOD_NAME, value key)]); type 7 (refund) has no XML on TEST.
+XML_LAYOUTS: dict[int, tuple[str, list[tuple[str, str]]]] = {
+    **{t: ("2000", [("2001", "request_type"), ("2002", "required_service"), ("2003", "referral_number"),
+                    ("2004", "required_medical_facility"), ("2005", "text"), ("2006", "has_attachments"),
+                    ("2007", "phone"), ("2008", "target")]) for t in (1, 2, 3, 4)},
+    5: ("3000", [("3001", "prescription_name"), ("3002", "prescription_type_id"), ("3003", "text"),
+                 ("3004", "has_attachments"), ("3005", "phone"), ("3006", "target")]),
+    6: ("4000", [("4001", "text"), ("4002", "has_attachments"), ("4003", "phone"), ("4004", "target")]),
+    8: ("6000", [("6001", "insoles_chain_id"), ("6002", "text"), ("6003", "phone"), ("6004", "target")]),
+    9: ("7000", [("7001", "facility_id"), ("7002", "referral_number"), ("7003", "visit_date"),
+                 ("7004", "visit_hour"), ("7005", "referral_reason_id"), ("7006", "text"),
+                 ("7007", "referral_source_id"), ("7008", "has_attachments"), ("7009", "phone"),
+                 ("7010", "target")]),
+    10: ("8000", [("8001", "start_date"), ("8002", "end_date"), ("8003", "text"), ("8004", "phone"),
+                  ("8006", "has_attachments"), ("8007", "target")]),
+    11: ("5000", [("5001", "optic_chain_id"), ("5002", "text"), ("5003", "phone"), ("5004", "target")]),
+}
+XML_TARGET = "ALTOR"
+# Referral types that act on an existing referral carry its number (new referral, type 4, has none).
+EXISTING_REFERRAL_TYPES = frozenset({1, 2, 3})
+
 TAG_PREFIX = "AUTO-SEED"
 TAG_RE = re.compile(rf"^\[{TAG_PREFIX}:([0-9a-f]{{12}})\]")
 DATASETS = tuple(REQUEST_KINDS) + ("all",)
@@ -74,6 +111,13 @@ def dataset_kinds(dataset: str) -> list[str]:
     if dataset not in REQUEST_KINDS:
         raise SeedGuardError(f"Unknown dataset '{dataset}', expected one of {DATASETS}.")
     return [dataset]
+
+
+def kind_states(kind: str, state: str) -> list[str]:
+    if state not in STATES:
+        raise SeedGuardError(f"Unknown state '{state}', expected one of {STATES}.")
+    wanted = ["saved", "approved"] if state == "both" else [state]
+    return [s for s in wanted if s == "saved" or REQUEST_KINDS[kind][0] in APPROVABLE_TYPES]
 
 
 class SeedGuardError(RuntimeError):
@@ -97,6 +141,8 @@ class SeedEntity:
     label: str
     display_text: str
     target_date: Optional[str] = None
+    state: str = "saved"
+    has_xml: bool = False
 
 
 @dataclass
@@ -107,6 +153,7 @@ class SeedManifest:
     personal_number: str
     created_at: str
     status: str = "planned"  # planned -> pending -> committed -> cleaned | cleanup_failed
+    state: str = "saved"
     dates: list[dict] = field(default_factory=list)
     entities: list[dict] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -240,10 +287,12 @@ def resolve_person_id(cur, personal_number: str) -> str:
     return rows[0]["patient_person_id"]
 
 
-def verify_reference_rows(cur, dataset: str) -> dict[str, int]:
+def verify_reference_rows(cur, dataset: str, state: str = "saved") -> dict[str, int]:
     """Check fixed reference IDs are active and resolve the ER reference IDs. Returns resolved refs."""
     kinds = dataset_kinds(dataset)
-    checks = [("request_state", REQUEST_STATE_SAVED)] + [("request_type", REQUEST_KINDS[k][0]) for k in kinds]
+    states = {s for k in kinds for s in kind_states(k, state)}
+    checks = [("request_state", STATE_IDS[s]) for s in sorted(states)]
+    checks += [("request_type", REQUEST_KINDS[k][0]) for k in kinds]
     if "prescriptions" in kinds:
         checks.append(("prescription_type", PRESCRIPTION_TYPE_OTHER))
     if "insoles" in kinds:
@@ -303,13 +352,14 @@ def _prepare(cur) -> None:
     cur.execute("SET LOCAL lock_timeout = '5s'")
 
 
-def plan(env: str, personal_number: str, dataset: str) -> SeedManifest:
+def plan(env: str, personal_number: str, dataset: str, state: str = "both") -> SeedManifest:
     """Read-only: validate everything a seed would need and return the would-be manifest."""
     load_env(env)
     pn = validate_personal_number(personal_number)
-    dataset_kinds(dataset)
+    for kind in dataset_kinds(dataset):
+        kind_states(kind, state)
     manifest = SeedManifest(run_id=uuid.uuid4().hex[:12], env=env, dataset=dataset, personal_number=pn,
-                            created_at=datetime.now(TZ).isoformat())
+                            created_at=datetime.now(TZ).isoformat(), state=state)
     manifest.dates = [asdict(d) for d in seed_dates(datetime.now(TZ).date())]
     with _connect() as conn:
         conn.set_session(readonly=True)
@@ -317,7 +367,7 @@ def plan(env: str, personal_number: str, dataset: str) -> SeedManifest:
             _prepare(cur)
             manifest.warnings += verify_server(cur, env)
             resolve_person_id(cur, pn)
-            verify_reference_rows(cur, dataset)
+            verify_reference_rows(cur, dataset, state)
             leftovers = find_leftovers(cur, pn)
         conn.rollback()
     if leftovers:
@@ -326,9 +376,9 @@ def plan(env: str, personal_number: str, dataset: str) -> SeedManifest:
     return manifest
 
 
-def seed(env: str, personal_number: str, dataset: str) -> SeedManifest:
+def seed(env: str, personal_number: str, dataset: str, state: str = "both") -> SeedManifest:
     """Insert the dataset in one transaction, commit, and return the manifest with real IDs."""
-    manifest = plan(env, personal_number, dataset)
+    manifest = plan(env, personal_number, dataset, state)
     lock = _UserLock(env, manifest.personal_number)
     lock.acquire(manifest.run_id)
     try:
@@ -338,12 +388,13 @@ def seed(env: str, personal_number: str, dataset: str) -> SeedManifest:
                     _prepare(cur)
                     verify_server(cur, env)
                     person_id = resolve_person_id(cur, manifest.personal_number)
-                    refs = verify_reference_rows(cur, dataset)
+                    refs = verify_reference_rows(cur, dataset, state)
                     now = datetime.now(TZ)
                     for kind in dataset_kinds(dataset):
-                        for i, sd in enumerate(manifest.dates, start=1):
-                            manifest.entities.append(asdict(_insert_entity(
-                                cur, manifest, kind, refs, person_id, now, i, SeedDate(**sd))))
+                        for st in kind_states(kind, state):
+                            for i, sd in enumerate(manifest.dates, start=1):
+                                manifest.entities.append(asdict(_insert_entity(
+                                    cur, manifest, kind, refs, person_id, now, i, SeedDate(**sd), st)))
                 manifest.status = "pending"
                 manifest.save()  # IDs recorded before commit for crash recovery
                 conn.commit()
@@ -363,46 +414,88 @@ def seed(env: str, personal_number: str, dataset: str) -> SeedManifest:
         raise
 
 
+def build_request_xml(request_type: int, request_id: int, request_time: datetime,
+                      values: dict[str, Any]) -> Optional[str]:
+    """Render request_xml in the app's format, or None for types the app sends without XML."""
+    layout = XML_LAYOUTS.get(request_type)
+    if layout is None:
+        return None
+    p_sug, fields = layout
+    values = {"request_type": request_type, "has_attachments": 0, "target": XML_TARGET,
+              "phone": os.getenv("TEST_USER_PHONE", ""), **values}
+    lines = ['<?xml version="1.0"?>', "<MESER>", "  <MESSER_METUPAL>", "    <PARIT_REFUI>"]
+    for order, (code, key) in enumerate(fields, start=1):
+        value = values.get(key)
+        if isinstance(value, date):
+            value = value.strftime("%d/%m/%Y")
+        lines += ["      <NATUN_REFUI>", f"        <N_ORDER>{order}</N_ORDER>",
+                  f"        <N_KOD_NAME>{code}</N_KOD_NAME>",
+                  f"        <N_TEXT>{escape('' if value is None else str(value))}</N_TEXT>", "      </NATUN_REFUI>"]
+    lines += [f"      <P_ID>{request_id}</P_ID>", f"      <P_SUG>{p_sug}</P_SUG>", "      <P_ORDER>1</P_ORDER>",
+              f"      <P_DATE>{request_time.astimezone(TZ).strftime('%d/%m/%Y %H:%M:%S')}</P_DATE>",
+              "    </PARIT_REFUI>", "  </MESSER_METUPAL>", "</MESER>"]
+    return "\n".join(lines)
+
+
 def _insert_entity(cur, manifest: SeedManifest, kind: str, refs: dict[str, int], person_id: str,
-                   now: datetime, index: int, sd: SeedDate) -> SeedEntity:
+                   now: datetime, index: int, sd: SeedDate, state: str = "saved") -> SeedEntity:
     request_type, child_table = REQUEST_KINDS[kind]
-    display = f"AUTO {kind} {manifest.run_id[:6]} {index}"
+    display = f"AUTO {kind} {state} {manifest.run_id[:6]} {index}"
+    request_text = f"{manifest.tag} {display}"
+    approved = state == "approved"
     cur.execute(
         "INSERT INTO public.user_request (create_user, patient_person_id, patient_military_id, request_text, "
-        "request_type_id, request_state_id, request_time, hatch_upload_counter) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s, 0) RETURNING id",
-        (person_id, person_id, int(manifest.personal_number), f"{manifest.tag} {display}",
-         request_type, REQUEST_STATE_SAVED, now))
+        "request_type_id, request_state_id, request_time, hatch_upload_counter, clinic_answer, answer_time) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, 0, %s, %s) RETURNING id",
+        (person_id, person_id, int(manifest.personal_number), request_text,
+         request_type, STATE_IDS[state], now,
+         APPROVED_CLINIC_ANSWER if approved else None, now if approved else None))
     request_id = cur.fetchone()[0]
     target = None
+    values: dict[str, Any] = {"text": request_text}
     if child_table == "referral_request":
+        values.update(required_service=display, required_medical_facility=display,
+                      referral_number=900000000 + request_id if request_type in EXISTING_REFERRAL_TYPES else None)
         cur.execute("INSERT INTO public.referral_request (create_user, required_service, required_medical_facility, "
-                    "request_id) VALUES (%s, %s, %s, %s) RETURNING id", (person_id, display, display, request_id))
+                    "referral_number, request_id) VALUES (%s, %s, %s, %s, %s) RETURNING id",
+                    (person_id, display, display, values["referral_number"], request_id))
     elif child_table == "prescription_request":
+        values.update(prescription_name=display, prescription_type_id=PRESCRIPTION_TYPE_OTHER)
         cur.execute("INSERT INTO public.prescription_request (create_user, prescription_name, request_id, "
                     "prescription_type_id) VALUES (%s, %s, %s, %s) RETURNING id",
                     (person_id, display, request_id, PRESCRIPTION_TYPE_OTHER))
     elif child_table == "insoles_request":
+        values.update(insoles_chain_id=INSOLES_CHAIN_TEST)
         cur.execute("INSERT INTO public.insoles_request (create_user, request_id, insoles_chain_id) "
                     "VALUES (%s, %s, %s) RETURNING id", (person_id, request_id, INSOLES_CHAIN_TEST))
     elif child_table == "optic_request":
+        values.update(optic_chain_id=OPTIC_CHAIN_TEST)
         cur.execute("INSERT INTO public.optic_request (create_user, request_id, optic_chain_id) "
                     "VALUES (%s, %s, %s) RETURNING id", (person_id, request_id, OPTIC_CHAIN_TEST))
     elif child_table == "retroactive_commitment_request":
         # Retroactive ER commitment covers a past visit: yesterday 10:00 Israel time.
         visit = datetime.combine(now.date() - timedelta(days=1), datetime.min.time(), TZ).replace(hour=10)
         target = visit.isoformat()
+        values.update(facility_id=refs["er_facility"], referral_number=900000000 + request_id,
+                      visit_date=visit.date(), visit_hour=visit.strftime("%H:%M"),
+                      referral_reason_id=refs["er_referral_reason"], referral_source_id=refs["er_referral_source"])
         cur.execute("INSERT INTO public.retroactive_commitment_request (create_user, referral_number, visit_time, "
                     "request_id, facility_id, referral_reason_id, referral_source_id) "
                     "VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
-                    (person_id, 900000000 + request_id, visit, request_id, refs["er_facility"],
+                    (person_id, values["referral_number"], visit, request_id, refs["er_facility"],
                      refs["er_referral_reason"], refs["er_referral_source"]))
     elif child_table == "sick_days_request":
         target = sd.adjusted.isoformat()
+        values.update(start_date=sd.adjusted, end_date=sd.adjusted)
         cur.execute("INSERT INTO public.sick_days_request (create_user, start_date, end_date, request_id) "
                     "VALUES (%s, %s, %s, %s) RETURNING id", (person_id, sd.adjusted, sd.adjusted, request_id))
     child_ids = [cur.fetchone()[0]] if child_table else []
-    return SeedEntity(kind, request_id, request_type, child_table, child_ids, sd.label, display, target)
+    request_xml = build_request_xml(request_type, request_id, now, values)
+    if request_xml is not None:
+        cur.execute("UPDATE public.user_request SET request_xml = XMLPARSE(DOCUMENT %s) WHERE id = %s",
+                    (request_xml, request_id))
+    return SeedEntity(kind, request_id, request_type, child_table, child_ids, sd.label, display, target, state,
+                      request_xml is not None)
 
 
 def verify(manifest: SeedManifest) -> list[dict[str, Any]]:
@@ -413,7 +506,9 @@ def verify(manifest: SeedManifest) -> list[dict[str, Any]]:
         with conn.cursor() as cur:
             _prepare(cur)
             for e in manifest.entities:
-                parent = _fetch(cur, "SELECT ur.request_type_id, rt.description AS type_name, rs.user_text AS state "
+                parent = _fetch(cur, "SELECT ur.request_type_id, ur.request_state_id, rt.description AS type_name, "
+                                     "rs.user_text AS state, "
+                                     "(xpath('//P_ID/text()', ur.request_xml))[1]::text AS xml_request_id "
                                      "FROM public.user_request ur "
                                      "JOIN public.request_type rt ON rt.id = ur.request_type_id "
                                      "JOIN public.request_state rs ON rs.id = ur.request_state_id "
@@ -427,10 +522,13 @@ def verify(manifest: SeedManifest) -> list[dict[str, Any]]:
                                            "WHERE id = ANY(%s) AND request_id = %s",
                                       (e["child_ids"], e["request_id"]))[0]["n"]
                 ok = bool(parent) and parent[0]["request_type_id"] == e["request_type_id"] and \
-                    children == len(e["child_ids"])
+                    parent[0]["request_state_id"] == STATE_IDS[e.get("state", "saved")] and \
+                    children == len(e["child_ids"]) and \
+                    (not e.get("has_xml") or parent[0]["xml_request_id"] == str(e["request_id"]))
                 results.append({"kind": e["kind"], "request_id": e["request_id"],
                                 "type": parent[0]["type_name"] if parent else None,
                                 "state": parent[0]["state"] if parent else None,
+                                "xml": bool(parent and parent[0]["xml_request_id"]),
                                 "child_table": e["child_table"], "children": children, "ok": ok})
         conn.rollback()
     return results

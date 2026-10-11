@@ -148,6 +148,7 @@ When `MEDITIK_SEED_ENV` equals `TEST_ENV`, the session fixture seeds **3 request
 | `MEDITIK_SEED_ENV`              | Must equal `TEST_ENV` to enable seeding         |
 | `SEED_ALLOWED_PERSONAL_NUMBERS` | Allowed personal numbers/ranges (guard)         |
 | `MEDITIK_SEED_DATASET`          | Dataset to seed (default `all`)                 |
+| `MEDITIK_SEED_STATE`            | `saved`, `approved` or `both` (default)         |
 | `MEDITIK_SEED_CLEANUP`          | `report` (keep rows, default) or `delete-owned` |
 | `MEDITIK_SEED_MANIFEST_DIR`     | Run manifests (default `~/.refua_seeds`)        |
 

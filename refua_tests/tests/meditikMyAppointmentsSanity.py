@@ -23,8 +23,8 @@ import pytest
 
 from refua_tests.pages.common.popUpInfo import PopUpInfo
 from refua_tests.pages.meditikBasePage import MeditekBasePage
-from refua_tests.pages.myAppointmentsTabbedPage import (DEFAULT_TAB_KEY,
-                                                        MyAppointmentsTabbedPage)
+from refua_tests.pages.myAppointmentsTabbedPage import (
+    DEFAULT_TAB_KEY, MyAppointmentsTabbedPage)
 
 
 @pytest.fixture(scope="class")
