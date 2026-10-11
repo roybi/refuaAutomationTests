@@ -188,7 +188,7 @@ The earlier workbook/application task remains BLOCKED and is unchanged.
 ### Resume point
 
 Integration is complete under `tools/azure_test_importer/` and
-`.github/workflows/upload-test-plan-to-azure.yml`. All 35 isolated unit tests,
+`.github/workflows/upload-test-plan-to-azure.yml`. All 37 isolated unit tests,
 Python compilation, workflow syntax, and the actual validation step against
 `example.xlsx` passed. PR: https://github.com/DigitalIDF/refuaAutomationTests/pull/3
 Required security workflows and CodeQL blocked the direct main push (GH013);
@@ -213,6 +213,14 @@ runs, DB seeding, or Azure writes. Hosted verification has not run yet.
 	by required organization security workflows and CodeQL rules. With explicit
 	user approval, pushed `feature/upload-test-plan-to-azure` and opened PR #3.
 	Hosted dry-run is deferred until merge; the same check passed locally.
+- 2026-10-11: Addressed Code Scanning alerts #15-18: upgraded requests to 2.33.0
+	for CVE-2026-25645, switched XML test parsing to defusedxml, and replaced test
+	execution of YAML Python strings with direct calls to `workflow_runner.py`.
+	Workflow steps now call that module's validate/upload/summary entry points.
+	All 37 tests passed in an isolated environment, including a real no-PAT CLI
+	dry-run; compilation, dependency consistency, and editor diagnostics passed.
+	No alert dismissals or scanner exclusions were added. GitHub's rescan will
+	determine alert closure. The user's separately edited local importer is intact.
 
 ## PROJECT QUICK REFERENCE (static — rarely changes)
 

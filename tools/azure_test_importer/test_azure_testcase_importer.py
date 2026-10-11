@@ -2,17 +2,19 @@ import io
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
-from xml.etree import ElementTree
 
 import yaml
+from defusedxml import ElementTree
 from openpyxl import Workbook, load_workbook
 
 import azure_testcase_importer as importer
+import workflow_runner
 
 WORKBOOK = Path(__file__).with_name("Meditik_Test_Cases.xlsx")
 FIXTURE_DIRECTORY = None
@@ -346,7 +348,13 @@ class WorkflowTests(unittest.TestCase):
         }
 
     def execute_step(self, name):
-        exec(compile(self.steps[name]["run"], name, "exec"), {})
+        mode, operation = {
+            "Validate workbook": ("validate", workflow_runner.validate_workbook),
+            "Upload test plan to Azure": ("upload", workflow_runner.upload_test_plan),
+            "Write run summary": ("summary", workflow_runner.write_summary),
+        }[name]
+        self.assertEqual(self.steps[name]["run"], f"python tools/azure_test_importer/workflow_runner.py {mode}")
+        operation()
 
     def test_manual_inputs_and_secret_scope(self):
         self.assertEqual(self.workflow["name"], "Upload Test Plan to Azure")
@@ -382,6 +390,37 @@ class WorkflowTests(unittest.TestCase):
                     with patch("subprocess.run") as run, self.assertRaises(SystemExit):
                         self.execute_step("Validate workbook")
                     run.assert_not_called()
+
+    def test_validation_cli_runs_real_importer_without_pat(self):
+        workspace = Path(__file__).resolve().parents[2]
+        environment = {
+            **os.environ, **self.env,
+            "GITHUB_WORKSPACE": str(workspace),
+            "EXCEL_PATH": "tools/azure_test_importer/example.xlsx",
+            "SHEET_NAME": "Test_Cases",
+        }
+        environment.pop("AZURE_DEVOPS_PAT", None)
+        result = subprocess.run(
+            [sys.executable, str(Path(workflow_runner.__file__)), "validate"],
+            env=environment, capture_output=True, text=True, check=True,
+        )
+        self.assertIn("Read 1 test case(s)", result.stdout)
+        self.assertIn("No Azure DevOps changes were made.", result.stdout)
+        saved = json.loads((self.workspace / "azure-import-command.json").read_text(encoding="utf-8"))
+        self.assertNotIn("--dry-run", saved)
+
+    def test_summary_preserves_mode_and_status(self):
+        for validation_only, status, expected in (
+            ("true", "success", "Excel validation only; no Azure changes"),
+            ("false", "failure", "Azure import"),
+        ):
+            with self.subTest(validation_only=validation_only, status=status):
+                environment = {**self.env, "VALIDATION_ONLY": validation_only, "JOB_STATUS": status}
+                with patch.dict(os.environ, environment, clear=True):
+                    self.execute_step("Write run summary")
+                summary = Path(self.env["GITHUB_STEP_SUMMARY"]).read_text(encoding="utf-8")
+                self.assertIn("Mode: " + expected, summary)
+                self.assertIn("Status: " + status, summary)
 
     def test_failed_validation_stops_before_live_command_is_saved(self):
         with patch.dict(os.environ, self.env, clear=True):

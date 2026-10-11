@@ -81,13 +81,17 @@ Run these commands from the repository root with Python 3.12:
 ```powershell
 py -m pip install -r tools/azure_test_importer/requirements-dev.txt
 py -m unittest discover -s tools/azure_test_importer -p test_azure_testcase_importer.py -v
-py -m py_compile tools/azure_test_importer/azure_testcase_importer.py
+py -m py_compile tools/azure_test_importer/azure_testcase_importer.py tools/azure_test_importer/workflow_runner.py
 py tools/azure_test_importer/azure_testcase_importer.py tools/azure_test_importer/example.xlsx --plan Importer_Verification --sheet Test_Cases --dry-run
 ```
 
 Tests generate temporary synthetic workbooks and mock Azure requests. Use
 `unittest` as above; do not invoke the application's pytest fixtures for these
 standalone tests. The root requirements and application test runner are unchanged.
+
+The workflow calls `workflow_runner.py` for validation, upload, and summaries.
+Tests import those functions directly and check the YAML entry points. A real
+subprocess test also validates the synthetic sample without a PAT or Azure writes.
 
 For authentication failures, check token expiry/scopes, project access and the
 token owner's Azure Test Plans access level. Browser sign-in does not authenticate
