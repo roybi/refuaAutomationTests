@@ -1,6 +1,7 @@
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -14,6 +15,7 @@ from defusedxml import ElementTree
 from openpyxl import Workbook, load_workbook
 
 import azure_testcase_importer as importer
+import local_upload
 import workflow_runner
 
 WORKBOOK = Path(__file__).with_name("Meditik_Test_Cases.xlsx")
@@ -339,7 +341,10 @@ class WorkflowTests(unittest.TestCase):
             "GITHUB_WORKSPACE": str(self.workspace),
             "RUNNER_TEMP": str(self.workspace),
             "GITHUB_STEP_SUMMARY": str(self.workspace / "summary.md"),
+            "GITHUB_REPOSITORY": "example/tests",
+            "GITHUB_ACTOR": "tester",
             "EXCEL_PATH": "uploads/cases with spaces.xlsx",
+            "UPLOAD_ID": "",
             "PLAN_NAME": "Visits; $(echo not-a-shell-command)",
             "SHEET_NAME": "Test Cases",
             "AZURE_ORGANIZATION": "example",
@@ -351,6 +356,7 @@ class WorkflowTests(unittest.TestCase):
         mode, operation = {
             "Validate workbook": ("validate", workflow_runner.validate_workbook),
             "Upload test plan to Azure": ("upload", workflow_runner.upload_test_plan),
+            "Delete temporary workbook upload": ("cleanup", workflow_runner.cleanup_workbook),
             "Write run summary": ("summary", workflow_runner.write_summary),
         }[name]
         self.assertEqual(self.steps[name]["run"], f"python tools/azure_test_importer/workflow_runner.py {mode}")
@@ -364,8 +370,15 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(inputs["dry_run"]["default"], "true")
         self.assertNotIn("AZURE_DEVOPS_PAT", self.workflow["jobs"]["upload"]["env"])
         self.assertEqual(self.steps["Upload test plan to Azure"]["if"], "${{ !inputs.dry_run }}")
-        self.assertEqual(self.steps["Upload test plan to Azure"]["env"]["AZURE_DEVOPS_PAT"], "${{ secrets.AZURE_DEVOPS_PAT }}")
+        self.assertEqual(self.steps["Upload test plan to Azure"]["env"]["AZURE_DEVOPS_PAT"],
+                 "${{ secrets[format('AZURE_IMPORT_PAT_{0}', inputs.upload_id)] }}")
         self.assertEqual(self.workflow["permissions"], {"contents": "read"})
+        self.assertEqual(self.workflow["jobs"]["upload"]["permissions"], {"contents": "write"})
+        self.assertEqual(inputs["excel_path"]["required"], "false")
+        self.assertEqual(inputs["upload_id"]["required"], "false")
+        self.assertIn("always()", self.steps["Delete temporary workbook upload"]["if"])
+        self.assertIn("GH_TOKEN", self.steps["Validate workbook"]["env"])
+        self.assertNotIn("AZURE_DEVOPS_PAT", self.steps["Validate workbook"]["env"])
         self.assertEqual(self.workflow["concurrency"]["cancel-in-progress"], "false")
         for step in self.steps.values():
             self.assertNotIn("${{", step.get("run", ""))
@@ -383,12 +396,56 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(saved, arguments[:-1])
 
     def test_invalid_paths_never_start_importer(self):
-        for excel_path in ("../outside.xlsx", str(self.excel), "missing.xlsx", "cases.csv"):
+        for excel_path in ("../outside.xlsx", str(self.excel), "missing.xlsx", "cases.csv",
+                   r"C:\Users\Tester\Downloads\cases.xlsx"):
             with self.subTest(excel_path=excel_path):
                 with patch.dict(os.environ, {**self.env, "EXCEL_PATH": excel_path}, clear=True):
                     with patch.object(importer, "main") as import_main, self.assertRaises(SystemExit):
                         self.execute_step("Validate workbook")
                     import_main.assert_not_called()
+
+    def test_upload_id_and_repository_path_are_mutually_exclusive(self):
+        for upload_id, excel_path in (("", ""), ("a" * 32, "cases.xlsx")):
+            with self.subTest(upload_id=upload_id, excel_path=excel_path):
+                with patch.dict(os.environ, {**self.env, "UPLOAD_ID": upload_id, "EXCEL_PATH": excel_path}, clear=True):
+                    with patch.object(importer, "main") as import_main, self.assertRaisesRegex(SystemExit, "either"):
+                        self.execute_step("Validate workbook")
+                    import_main.assert_not_called()
+
+    def test_live_repository_path_requires_personal_uploader(self):
+        with patch.dict(os.environ, {**self.env, "VALIDATION_ONLY": "false"}, clear=True):
+            with patch.object(importer, "main") as import_main, self.assertRaisesRegex(SystemExit, "personal PAT"):
+                self.execute_step("Validate workbook")
+            import_main.assert_not_called()
+
+    def test_uploaded_workbook_is_downloaded_and_validated_before_live_import(self):
+        environment = {**self.env, "EXCEL_PATH": "", "UPLOAD_ID": "a" * 32}
+        with patch.dict(os.environ, environment, clear=True):
+            with patch.object(local_upload, "download_workbook", return_value=self.excel) as download:
+                with patch.object(importer, "main", return_value=0) as import_main:
+                    self.execute_step("Validate workbook")
+        download.assert_called_once_with("example/tests", "a" * 32, "tester", str(self.workspace))
+        self.assertEqual(import_main.call_args.args[0][0], str(self.excel))
+        self.assertEqual(import_main.call_args.args[0][-1], "--dry-run")
+
+    def test_failed_download_never_starts_importer(self):
+        environment = {**self.env, "EXCEL_PATH": "", "UPLOAD_ID": "a" * 32}
+        with patch.dict(os.environ, environment, clear=True):
+            with patch.object(local_upload, "download_workbook", side_effect=ValueError("Checksum mismatch")):
+                with patch.object(importer, "main") as import_main, self.assertRaisesRegex(ValueError, "Checksum"):
+                    self.execute_step("Validate workbook")
+                import_main.assert_not_called()
+
+    def test_cleanup_is_scoped_to_initiating_user_and_uploaded_workbook(self):
+        for upload_id in ("", "a" * 32):
+            with self.subTest(upload_id=upload_id):
+                with patch.dict(os.environ, {**self.env, "UPLOAD_ID": upload_id}, clear=True):
+                    with patch.object(local_upload, "delete_upload") as delete, redirect_stdout(io.StringIO()):
+                        self.execute_step("Delete temporary workbook upload")
+                if upload_id:
+                    delete.assert_called_once_with("example/tests", upload_id, "tester")
+                else:
+                    delete.assert_not_called()
 
     def test_validation_cli_runs_real_importer_without_pat(self):
         workspace = Path(__file__).resolve().parents[2]
@@ -464,6 +521,237 @@ class WorkflowTests(unittest.TestCase):
                     self.execute_step("Upload test plan to Azure")
         import_main.assert_not_called()
         self.assertEqual(output.getvalue(), "")
+
+
+class LocalUploadTests(unittest.TestCase):
+    def setUp(self):
+        self.upload_id = "a" * 32
+        self.release = {
+            "id": 123, "draft": True, "tag_name": local_upload.upload_tag(self.upload_id),
+            "author": {"login": "tester"},
+            "body": json.dumps({"sha256": local_upload.validate_file(WORKBOOK)}),
+            "assets": [{"name": "workbook.xlsx", "state": "uploaded", "size": WORKBOOK.stat().st_size}],
+        }
+
+    def test_picker_cancellation_makes_no_github_request(self):
+        with patch.object(local_upload, "choose_file", return_value=None):
+            with patch.object(local_upload, "github_json") as github, redirect_stdout(io.StringIO()):
+                self.assertEqual(local_upload.main([]), 0)
+        github.assert_not_called()
+
+    def test_local_validation_defaults_to_dry_run(self):
+        with patch.object(local_upload, "publish_workbook") as publish, redirect_stdout(io.StringIO()):
+            self.assertEqual(local_upload.main(["--file", str(WORKBOOK), "--plan", "Visits", "--yes"]), 0)
+        inputs = publish.call_args.args[3]
+        self.assertEqual(inputs["dry_run"], "true")
+        self.assertEqual(inputs["plan_name"], "AUTO_Visits")
+        self.assertNotIn("AZURE_DEVOPS_PAT", inputs)
+
+    def test_live_mode_is_explicit(self):
+        with patch.object(local_upload, "publish_workbook") as publish, redirect_stdout(io.StringIO()):
+            with patch.object(local_upload, "prompt_personal_pat", return_value="personal-test-token") as prompt:
+                self.assertEqual(local_upload.main(["--file", str(WORKBOOK), "--live", "--yes"]), 0)
+        self.assertEqual(publish.call_args.args[3]["dry_run"], "false")
+        self.assertEqual(publish.call_args.kwargs["pat"], "personal-test-token")
+        prompt.assert_called_once()
+
+    def test_pat_cancellation_never_uploads(self):
+        with patch.object(local_upload, "publish_workbook") as publish, redirect_stdout(io.StringIO()):
+            with patch.object(local_upload, "prompt_personal_pat", return_value=None):
+                self.assertEqual(local_upload.main(["--file", str(WORKBOOK), "--live", "--yes"]), 0)
+        publish.assert_not_called()
+
+    def test_dry_run_never_prompts_for_pat(self):
+        with patch.object(local_upload, "publish_workbook"), redirect_stdout(io.StringIO()):
+            with patch.object(local_upload, "prompt_personal_pat") as prompt:
+                self.assertEqual(local_upload.main(["--file", str(WORKBOOK), "--yes"]), 0)
+        prompt.assert_not_called()
+
+    def test_live_pat_is_sent_on_stdin_and_deleted_after_workflow(self):
+        for failure in (None, RuntimeError("Workflow failed")):
+            with self.subTest(failure=failure):
+                output = io.StringIO()
+                with patch.object(local_upload, "github_json", return_value={"private": True, "default_branch": "main"}):
+                    with patch.object(local_upload, "run_gh") as github, patch.object(local_upload, "dispatch_workbook"):
+                        with patch.object(local_upload, "wait_for_workflow", side_effect=failure), redirect_stdout(output), redirect_stderr(output):
+                            if failure:
+                                with self.assertRaisesRegex(RuntimeError, "Workflow failed"):
+                                    local_upload.publish_workbook(WORKBOOK, "example/tests", "main", {"dry_run": "false"}, pat="personal-test-token")
+                            else:
+                                local_upload.publish_workbook(WORKBOOK, "example/tests", "main", {"dry_run": "false"}, pat="personal-test-token")
+                setter, deleter = github.call_args_list
+                self.assertEqual(setter.args[0][:2], ["secret", "set"])
+                self.assertEqual(setter.kwargs["stdin"], "personal-test-token")
+                self.assertTrue(setter.kwargs["sensitive"])
+                self.assertEqual(deleter.args[0][:2], ["secret", "delete"])
+                self.assertEqual(setter.args[0][2], deleter.args[0][2])
+                self.assertNotIn("personal-test-token", " ".join(setter.args[0]))
+                self.assertNotIn(setter.args[0][2], output.getvalue())
+                self.assertNotIn("personal-test-token", output.getvalue())
+
+    def test_cleanup_warning_does_not_log_credentials_or_secret_name(self):
+        output = io.StringIO()
+        with patch.object(local_upload, "github_json", return_value={"private": True, "default_branch": "main"}):
+            with patch.object(local_upload, "run_gh", side_effect=[None, RuntimeError("personal-test-token")]) as github:
+                with patch.object(local_upload, "dispatch_workbook"), patch.object(local_upload, "wait_for_workflow"):
+                    with redirect_stdout(output), redirect_stderr(output):
+                        local_upload.publish_workbook(WORKBOOK, "example/tests", "main", {"dry_run": "false"}, pat="personal-test-token")
+        self.assertIn("cleanup failed", output.getvalue())
+        self.assertIn("revoke the PAT", output.getvalue())
+        self.assertNotIn(github.call_args_list[0].args[0][2], output.getvalue())
+        self.assertNotIn("personal-test-token", output.getvalue())
+
+    def test_live_without_pat_stops_before_github_calls(self):
+        with patch.object(local_upload, "github_json") as github:
+            with self.assertRaisesRegex(ValueError, "personal PAT"):
+                local_upload.publish_workbook(WORKBOOK, "example/tests", "main", {"dry_run": "false"})
+        github.assert_not_called()
+
+    def test_live_pat_requires_default_branch(self):
+        with patch.object(local_upload, "github_json", return_value={"private": True, "default_branch": "main"}):
+            with patch.object(local_upload, "run_gh") as github, self.assertRaisesRegex(ValueError, "default branch"):
+                local_upload.publish_workbook(WORKBOOK, "example/tests", "untrusted", {"dry_run": "false"}, pat="test-token")
+        github.assert_not_called()
+
+    def test_sensitive_cli_failure_does_not_echo_pat(self):
+        failure = subprocess.CalledProcessError(1, ["gh"], stderr="echoed-test-token")
+        with patch.object(local_upload.subprocess, "run", side_effect=failure):
+            with self.assertRaisesRegex(RuntimeError, "secret-management") as error:
+                local_upload.run_gh(["secret", "set", "TEST"], stdin="echoed-test-token", sensitive=True)
+        self.assertNotIn("echoed-test-token", str(error.exception))
+
+    def test_invalid_workbook_never_uploads(self):
+        with patch.object(local_upload, "publish_workbook") as publish, redirect_stderr(io.StringIO()):
+            self.assertEqual(local_upload.main(["--file", "missing.xlsx", "--yes"]), 1)
+        publish.assert_not_called()
+
+    def test_invalid_sheet_never_uploads(self):
+        with patch.object(local_upload, "publish_workbook") as publish, redirect_stderr(io.StringIO()):
+            self.assertEqual(local_upload.main(["--file", str(WORKBOOK), "--sheet", "Missing", "--yes"]), 2)
+        publish.assert_not_called()
+
+    def test_declined_confirmation_never_uploads(self):
+        with patch.object(local_upload, "confirm_upload", return_value=False):
+            with patch.object(local_upload, "publish_workbook") as publish, redirect_stdout(io.StringIO()):
+                self.assertEqual(local_upload.main(["--file", str(WORKBOOK)]), 0)
+        publish.assert_not_called()
+
+    def test_public_repository_is_rejected_before_release_creation(self):
+        with patch.object(local_upload, "github_json", return_value={"private": False}) as github:
+            with self.assertRaisesRegex(ValueError, "private"):
+                local_upload.publish_workbook(WORKBOOK, "example/tests", "main", {})
+        github.assert_called_once()
+
+    def test_draft_upload_and_dispatch_have_no_file_content_or_pat_in_inputs(self):
+        with patch.object(local_upload, "github_json", side_effect=[{"private": True}, {"id": 123}, None]) as github:
+            with patch.object(local_upload, "run_gh") as upload, redirect_stdout(io.StringIO()):
+                upload_id = local_upload.publish_workbook(WORKBOOK, "example/tests", "main", {"dry_run": "true"})
+        draft = github.call_args_list[1].kwargs["body"]
+        self.assertIs(draft["draft"], True)
+        self.assertEqual(json.loads(draft["body"])["sha256"], local_upload.validate_file(WORKBOOK))
+        self.assertEqual(upload.call_args.args[0][:3], ["release", "upload", local_upload.upload_tag(upload_id)])
+        payload = github.call_args_list[2].kwargs["body"]
+        self.assertEqual(payload, {"ref": "main", "inputs": {"dry_run": "true", "excel_path": "", "upload_id": upload_id}})
+
+    def test_failed_asset_upload_deletes_only_created_draft(self):
+        with patch.object(local_upload, "github_json", side_effect=[{"private": True}, {"id": 123}, None]) as github:
+            with patch.object(local_upload, "run_gh", side_effect=RuntimeError("Upload failed")):
+                with self.assertRaisesRegex(RuntimeError, "Upload failed"):
+                    local_upload.publish_workbook(WORKBOOK, "example/tests", "main", {})
+        self.assertEqual(github.call_args.args, ("repos/example/tests/releases/123",))
+        self.assertEqual(github.call_args.kwargs["method"], "DELETE")
+
+    def test_ambiguous_dispatch_failure_retains_upload_for_possible_run(self):
+        with patch.object(local_upload, "github_json", side_effect=[
+            {"private": True}, {"id": 123}, RuntimeError("Network timeout"),
+        ]) as github:
+            with patch.object(local_upload, "run_gh"):
+                with self.assertRaisesRegex(RuntimeError, "Check Actions before retrying"):
+                    local_upload.publish_workbook(WORKBOOK, "example/tests", "main", {})
+        self.assertFalse(any(call.kwargs.get("method") == "DELETE" for call in github.call_args_list))
+
+    def test_invalid_upload_ids_are_rejected_before_github_calls(self):
+        for upload_id in ("../other", "invalid", "a" * 33):
+            with self.subTest(upload_id=upload_id), patch.object(local_upload, "github_json") as github:
+                with self.assertRaisesRegex(ValueError, "upload ID"):
+                    local_upload.delete_upload("example/tests", upload_id, "tester")
+                github.assert_not_called()
+
+    def test_foreign_or_published_release_is_never_deleted(self):
+        for changes in ({"draft": False}, {"author": {"login": "other-user"}}):
+            with self.subTest(changes=changes):
+                with patch.object(local_upload, "github_json", return_value=[{**self.release, **changes}]) as github:
+                    with self.assertRaisesRegex(ValueError, "owned"):
+                        local_upload.delete_upload("example/tests", self.upload_id, "tester")
+                self.assertEqual(github.call_count, 1)
+
+    def test_cleanup_deletes_only_verified_release(self):
+        with patch.object(local_upload, "github_json", side_effect=[[self.release], None]) as github:
+            local_upload.delete_upload("example/tests", self.upload_id, "tester")
+        self.assertEqual(github.call_args.args, ("repos/example/tests/releases/123",))
+        self.assertEqual(github.call_args.kwargs["method"], "DELETE")
+
+    def test_download_verifies_workbook_checksum(self):
+        def download(arguments, body=None):
+            destination = Path(arguments[arguments.index("--dir") + 1], "workbook.xlsx")
+            shutil.copyfile(WORKBOOK, destination)
+
+        for checksum, valid in ((local_upload.validate_file(WORKBOOK), True), ("0" * 64, False)):
+            with self.subTest(valid=valid), tempfile.TemporaryDirectory() as directory:
+                release = {**self.release, "body": json.dumps({"sha256": checksum})}
+                with patch.object(local_upload, "github_json", return_value=[release]):
+                    with patch.object(local_upload, "run_gh", side_effect=download):
+                        if valid:
+                            path = local_upload.download_workbook("example/tests", self.upload_id, "tester", directory)
+                            self.assertEqual(path.read_bytes(), WORKBOOK.read_bytes())
+                        else:
+                            with self.assertRaisesRegex(ValueError, "checksum"):
+                                local_upload.download_workbook("example/tests", self.upload_id, "tester", directory)
+
+    def test_invalid_assets_are_rejected_before_download(self):
+        for assets in ([], [{"name": "other.xlsx"}], [
+            {"name": "workbook.xlsx", "state": "uploaded", "size": local_upload.MAX_BYTES + 1},
+        ]):
+            with self.subTest(assets=assets):
+                with patch.object(local_upload, "github_json", return_value=[{**self.release, "assets": assets}]):
+                    with patch.object(local_upload, "run_gh") as download, self.assertRaisesRegex(ValueError, "exactly one"):
+                        local_upload.download_workbook("example/tests", self.upload_id, "tester", tempfile.gettempdir())
+                    download.assert_not_called()
+
+    def test_github_subprocess_does_not_receive_azure_pat(self):
+        with patch.dict(os.environ, {"AZURE_DEVOPS_PAT": "test-token"}):
+            with patch.object(local_upload.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, "{}")) as process:
+                local_upload.github_json("user")
+        self.assertNotIn("AZURE_DEVOPS_PAT", process.call_args.kwargs["env"])
+        self.assertNotIn("test-token", " ".join(process.call_args.args[0]))
+        self.assertNotIn("shell", process.call_args.kwargs)
+
+    def test_draft_lookup_paginates_and_ignores_unrelated_releases(self):
+        unrelated = [{"tag_name": f"v{index}"} for index in range(100)]
+        with patch.object(local_upload, "github_json", side_effect=[unrelated, [self.release]]) as github:
+            self.assertEqual(local_upload.owned_release("example/tests", self.upload_id, "tester"), self.release)
+        self.assertIn("page=2", github.call_args.args[0])
+
+    def test_unrelated_release_is_never_deleted(self):
+        with patch.object(local_upload, "github_json", return_value=[{**self.release, "tag_name": "v1.0"}]) as github:
+            with self.assertRaisesRegex(ValueError, "not found"):
+                local_upload.delete_upload("example/tests", self.upload_id, "tester")
+        self.assertEqual(github.call_count, 1)
+
+    def test_monitor_selects_only_this_upload_run(self):
+        runs = [{"id": 1, "display_title": "Another import"},
+                {"id": 2, "display_title": "Azure import - " + self.upload_id}]
+        with patch.object(local_upload, "github_json", return_value={"workflow_runs": runs}):
+            with patch.object(local_upload, "run_gh") as watch, redirect_stdout(io.StringIO()):
+                local_upload.wait_for_workflow("example/tests", "main", self.upload_id)
+        self.assertEqual(watch.call_args.args[0], ["run", "watch", "2", "--repo", "example/tests", "--exit-status"])
+
+    def test_monitor_timeout_stops_without_selecting_another_run(self):
+        with patch.object(local_upload.time, "monotonic", side_effect=[0, 0, 181]):
+            with patch.object(local_upload.time, "sleep"), patch.object(local_upload, "github_json", return_value={"workflow_runs": []}):
+                with patch.object(local_upload, "run_gh") as watch, self.assertRaisesRegex(RuntimeError, "not found"):
+                    local_upload.wait_for_workflow("example/tests", "main", self.upload_id)
+                watch.assert_not_called()
 
 
 if __name__ == "__main__":

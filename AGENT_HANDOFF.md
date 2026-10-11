@@ -170,10 +170,10 @@ Next action (when resumed): either (a) get a fresh manual login in the integrate
 
 ## SEPARATE TASK: Azure Excel Import Workflow (2026-10-11)
 
-**STATUS**: `BLOCKED` (awaiting PR merge for hosted workflow verification)
+**STATUS**: `BLOCKED` (PR #4 awaiting required checks and merge)
 **LAST AGENT**: `GitHub Copilot`
 **LAST UPDATED**: `2026-10-11`
-**BRANCH**: `feature/upload-test-plan-to-azure` (PR route approved after main rejection)
+**BRANCH**: `copilot/azure-local-upload` (PR route approved after main rejection)
 
 The earlier workbook/application task remains BLOCKED and is unchanged.
 
@@ -184,21 +184,39 @@ The earlier workbook/application task remains BLOCKED and is unchanged.
 - [x] Pass focused unit tests, compilation, and workbook dry-run.
 - [x] Commit/push to a feature branch and open PR #3 after main rejected direct push.
 - [ ] After PR merge, verify the GitHub workflow with synthetic data only.
+- [x] Add native local file selection and temporary draft-release workbook transport.
+- [x] Require a masked personal PAT prompt for each live run, using a unique temporary GitHub secret.
+- [x] Validate 69 isolated tests, actionlint, and editor diagnostics without real credentials or remote writes.
+- [x] Publish the local-upload extension PR and inspect required repository checks.
+- [x] Remove secret-name logging and validate success/failure output with 70 isolated tests.
 
 ### Resume point
 
-Integration is complete under `tools/azure_test_importer/` and
-`.github/workflows/upload-test-plan-to-azure.yml`. All 38 isolated unit tests,
-Python compilation, workflow syntax, and the actual validation step against
-`example.xlsx` passed. PR: https://github.com/DigitalIDF/refuaAutomationTests/pull/3
-Required security workflows and CodeQL blocked the direct main push (GH013);
-the user approved creating this branch and PR, not bypassing protections.
-After merge, dispatch the workflow with `tools/azure_test_importer/example.xlsx`,
-plan `Importer_Verification`, sheet `Test_Cases`, and `dry_run=true`.
-The workflow must reach the default branch before manual dispatch is available.
-Repository secret listing did not find `AZURE_DEVOPS_PAT`; live runs require
-private secret setup by the user. No real workbook uploads, application pytest
-runs, DB seeding, or Azure writes. Hosted verification has not run yet.
+PR #3 is merged on main at a349e89. The user encountered a hosted failure because
+EXCEL_PATH was a local Windows Downloads path, then requested a native local file
+picker and a personal PAT supplied on every live execution. The current extension
+is in the separate worktree `C:/_Dev/python/refuaAutomationTests-azure-local-upload`.
+`tools/azure_test_importer/local_upload.py` now selects/validates the workbook,
+uploads it as an owned draft-release asset, and dispatches the existing Action.
+Live mode prompts with a masked Tkinter field, sends the PAT only on stdin to
+`gh secret set`, uses a unique AZURE_IMPORT_PAT_<UPLOAD_ID> secret, monitors the
+exact Action run, and attempts secret deletion in finally. The Action downloads
+and verifies SHA256/ownership, uses only that run's PAT, and cleans up the draft.
+No shared PAT fallback. Live use requires repository secret-management permission
+and the protected default branch. Abrupt interruption can leave resources; the
+README documents manual cleanup and PAT revocation.
+
+PR #4: https://github.com/DigitalIDF/refuaAutomationTests/pull/4 (feature commit ca8c7f9).
+CodeQL follow-up: removed generated secret names from both print calls in
+`tools/azure_test_importer/local_upload.py` (publish_workbook, line 165).
+Success, workflow-failure, and cleanup-failure logging checks pass (70 tests total).
+Next action after publication: review the new CodeQL scan on PR #4 and merge
+through normal protection rules. Alert closure is not yet
+verified. Do not publish the older duplicate
+importer worktree. 69 unit tests, actionlint, Python compilation, and editor diagnostics
+passed. No real PAT was collected; GitHub upload/secret APIs are mocked in tests;
+no real workbook upload, workflow dispatch, Azure writes, or Meditik DB/UI runs
+were performed. Earlier worktrees and unrelated changes are preserved.
 
 ### Work log (append only)
 
@@ -228,6 +246,30 @@ runs, DB seeding, or Azure writes. Hosted verification has not run yet.
   executable commands. Existing CLI usage remains compatible; importer failures
   still fail the workflow. All 38 tests, compilation, and editor checks passed.
   Publishing this follow-up to PR #3 for another required security scan.
+
+- 2026-10-11: Continued from published PR #3 rather than the obsolete duplicate
+	importer worktree. User selected a local native file picker and required a
+	personal expiring PAT on every live run. Added local_upload.py, draft-release
+	transport, checksum/ownership guards, per-run secret creation/deletion, exact
+	Action monitoring, and masked PAT entry; updated the existing runner/workflow
+	and README. 69 mocked/synthetic tests and checksum-verified actionlint passed.
+	GitHub CLI authenticated HTTPS worked after ordinary HTTPS/SSH fetch failures.
+	No secrets were requested in chat or included in files, dispatch inputs, or
+	release assets. Publication is via copilot/azure-local-upload PR, not main bypass.
+
+	- 2026-10-11: Committed the local-upload/personal-PAT extension as ca8c7f9,
+	  pushed copilot/azure-local-upload to DigitalIDF, and opened PR #4 against main.
+	  Initial required-check inspection found passing/pending checks and no failures.
+	  PR is not merged; hosted local-upload execution and real Azure authentication
+	  remain unverified. No user PAT was collected or stored during development.
+
+- 2026-10-11: Addressed the reported CodeQL clear-text logging finding in
+	publish_workbook. The logged value was a generated secret name, not the PAT;
+	both normal and cleanup-warning messages now use static text. Added output
+	assertions for success, workflow failure, and cleanup failure, and updated
+	manual-cleanup instructions. All 70 standalone tests, editor diagnostics,
+	and diff whitespace checks passed. Publishing to existing PR #4 for rescan;
+	no scanner suppression, real credentials, or remote import execution.
 
 ## PROJECT QUICK REFERENCE (static — rarely changes)
 
