@@ -2,6 +2,14 @@
 
 **Test Automation Implementation for MEDITEK Medical Application**
 
+## Upload Excel Test Cases to Azure
+
+Use **Actions > Upload Test Plan to Azure > Run workflow** to import any uploaded
+Excel workbook into an Azure Test Plan. Enter its repository path, plan name, and
+worksheet. Configure `AZURE_DEVOPS_PAT` as an Actions secret; start with validation
+mode checked. This standalone tool does not run application tests or DB seeding.
+See the [setup and usage guide](tools/azure_test_importer/README.md).
+
 ## Overview
 
 This repository contains comprehensive test automation for the MEDITEK medical application. It uses the **refuaAutomationCore** framework for all test infrastructure, allowing the test code to focus purely on test logic and page object design.
