@@ -188,7 +188,7 @@ The earlier workbook/application task remains BLOCKED and is unchanged.
 ### Resume point
 
 Integration is complete under `tools/azure_test_importer/` and
-`.github/workflows/upload-test-plan-to-azure.yml`. All 37 isolated unit tests,
+`.github/workflows/upload-test-plan-to-azure.yml`. All 38 isolated unit tests,
 Python compilation, workflow syntax, and the actual validation step against
 `example.xlsx` passed. PR: https://github.com/DigitalIDF/refuaAutomationTests/pull/3
 Required security workflows and CodeQL blocked the direct main push (GH013);
@@ -221,6 +221,13 @@ runs, DB seeding, or Azure writes. Hosted verification has not run yet.
 	dry-run; compilation, dependency consistency, and editor diagnostics passed.
 	No alert dismissals or scanner exclusions were added. GitHub's rescan will
 	determine alert closure. The user's separately edited local importer is intact.
+
+- 2026-10-11: Removed workflow subprocess calls after the rescan cleared alerts
+  #15-18 but reported WS-I013-PYTHON-00141 as alerts #19-20. The workflow now calls
+  `importer.main(arguments)` directly and persists only importer arguments, not
+  executable commands. Existing CLI usage remains compatible; importer failures
+  still fail the workflow. All 38 tests, compilation, and editor checks passed.
+  Publishing this follow-up to PR #3 for another required security scan.
 
 ## PROJECT QUICK REFERENCE (static — rarely changes)
 

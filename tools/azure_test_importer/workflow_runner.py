@@ -4,9 +4,9 @@ import argparse
 import base64
 import json
 import os
-import subprocess
-import sys
 from pathlib import Path
+
+import azure_testcase_importer as importer
 
 
 def validate_workbook():
@@ -17,18 +17,20 @@ def validate_workbook():
         raise SystemExit("Excel path must be relative to and inside this repository.")
     if excel.suffix.lower() != ".xlsx" or not excel.is_file():
         raise SystemExit("Excel file not found. Upload an .xlsx file to the selected branch first.")
-    command = [
-        sys.executable, str(workspace / "tools/azure_test_importer/azure_testcase_importer.py"), str(excel),
+    arguments = [
+        str(excel),
         "--plan", os.environ["PLAN_NAME"],
         "--sheet", os.environ["SHEET_NAME"],
         "--organization", os.environ["AZURE_ORGANIZATION"],
         "--project", os.environ["AZURE_PROJECT"],
     ]
     if os.environ.get("SUITE_NAME", "").strip():
-        command.extend(["--suite", os.environ["SUITE_NAME"]])
-    subprocess.run(command + ["--dry-run"], check=True)
-    Path(os.environ["RUNNER_TEMP"], "azure-import-command.json").write_text(
-        json.dumps(command), encoding="utf-8"
+        arguments.extend(["--suite", os.environ["SUITE_NAME"]])
+    result = importer.main(arguments + ["--dry-run"])
+    if result:
+        raise SystemExit(result)
+    Path(os.environ["RUNNER_TEMP"], "azure-import-arguments.json").write_text(
+        json.dumps(arguments), encoding="utf-8"
     )
 
 
@@ -43,10 +45,12 @@ def upload_test_plan():
     print("::add-mask::" + pat, flush=True)
     print("::add-mask::" + base64.b64encode((":" + pat).encode()).decode(), flush=True)
     os.environ["AZURE_DEVOPS_PAT"] = pat
-    command = json.loads(
-        Path(os.environ["RUNNER_TEMP"], "azure-import-command.json").read_text(encoding="utf-8")
+    arguments = json.loads(
+        Path(os.environ["RUNNER_TEMP"], "azure-import-arguments.json").read_text(encoding="utf-8")
     )
-    subprocess.run(command, check=True)
+    result = importer.main(arguments)
+    if result:
+        raise SystemExit(result)
 
 
 def write_summary():

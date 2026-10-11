@@ -410,7 +410,7 @@ def read_excel(path: Path, sheet_name: str, default_suite: str | None,
         return output
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Create or update Azure DevOps test cases from Excel by TC_ID")
     p.add_argument("excel", type=Path, help="Path to the .xlsx file")
     p.add_argument("--organization", default=DEFAULT_ORG)
@@ -423,11 +423,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--iteration", help="Optional iteration when creating a new Test Plan")
     p.add_argument("--only-automation-candidates", action="store_true")
     p.add_argument("--dry-run", action="store_true", help="Read and validate Excel without changing Azure DevOps")
-    return p.parse_args()
+    return p.parse_args(argv)
 
 
-def main() -> int:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
     if not args.excel.exists():
         print(f"ERROR: Excel file not found: {args.excel}", file=sys.stderr)
         return 2

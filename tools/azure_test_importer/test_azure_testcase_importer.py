@@ -371,25 +371,24 @@ class WorkflowTests(unittest.TestCase):
             self.assertNotIn("${{", step.get("run", ""))
 
     def test_validation_preserves_paths_and_inputs_as_arguments(self):
-        with patch.dict(os.environ, self.env, clear=True), patch("subprocess.run") as run:
+        with patch.dict(os.environ, self.env, clear=True), patch.object(importer, "main", return_value=0) as import_main:
             self.execute_step("Validate workbook")
-        command = run.call_args.args[0]
-        self.assertEqual(command[1], str(self.workspace / "tools/azure_test_importer/azure_testcase_importer.py"))
-        self.assertEqual(command[2], str(self.excel))
-        self.assertEqual(command[command.index("--plan") + 1], self.env["PLAN_NAME"])
-        self.assertEqual(command[command.index("--sheet") + 1], "Test Cases")
-        self.assertEqual(command[-3:], ["--suite", "Visit Summaries", "--dry-run"])
-        self.assertEqual(run.call_args.kwargs, {"check": True})
-        saved = json.loads((self.workspace / "azure-import-command.json").read_text(encoding="utf-8"))
-        self.assertEqual(saved, command[:-1])
+        arguments = import_main.call_args.args[0]
+        self.assertEqual(arguments[0], str(self.excel))
+        self.assertEqual(arguments[arguments.index("--plan") + 1], self.env["PLAN_NAME"])
+        self.assertEqual(arguments[arguments.index("--sheet") + 1], "Test Cases")
+        self.assertEqual(arguments[-3:], ["--suite", "Visit Summaries", "--dry-run"])
+        import_main.assert_called_once_with(arguments)
+        saved = json.loads((self.workspace / "azure-import-arguments.json").read_text(encoding="utf-8"))
+        self.assertEqual(saved, arguments[:-1])
 
     def test_invalid_paths_never_start_importer(self):
         for excel_path in ("../outside.xlsx", str(self.excel), "missing.xlsx", "cases.csv"):
             with self.subTest(excel_path=excel_path):
                 with patch.dict(os.environ, {**self.env, "EXCEL_PATH": excel_path}, clear=True):
-                    with patch("subprocess.run") as run, self.assertRaises(SystemExit):
+                    with patch.object(importer, "main") as import_main, self.assertRaises(SystemExit):
                         self.execute_step("Validate workbook")
-                    run.assert_not_called()
+                    import_main.assert_not_called()
 
     def test_validation_cli_runs_real_importer_without_pat(self):
         workspace = Path(__file__).resolve().parents[2]
@@ -406,7 +405,7 @@ class WorkflowTests(unittest.TestCase):
         )
         self.assertIn("Read 1 test case(s)", result.stdout)
         self.assertIn("No Azure DevOps changes were made.", result.stdout)
-        saved = json.loads((self.workspace / "azure-import-command.json").read_text(encoding="utf-8"))
+        saved = json.loads((self.workspace / "azure-import-arguments.json").read_text(encoding="utf-8"))
         self.assertNotIn("--dry-run", saved)
 
     def test_summary_preserves_mode_and_status(self):
@@ -422,38 +421,48 @@ class WorkflowTests(unittest.TestCase):
                 self.assertIn("Mode: " + expected, summary)
                 self.assertIn("Status: " + status, summary)
 
-    def test_failed_validation_stops_before_live_command_is_saved(self):
+    def test_failed_validation_stops_before_live_arguments_are_saved(self):
         with patch.dict(os.environ, self.env, clear=True):
-            with patch("subprocess.run", side_effect=subprocess.CalledProcessError(2, ["python"])):
-                with self.assertRaises(subprocess.CalledProcessError):
+            with patch.object(importer, "main", return_value=2):
+                with self.assertRaises(SystemExit) as failure:
                     self.execute_step("Validate workbook")
-        self.assertFalse((self.workspace / "azure-import-command.json").exists())
+        self.assertEqual(failure.exception.code, 2)
+        self.assertFalse((self.workspace / "azure-import-arguments.json").exists())
 
     def test_missing_pat_prevents_upload(self):
-        with patch.dict(os.environ, self.env, clear=True), patch("subprocess.run") as run:
+        with patch.dict(os.environ, self.env, clear=True), patch.object(importer, "main") as import_main:
             with self.assertRaisesRegex(SystemExit, "Missing AZURE_DEVOPS_PAT"):
                 self.execute_step("Upload test plan to Azure")
-        run.assert_not_called()
+        import_main.assert_not_called()
 
     def test_upload_uses_environment_secret_not_command_argument(self):
-        with patch.dict(os.environ, self.env, clear=True), patch("subprocess.run"):
+        with patch.dict(os.environ, self.env, clear=True), patch.object(importer, "main", return_value=0):
             self.execute_step("Validate workbook")
         output = io.StringIO()
         with patch.dict(os.environ, {**self.env, "AZURE_DEVOPS_PAT": "test-token"}, clear=True):
-            with patch("subprocess.run") as run, redirect_stdout(output):
+            with patch.object(importer, "main", return_value=0) as import_main, redirect_stdout(output):
                 self.execute_step("Upload test plan to Azure")
-        self.assertNotIn("--dry-run", run.call_args.args[0])
-        self.assertNotIn("test-token", " ".join(run.call_args.args[0]))
-        self.assertEqual(run.call_args.kwargs, {"check": True})
+        self.assertNotIn("--dry-run", import_main.call_args.args[0])
+        self.assertNotIn("test-token", " ".join(import_main.call_args.args[0]))
+        import_main.assert_called_once_with(import_main.call_args.args[0])
         self.assertIn("::add-mask::test-token", output.getvalue())
+
+    def test_failed_upload_propagates_exit_status(self):
+        with patch.dict(os.environ, self.env, clear=True), patch.object(importer, "main", return_value=0):
+            self.execute_step("Validate workbook")
+        with patch.dict(os.environ, {**self.env, "AZURE_DEVOPS_PAT": "test-token"}, clear=True):
+            with patch.object(importer, "main", return_value=1), redirect_stdout(io.StringIO()):
+                with self.assertRaises(SystemExit) as failure:
+                    self.execute_step("Upload test plan to Azure")
+        self.assertEqual(failure.exception.code, 1)
 
     def test_multiline_pat_is_rejected_before_masking(self):
         output = io.StringIO()
         with patch.dict(os.environ, {**self.env, "AZURE_DEVOPS_PAT": "test\ntoken"}, clear=True):
-            with patch("subprocess.run") as run, redirect_stdout(output):
+            with patch.object(importer, "main") as import_main, redirect_stdout(output):
                 with self.assertRaisesRegex(SystemExit, "line breaks"):
                     self.execute_step("Upload test plan to Azure")
-        run.assert_not_called()
+        import_main.assert_not_called()
         self.assertEqual(output.getvalue(), "")
 
 
