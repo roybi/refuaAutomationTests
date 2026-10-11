@@ -82,11 +82,13 @@ Test Cases. A successful dry run does not validate Azure credentials.
 Cleanup is best-effort, not a token expiry mechanism. If the uploader is killed,
 the PC loses power, the job never starts, or GitHub rejects cleanup, temporary
 resources may remain. Check **Settings > Secrets and variables > Actions** for
-the printed `AZURE_IMPORT_PAT_<UPLOAD_ID>` name and **Releases** for the matching
+the `AZURE_IMPORT_PAT_<UPLOAD_ID>` name using this run's uppercase upload ID
+(shown in the workflow run title), and **Releases** for the matching
 `azure-import-input-<upload_id>` draft. Delete only your matching resources and
 revoke the PAT in Azure DevOps when finished. The workflow token does not have
 permission to delete repository secrets; that deletion requires the local user's
 GitHub identity. Interrupted runs may already have changed Azure cases.
+The uploader does not print the PAT or the generated secret name.
 
 If workflow dispatch times out, inspect Actions before retrying: GitHub may have
 accepted the request. The workbook draft is retained for inspection, but the

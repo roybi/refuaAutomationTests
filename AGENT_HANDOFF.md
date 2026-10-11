@@ -188,6 +188,7 @@ The earlier workbook/application task remains BLOCKED and is unchanged.
 - [x] Require a masked personal PAT prompt for each live run, using a unique temporary GitHub secret.
 - [x] Validate 69 isolated tests, actionlint, and editor diagnostics without real credentials or remote writes.
 - [x] Publish the local-upload extension PR and inspect required repository checks.
+- [x] Remove secret-name logging and validate success/failure output with 70 isolated tests.
 
 ### Resume point
 
@@ -206,9 +207,12 @@ and the protected default branch. Abrupt interruption can leave resources; the
 README documents manual cleanup and PAT revocation.
 
 PR #4: https://github.com/DigitalIDF/refuaAutomationTests/pull/4 (feature commit ca8c7f9).
-Next action: review required scans and merge through normal protection rules;
-CodeQL, ScanLi, VersionCheck, and Dependabot checks were still running at the last
-inspection, with no reported failures. Do not publish the older duplicate
+CodeQL follow-up: removed generated secret names from both print calls in
+`tools/azure_test_importer/local_upload.py` (publish_workbook, line 165).
+Success, workflow-failure, and cleanup-failure logging checks pass (70 tests total).
+Next action after publication: review the new CodeQL scan on PR #4 and merge
+through normal protection rules. Alert closure is not yet
+verified. Do not publish the older duplicate
 importer worktree. 69 unit tests, actionlint, Python compilation, and editor diagnostics
 passed. No real PAT was collected; GitHub upload/secret APIs are mocked in tests;
 no real workbook upload, workflow dispatch, Azure writes, or Meditik DB/UI runs
@@ -258,6 +262,14 @@ were performed. Earlier worktrees and unrelated changes are preserved.
 	  Initial required-check inspection found passing/pending checks and no failures.
 	  PR is not merged; hosted local-upload execution and real Azure authentication
 	  remain unverified. No user PAT was collected or stored during development.
+
+- 2026-10-11: Addressed the reported CodeQL clear-text logging finding in
+	publish_workbook. The logged value was a generated secret name, not the PAT;
+	both normal and cleanup-warning messages now use static text. Added output
+	assertions for success, workflow failure, and cleanup failure, and updated
+	manual-cleanup instructions. All 70 standalone tests, editor diagnostics,
+	and diff whitespace checks passed. Publishing to existing PR #4 for rescan;
+	no scanner suppression, real credentials, or remote import execution.
 
 ## PROJECT QUICK REFERENCE (static — rarely changes)
 

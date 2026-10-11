@@ -570,9 +570,10 @@ class LocalUploadTests(unittest.TestCase):
     def test_live_pat_is_sent_on_stdin_and_deleted_after_workflow(self):
         for failure in (None, RuntimeError("Workflow failed")):
             with self.subTest(failure=failure):
+                output = io.StringIO()
                 with patch.object(local_upload, "github_json", return_value={"private": True, "default_branch": "main"}):
                     with patch.object(local_upload, "run_gh") as github, patch.object(local_upload, "dispatch_workbook"):
-                        with patch.object(local_upload, "wait_for_workflow", side_effect=failure), redirect_stdout(io.StringIO()):
+                        with patch.object(local_upload, "wait_for_workflow", side_effect=failure), redirect_stdout(output), redirect_stderr(output):
                             if failure:
                                 with self.assertRaisesRegex(RuntimeError, "Workflow failed"):
                                     local_upload.publish_workbook(WORKBOOK, "example/tests", "main", {"dry_run": "false"}, pat="personal-test-token")
@@ -585,6 +586,20 @@ class LocalUploadTests(unittest.TestCase):
                 self.assertEqual(deleter.args[0][:2], ["secret", "delete"])
                 self.assertEqual(setter.args[0][2], deleter.args[0][2])
                 self.assertNotIn("personal-test-token", " ".join(setter.args[0]))
+                self.assertNotIn(setter.args[0][2], output.getvalue())
+                self.assertNotIn("personal-test-token", output.getvalue())
+
+    def test_cleanup_warning_does_not_log_credentials_or_secret_name(self):
+        output = io.StringIO()
+        with patch.object(local_upload, "github_json", return_value={"private": True, "default_branch": "main"}):
+            with patch.object(local_upload, "run_gh", side_effect=[None, RuntimeError("personal-test-token")]) as github:
+                with patch.object(local_upload, "dispatch_workbook"), patch.object(local_upload, "wait_for_workflow"):
+                    with redirect_stdout(output), redirect_stderr(output):
+                        local_upload.publish_workbook(WORKBOOK, "example/tests", "main", {"dry_run": "false"}, pat="personal-test-token")
+        self.assertIn("cleanup failed", output.getvalue())
+        self.assertIn("revoke the PAT", output.getvalue())
+        self.assertNotIn(github.call_args_list[0].args[0][2], output.getvalue())
+        self.assertNotIn("personal-test-token", output.getvalue())
 
     def test_live_without_pat_stops_before_github_calls(self):
         with patch.object(local_upload, "github_json") as github:

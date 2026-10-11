@@ -161,7 +161,7 @@ def publish_workbook(path, repository, ref, inputs, *, pat=None):
     secret_name = personal_secret_name(upload_id)
     try:
         if live:
-            print(f"Temporary secret: {secret_name}. Keep this uploader open until the run finishes.", flush=True)
+            print("Keep this uploader open until the run finishes so temporary credentials can be removed.", flush=True)
             run_gh(["secret", "set", secret_name, "--repo", repository], stdin=pat.strip(), sensitive=True)
         dispatch_workbook(path, repository, ref, inputs, upload_id, checksum)
         if live:
@@ -171,7 +171,7 @@ def publish_workbook(path, repository, ref, inputs, *, pat=None):
             try:
                 run_gh(["secret", "delete", secret_name, "--repo", repository])
             except RuntimeError:
-                print(f"WARNING: delete temporary secret {secret_name} in {repository} and revoke the PAT.", file=sys.stderr)
+                print("WARNING: temporary credential cleanup failed. Remove this run's secret in repository Actions settings and revoke the PAT.", file=sys.stderr)
     return upload_id
 
 
