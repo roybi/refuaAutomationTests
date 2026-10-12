@@ -2,6 +2,14 @@
 
 **Test Automation Implementation for MEDITEK (Meditik) Medical Application**
 
+## Upload Excel Test Cases to Azure
+
+Use **Actions > Upload Test Plan to Azure > Run workflow** to import any uploaded
+Excel workbook into an Azure Test Plan. Enter its repository path, plan name, and
+worksheet. Configure `AZURE_DEVOPS_PAT` as an Actions secret; start with validation
+mode checked. This standalone tool does not run application tests or DB seeding.
+See the [setup and usage guide](tools/azure_test_importer/README.md).
+
 ## Overview
 
 Playwright + pytest + pytest-bdd automation for the Meditik application. It uses the **refuaAutomationCore** framework for infrastructure, so this repo focuses on page objects, tests, BDD features and test data.
