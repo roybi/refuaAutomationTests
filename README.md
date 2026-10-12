@@ -69,31 +69,52 @@ Either way, **one browser and one tab are shared by the whole run** (pytest and 
 
 ### 3. Run Tests
 
+`--system` (which application) and `--user` (which test user) are explicit per-run parameters; one run = one system + one user. Use the single entry point:
+
+```powershell
+# Meditik, BDD only, @smoke scenarios, user 4444401, TEST
+.\venv\Scripts\python.exe run_tests.py --system meditik --suite bdd --tags smoke --user 4444401 --env test
+
+# Another run, another user
+.\venv\Scripts\python.exe run_tests.py --system meditik --suite bdd --tags smoke --user 4444405
+
+# Every registered system / list systems / collect only (no browser)
+.\venv\Scripts\python.exe run_tests.py --system all --user 4444411
+.\venv\Scripts\python.exe run_tests.py --list-systems
+.\venv\Scripts\python.exe run_tests.py --system meditik --user 4444401 -- --collect-only -q
+```
+
+The wrapper just builds and prints a pytest command; the native equivalent (always include `--system`):
+
 ```powershell
 $env:TEST_ENV = "test"
 
-# Everything (sanity + pending + BDD)
-pytest --personal-number <PN>
+# Everything of Meditik (sanity + pending + BDD)
+pytest --system meditik --personal-number <PN>
 
 # One module
-pytest refua_tests/tests/meditikVisitSummariesSanity.py --personal-number <PN>
-pytest -m sick_days --personal-number <PN>
+pytest refua_tests/tests/meditikVisitSummariesSanity.py --system meditik --personal-number <PN>
+pytest -m sick_days --system meditik --personal-number <PN>
 
 # BDD only
-pytest refua_tests/bdd --personal-number <PN>
+pytest refua_tests/bdd --system meditik --personal-number <PN>
 
 # Collect only (no browser) - quick import/marker check
-pytest --collect-only -q
+pytest --collect-only -q --system all
 ```
+
+Without `--system`, pytest exits with code 4 when system-owned tests are collected. New systems (for example CPR GO) are added through the registry in `refua_tests/systems.py` ([RUNBOOK](docs/guides/RUNBOOK.md), "Adding a new system").
 
 ## Project Structure
 
 ```
 refuaAutomationTests/
-├── conftest.py                     # --personal-number option (automation login + DB seed)
+├── conftest.py                     # --system and --personal-number options (system selection, automation login + DB seed)
+├── run_tests.py                    # single entry point: --system, --user, --suite, --tags, --env, --allure-dir
 ├── pytest.ini                      # testpaths, file patterns, markers, logging, allure dir
 ├── requirements.txt
 ├── refua_tests/
+│   ├── systems.py                  # Registry of systems under test (meditik; add cprgo here)
 │   ├── conftest.py                 # Session-wide Meditik DB seed (before all / after all)
 │   ├── pages/                      # Page objects (data-testid ids in automationIds.py)
 │   │   ├── meditikBasePage.py, meditikHomePage.py, menuPages.py, allActionsPage.py
@@ -177,18 +198,20 @@ python tools\db_seed_meditik.py leftovers --env test --user <PN>
 
 ### Basic Commands
 
+Every command below also needs `--system meditik` (or `all`); the single entry point `run_tests.py` adds it for you (see section 3).
+
 ```bash
 # All tests (testpaths = refua_tests/tests + refua_tests/bdd)
-TEST_ENV=test pytest --personal-number <PN>
+TEST_ENV=test pytest --system meditik --personal-number <PN>
 
 # Specific file
-TEST_ENV=test pytest refua_tests/tests/meditikMenuSanity.py --personal-number <PN>
+TEST_ENV=test pytest refua_tests/tests/meditikMenuSanity.py --system meditik --personal-number <PN>
 
 # Specific test
-TEST_ENV=test pytest "refua_tests/tests/meditikMenuSanity.py::<Class>::<test>" --personal-number <PN>
+TEST_ENV=test pytest "refua_tests/tests/meditikMenuSanity.py::<Class>::<test>" --system meditik --personal-number <PN>
 
 # Tests matching pattern
-TEST_ENV=test pytest -k "empty_state" --personal-number <PN>
+TEST_ENV=test pytest -k "empty_state" --system meditik --personal-number <PN>
 ```
 
 Test discovery (`pytest.ini`): files `test_*.py` and `*Sanity.py`, classes `Test*` and `Meditik*`.

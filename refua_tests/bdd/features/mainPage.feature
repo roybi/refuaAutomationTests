@@ -1,3 +1,4 @@
+@bdd @meditik @main_page
 Feature: Main Page Functionality
   As a QA engineer
   I want to verify the Main Page works correctly across all environments

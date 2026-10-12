@@ -52,6 +52,7 @@ def _return_home_after(home_actions_page):
         print(f"[home_actions] return_to_home failed: {error}")
 
 
+@pytest.mark.meditik
 @pytest.mark.smoke
 @pytest.mark.ui
 class MeditikHomeAndActionsSanity:

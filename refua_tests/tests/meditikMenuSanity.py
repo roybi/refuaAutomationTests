@@ -60,6 +60,7 @@ def _return_home_after_each(menu_sanity_page):
         print(f"[menu_sanity] return_to_home failed: {error}")
 
 
+@pytest.mark.meditik
 @pytest.mark.smoke
 @pytest.mark.ui
 class MeditikMenuSanity:

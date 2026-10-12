@@ -229,6 +229,7 @@ from refua_tests.pages.softNotes import (clear_session_soft_notes,
                                          clear_soft_notes, drain_soft_notes,
                                          publish_soft_notes_to_allure,
                                          session_soft_notes, soft_notes_mode)
+from refua_tests.systems import is_system_active
 
 
 @pytest.fixture(autouse=True)
@@ -256,8 +257,11 @@ def _soft_notes_per_test():
 
 
 @pytest.fixture(scope="session", autouse=True)
-def _soft_notes_session_log(auth_state_session):
+def _soft_notes_session_log(auth_state_session, request):
     """Write a suite-level soft-warnings log into allure/results at the end."""
+    if not is_system_active(request.config, "meditik"):
+        yield
+        return
     # categories.json is copied here so Allure can group broken/soft-warning tests under custom category labels.
     clear_session_soft_notes()
     results_dir = REPO_ROOT / "allure" / "results"
@@ -334,7 +338,13 @@ def auth_state_session(request):
 
     TEST_AUTH_METHOD=automation instead yields None; app_session logs in through
     /automation/login/:personalNumber (TEST_PERSONAL_NUMBER + AUTOMATION_SECRET).
+
+    Yields None without any login or environment check when meditik is not an active system
+    (for example a CPR GO-only run selected with --system).
     """
+    if not is_system_active(request.config, "meditik"):
+        yield None
+        return
     auth_method = os.getenv("TEST_AUTH_METHOD", "session_state")
     if auth_method not in {"session_state", "automation"}:
         pytest.exit("TEST_AUTH_METHOD must be session_state or automation.", returncode=1)

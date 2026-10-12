@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session", autouse=True)
-def meditik_seed_session(auth_state_session):
+def meditik_seed_session(auth_state_session, request):
     """BEFORE ALL: seed 3 requests of every Meditik request type. AFTER ALL: cleanup per MEDITIK_SEED_CLEANUP.
 
     Per execution: --personal-number 4444410 (or TEST_PERSONAL_NUMBER); it must match
@@ -23,6 +23,12 @@ def meditik_seed_session(auth_state_session):
     from dotenv import load_dotenv
 
     from refua_tests.utils import meditik_seed as ms
+
+    from refua_tests.systems import is_system_active
+
+    if not is_system_active(request.config, "meditik"):
+        yield None
+        return
 
     test_env = os.getenv("TEST_ENV", "").strip().lower()
     if test_env:

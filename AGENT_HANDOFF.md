@@ -51,6 +51,8 @@ Preserve source case IDs/actions/results, maintain tracker mappings, implement a
 
 ## RESUME POINT
 
+Single entry point + system/user parameters (2026-10-12): implemented and verified; no further action pending. `run_tests.py --system meditik|all --user <PN> [--suite --tags --env --allure-dir --clean --dry-run --list-systems] [-- pytest args]` builds a pytest command; native option `--system` (root `conftest.py`) selects tests by the system marker from the registry `refua_tests/systems.py`, sets `TEST_APP`, and gates `auth_state_session`, `_soft_notes_session_log` and `meditik_seed_session` to runs where meditik is active. `--system` is required (exit code 4) whenever system-owned tests are collected, including `--collect-only` (use `--system all`); `tools/tests` run without it. User is one per run (`--personal-number`). Next system (CPR GO): follow RUNBOOK "Adding a new system". The live smoke run from 2026-10-12 (My Requests @smoke BDD, user 4444401) had 8 passed / 7 failed because the TEST app redirected to Microsoft login and the DB was unreachable; not investigated further.
+
 Separate Azure importer action (2026-10-11): implemented `.github/workflows/azure-import-test-cases.yml`, `tools/azure_testcase_importer.py`, standalone dependencies and unit tests, and `docs/guides/AZURE_TEST_CASE_IMPORT.md`. Validation: 30 self-contained unit tests pass; the original 28 external tests also passed against the ported importer. YAML safety contracts and the exact workflow shell passed synthetic dry-run, filename-with-spaces, missing-PAT, outside-path, and invalid-sheet checks. actionlint download was blocked by network access; no GitHub-hosted run or Azure writes occurred. User explicitly requested commit/push to DigitalIDF/refuaAutomationTests main. Publish only this feature from an isolated checkout of digitalIDF/main (base 6bcaafb), not the four unrelated local branch commits. After publication, the next action is for the user to configure a GitHub Environment secret AZURE_DEVOPS_PAT, upload an approved workbook, run dry-run, and explicitly select a live import. Never ask for the PAT in chat. Existing workbook task remains BLOCKED.
 
 Commit/push validation (2026-10-11): pending source, documentation, and BDD workflows passed Python compilation, collection of 735 tests, tag-generator output comparison (19 tags), and whitespace checks. Collection reports an unregistered `main_page` marker warning. Generated Allure reports, the workbook ZIP, and local `.kiro/` settings are excluded from the requested Git snapshot. No live UI tests, authentication, or DB operations ran; the workbook task remains BLOCKED. No source implementation was resumed. For the next implementation task, start from the latest 2026-09-27 WORK LOG entry below; do not repeat the older authentication investigation in this section.
@@ -103,8 +105,8 @@ Next action (when resumed): either (a) get a fresh manual login in the integrate
 
 <!-- Decisions already made — the next agent must NOT re-litigate these. -->
 
-- _(e.g. "Using Page Object Model — locators as @property, per CLAUDE.md")_
-- _(e.g. "Tests run with TEST_ENV=test; session bypass enabled via SKIP_2FA")_
+- Tests are run through `run_tests.py` (or native pytest) with an explicit `--system` and exactly one `--user` per run; the system registry is `refua_tests/systems.py` (decided 2026-10-12, non-breaking: file locations unchanged, per-system BDD loaders such as `test_meditik_bdd.py`).
+- `--system` is required (no default); `all` runs every registered system.
 
 ---
 
@@ -176,11 +178,13 @@ Next action (when resumed): either (a) get a fresh manual login in the integrate
 
 | 2026-10-11 | GitHub Copilot | Implemented the Azure Excel importer manual GitHub Action with per-environment PAT secrets, committed-workbook input, default dry-run, serialized imports, standalone dependencies, and 30 passing synthetic/mocked unit tests ported from the supplied suite. Validated YAML contracts and shell behavior without Azure requests. Documented PAT scopes, approved workbook upload, project-wide ID updates, and partial failure behavior. User approved publication to DigitalIDF/refuaAutomationTests main; isolated the feature from unrelated royShfiutMeditik commits. No PAT collected, no private workbook copied, no Azure writes, no Meditik UI/DB execution. |
 
+| 2026-10-12 | GitHub Copilot | Added the single test entry point. New `refua_tests/systems.py` registry (meditik, alias meditek), root `conftest.py` `--system` option (required, deselects other systems' tests, sets TEST_APP, header `System/User/Env`), gating of the Meditik login/seed/soft-notes session fixtures, `run_tests.py` wrapper (system, one user per run, suite, tags, env, allure-dir auto/clean, dry-run), added missing `meditik` markers (3 smoke classes, new-referral guard test, mainPage.feature). Verified: `--collect-only` 735 for `--system meditik` and `all` (baseline 735), 216 smoke, 15 My Requests smoke BDD; omitted/unknown system exit 4; 14 new unit tests in `tools/tests/test_system_selection.py` (44 pass in tools/tests without `--system`). Docs updated: README, RUNBOOK (incl. "Adding a new system"), QUICK_START_BDD, both qa-automation skills. Earlier live My Requests smoke run: 8 passed/7 failed (TEST app redirected to Microsoft login, DB unreachable). No live tests executed for this change. |
+
 ## PROJECT QUICK REFERENCE (static — rarely changes)
 
 - **Project**: refuaAutomationTests — Playwright/pytest test automation for the MEDITEK medical app.
 - **Structure**: page objects in `refua_tests/pages/`, tests in `refua_tests/tests/`, fixtures in `refua_tests/tests/conftest.py`.
-- **Run tests**: `TEST_ENV=test pytest refua_tests/tests/ -v`
-- **Run one test**: `TEST_ENV=test pytest refua_tests/tests/test_<file>.py -v -k "<name>"`
+- **Run tests**: `python run_tests.py --system meditik --user <PN> --env test` (native: `TEST_ENV=test pytest --system meditik --personal-number <PN>`)
+- **Run one test**: `TEST_ENV=test pytest refua_tests/tests/test_<file>.py -v -k "<name>" --system meditik --personal-number <PN>`
 - **Conventions**: see `CLAUDE.md` (page objects inherit `BasePage`, tests named `test_<feature>.py`, markers in `pytest.ini`).
 - **Commit style**: `test: <description>` / `fix: <description>`; commit + push after validated changes.

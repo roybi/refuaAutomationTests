@@ -23,15 +23,23 @@ refua_tests/bdd/
 
 ## Run
 
+`--system` is required and `--user` is the per-run test user; one invocation = one system, one user. Use the single entry point ([RUNBOOK](../guides/RUNBOOK.md)):
+
 ```powershell
-$env:TEST_ENV = "test"
-venv\Scripts\pytest.exe refua_tests\bdd --personal-number <PN>                       # all BDD
-venv\Scripts\pytest.exe refua_tests\bdd\test_meditik_bdd.py --personal-number <PN>   # Ready scenarios only
-venv\Scripts\pytest.exe refua_tests\bdd -m "meditik and medicines" --personal-number <PN>
-venv\Scripts\pytest.exe refua_tests\bdd -m "meditik and not known_issue" --personal-number <PN>
+.\venv\Scripts\python.exe run_tests.py --system meditik --suite bdd --user <PN>                    # all Meditik BDD
+.\venv\Scripts\python.exe run_tests.py --system meditik --suite bdd --tags smoke --user <PN>       # only @smoke scenarios
+.\venv\Scripts\python.exe run_tests.py --system meditik --suite bdd --tags "medicines and not known_issue" --user <PN>
+.\venv\Scripts\python.exe run_tests.py --system all --suite bdd --tags smoke --user <PN>           # every registered system
 ```
 
-Tags: `@bdd @meditik` plus one module tag (`@home`, `@menu`, `@request_forms`, `@my_requests`, `@my_appointments`, `@scheduling`, `@referrals`, `@new_referral`, `@medicines`, `@sick_days`, `@vaccinations`, `@medical_profile`, `@visit_summaries`). `@cprgo` is reserved for a future application. Every tag must be registered in `pytest.ini`.
+Equivalent native pytest (the wrapper only builds this command):
+
+```powershell
+$env:TEST_ENV = "test"
+venv\Scripts\python.exe -m pytest refua_tests\bdd --system meditik -m smoke --personal-number <PN>
+```
+
+Tags: `@bdd @meditik` plus one module tag (`@home`, `@menu`, `@request_forms`, `@my_requests`, `@my_appointments`, `@scheduling`, `@referrals`, `@new_referral`, `@medicines`, `@sick_days`, `@vaccinations`, `@medical_profile`, `@visit_summaries`). The system tag (`@meditik`; later `@cprgo`) decides which `--system` owns the scenario, so every feature must carry exactly its system's tag. Every tag must be registered in `pytest.ini`.
 
 Each executed Given/When/Then is attached to the Allure result as `BDD scenario action` with its status.
 
@@ -57,7 +65,7 @@ Each executed Given/When/Then is attached to the Allure result as `BDD scenario 
        summaries.wait_until_loaded()
    ```
 
-4. New feature file -> add `scenarios("features/...")` and the step-module import to `test_meditik_bdd.py`.
+4. New feature file -> add `scenarios("features/...")` and the step-module import to the system's loader (`test_meditik_bdd.py` for Meditik). A new system gets its own loader (`test_<system>_bdd.py`) that imports only that system's steps; see "Adding a new system" in the [RUNBOOK](../guides/RUNBOOK.md).
 5. Remove the case from the pending feature and update `docs/setup/TEST_CASE_TRACKER.csv`. To regenerate a pending feature from its catalog:
 
    ```powershell

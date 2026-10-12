@@ -32,39 +32,77 @@ Details: [docs/setup/AUTH_STATE_SETUP.md](../setup/AUTH_STATE_SETUP.md).
 
 ## 2. Run
 
-`pytest.ini` already adds `-v`, `--alluredir=allure/results` and both test paths.
+One entry point runs any registered system. **`--system` and `--user` are explicit per-run parameters**: one invocation targets one system (`meditik`, later `cprgo`, or `all`) and exactly one user. The next run can use another user (4444405, 4444411, ...).
+
+```powershell
+# Meditik BDD, only @smoke scenarios, user 4444401, TEST
+.\venv\Scripts\python.exe run_tests.py --system meditik --suite bdd --tags smoke --user 4444401 --env test
+
+# Same selection, another user, results kept in their own Allure folder
+.\venv\Scripts\python.exe run_tests.py --system meditik --suite bdd --tags smoke --user 4444405 --allure-dir auto
+
+# Everything of every system; one module; collection only
+.\venv\Scripts\python.exe run_tests.py --system all --user 4444411
+.\venv\Scripts\python.exe run_tests.py --system meditik --tags medicines --user 4444401
+.\venv\Scripts\python.exe run_tests.py --system meditik --user 4444401 -- --collect-only -q
+
+.\venv\Scripts\python.exe run_tests.py --list-systems
+```
+
+| Option          | Meaning                                                                                                    |
+| --------------- | ---------------------------------------------------------------------------------------------------------- |
+| `--system`      | Required: a registered system (`meditik`, alias `meditek`) or `all`                                         |
+| `--user`        | Personal number of the test user, digits only; required for systems that need a login (Meditik)           |
+| `--env`         | `test` (default), `preprod`, `prod`; exported as `TEST_ENV`                                                |
+| `--suite`       | `bdd` (Gherkin), `pytest` (page-object tests) or `all` (default)                                           |
+| `--tags`        | pytest marker expression: `smoke`, `"smoke and my_requests"`, `"not known_issue"`                          |
+| `--allure-dir`  | Default `allure/results`; `auto` = `allure/results/<system>_<user>_<timestamp>`                            |
+| `--clean`       | Empty the Allure directory first (only inside `allure/`)                                                   |
+| `--dry-run`     | Print the pytest command without running it                                                                |
+| `-- <args>`     | Anything else is passed to pytest (`-x`, `--lf`, `-k "<expr>"`, `--headless`, `--collect-only`)             |
+
+The wrapper only builds a pytest command and prints it. The equivalent native command (`pytest.ini` already adds `-v`, `--alluredir=allure/results` and both test paths):
+
+```powershell
+$env:TEST_ENV = "test"
+venv\Scripts\python.exe -m pytest refua_tests\bdd --system meditik -m smoke --personal-number 4444401
+```
+
+How `--system` works: a test belongs to the system whose marker it carries (`@pytest.mark.meditik` on pytest tests, `@meditik` feature tag on BDD scenarios). The run keeps only that system's tests, exports its `TEST_APP`, and starts only that system's session fixtures (login, DB seed), so a CPR GO run never logs into Meditik. When system-owned tests are collected and `--system` is missing, pytest exits with code 4; this also applies to `--collect-only` (use `--system all`). Tests outside the registry (for example `tools/tests`) run without `--system`.
+
+Other direct commands (always add `--system`):
 
 ```powershell
 $env:TEST_ENV = "test"
 $pn = "<approved personal number>"
 
-# Everything (sanity + pending + BDD)
-venv\Scripts\pytest.exe --personal-number $pn
-
 # One module (file or marker)
-venv\Scripts\pytest.exe refua_tests\tests\meditikMedicinesSanity.py --personal-number $pn
-venv\Scripts\pytest.exe -m "visit_summaries" --personal-number $pn
-
-# BDD only / pytest only
-venv\Scripts\pytest.exe refua_tests\bdd --personal-number $pn
-venv\Scripts\pytest.exe refua_tests\tests --personal-number $pn
+venv\Scripts\python.exe -m pytest refua_tests\tests\meditikMedicinesSanity.py --system meditik --personal-number $pn
+venv\Scripts\python.exe -m pytest -m "visit_summaries" --system meditik --personal-number $pn
 
 # Skip known product issues
-venv\Scripts\pytest.exe -m "not known_issue" --personal-number $pn
+venv\Scripts\python.exe -m pytest -m "not known_issue" --system all --personal-number $pn
 
 # Collection check only (no browser, no login)
-venv\Scripts\pytest.exe --collect-only -q
+venv\Scripts\python.exe -m pytest --collect-only -q --system all
 ```
 
 Module markers: `home`, `menu`, `request_forms`, `my_requests`, `my_appointments`, `scheduling`, `referrals`, `new_referral`, `medicines`, `sick_days`, `vaccinations`, `medical_profile`, `visit_summaries`.
 
-Useful flags: `-x` (stop on first failure), `--lf` (last failed), `-k "<expr>"`, `--headless` (framework plugin option).
-
-Clean old results first, otherwise runs mix in the report:
+Clean old results first, otherwise runs mix in the report (or use `--clean` / `--allure-dir auto`):
 
 ```powershell
 Remove-Item -Recurse -Force allure\results\* -ErrorAction SilentlyContinue
 ```
+
+### Adding a new system (for example CPR GO)
+
+1. Register it in `refua_tests/systems.py` (`SystemSpec(name, marker, app_id, description, requires_user)`); `--system`, `run_tests.py --list-systems` and the usage messages pick it up automatically.
+2. Register its marker in `pytest.ini` (`cprgo` is already reserved).
+3. Add its page objects, pytest tests (`refua_tests/tests/cprgo<Module>Sanity.py`, each class/test `@pytest.mark.cprgo`) and its features (`refua_tests/bdd/features/cprgo_*.feature`, tagged `@bdd @cprgo`).
+4. Add its BDD loader `refua_tests/bdd/test_cprgo_bdd.py` that imports only CPR GO step modules (shared step names would collide with Meditik's).
+5. Put its login/session fixtures behind `is_system_active(request.config, "cprgo")` (see `auth_state_session` in `refua_tests/tests/conftest.py`) and add its URL/credentials to the `.env.<env>` files.
+6. Add the tracker rows (`docs/setup/TEST_CASE_TRACKER.csv`, `CPRGO-001`...), then verify with `run_tests.py --system cprgo --user <PN> -- --collect-only -q` and `--system meditik` (counts for Meditik must not change).
 
 ## 3. Report
 
@@ -94,3 +132,6 @@ venv\Scripts\python.exe tools\db_seed_meditik.py cleanup   --env test --run-id <
 | Pending tests "skipped"                                            | Expected - reason is the workbook Clarification Status                                                 |
 | Guard test fails                                                   | Workbook marked a case Ready: implement it (sanity + BDD) and update the tracker                       |
 | `--strict-markers` error                                           | Register the marker in `pytest.ini`                                                                    |
+| `--system is required` (exit code 4)                               | Add `--system meditik` (or `all`); also needed for `--collect-only`                                    |
+| `Unknown system '<name>'`                                          | Register it in `refua_tests/systems.py` (see "Adding a new system")                                    |
+| `--user is required` (wrapper)                                     | Pass exactly one personal number, digits only: `--user 4444401`                                        |

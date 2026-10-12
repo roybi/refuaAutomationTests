@@ -50,6 +50,7 @@ PENDING_CASES = [c for c in CASES if c["Clarification Status"] != "Ready"]
 READY_CASES = [c["TC_ID"] for c in CASES if c["Clarification Status"] == "Ready"]
 
 
+@pytest.mark.meditik
 def test_no_new_referral_case_is_silently_skipped():
     """Fail loudly if the workbook gains Ready cases needing implementation."""
     assert not READY_CASES, (
