@@ -1,0 +1,77 @@
+name: BDD - Update tag list
+
+on:
+  schedule:
+    # GitHub cron is UTC: 02:00 UTC = 05:00 IDT (summer), 03:00 UTC = 05:00 IST (winter); the gate keeps only the 05:00 one.
+    - cron: "0 2,3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: bdd-update-tags
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - id: check
+        run: |
+          hour=$(TZ=Asia/Jerusalem date +%H)
+          if [[ "${{ github.event_name }}" != "schedule" || "$hour" == "05" ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Skipped: Israel time is ${hour}:xx, not 05:xx." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  update:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    env:
+      BRANCH: bot/update-bdd-tags
+    steps:
+      - name: Check token
+        env:
+          BDD_TAGS_TOKEN: ${{ secrets.BDD_TAGS_TOKEN }}
+        run: |
+          # GITHUB_TOKEN may not modify files under .github/workflows, so a PAT/App token with workflow scope is required.
+          [[ -n "$BDD_TAGS_TOKEN" ]] || { echo "::error::Repository secret BDD_TAGS_TOKEN (repo + workflow scope) is not set"; exit 1; }
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          token: ${{ secrets.BDD_TAGS_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Collect tags
+        run: python tools/update_bdd_tags.py
+
+      - name: Open or refresh PR
+        env:
+          GH_TOKEN: ${{ secrets.BDD_TAGS_TOKEN }}
+          BASE: ${{ github.event.repository.default_branch }}
+        run: |
+          if git diff --quiet -- BDD_TAGS.md .github/workflows/bdd-run-by-tag.yml; then
+            echo "Tag list unchanged." >> "$GITHUB_STEP_SUMMARY"; exit 0
+          fi
+          git config user.name "bdd-tags-bot"
+          git config user.email "bdd-tags-bot@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add BDD_TAGS.md .github/workflows/bdd-run-by-tag.yml
+          git commit -m "chore: refresh BDD tag list"
+          git push --force-with-lease origin "$BRANCH"
+          if [[ -z "$(gh pr list --head "$BRANCH" --base "$BASE" --state open --json number --jq '.[0].number')" ]]; then
+            gh pr create --head "$BRANCH" --base "$BASE" --title "chore: refresh BDD tag list" \
+              --body "Automated by **BDD - Update tag list** (tools/update_bdd_tags.py). Updates BDD_TAGS.md and the tag dropdown of **BDD - Run by tag**."
+          fi
+          echo "Tag list changed - PR refreshed on \`$BRANCH\`." >> "$GITHUB_STEP_SUMMARY"

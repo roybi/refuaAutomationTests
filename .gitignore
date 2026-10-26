@@ -64,9 +64,13 @@ htmlcov/
 *.cover
 test-artifacts/
 
+# Temporary session notes (local only)
+SESSION_CHANGES.txt
+
 # Allure Reports
 allure/results/
 allure/report/
+allure-results/    # root-level override dir created by --alluredir=./allure-results
 
 # Test Execution
 test_execution.log

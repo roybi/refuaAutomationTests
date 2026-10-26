@@ -1,0 +1,293 @@
+MEDITEK AUTOMATION TESTS - HUMAN DESCRIPTION
+============================================
+
+Purpose
+-------
+This document explains in human words what each automated test checks.
+The tests log in once per run (automation login with --personal-number, or a
+saved authenticated session), open the MEDITEK web application in Chromium,
+perform the user flow, and verify that the expected screen or control is present.
+
+The tests do not submit medical requests or change patient data. Request-form
+tests only open the form and verify its structure.
+
+Test suites
+-----------
+- meditikHomeAndActionsSanity.py: home dashboard, widgets, CTAs, and speed dial.
+- meditikMenuSanity.py: navigation from the side menu.
+- meditikRequestFormsSanity.py: request forms opened from the All Actions page.
+
+The workbook-driven suites (My Requests, My Appointments, Scheduling, Referrals,
+New Referral, Medicines, Sick Days, Vaccinations, Medical Profile, Visit
+Summaries) are described case by case in docs/setup/<MODULE>_CASES.json and
+mapped to tests in docs/setup/TEST_CASE_TRACKER.csv.
+
+Common behavior
+---------------
+- One browser and one authenticated tab are shared by the whole run; class
+  fixtures reuse that tab.
+- Login happens once, so Microsoft login and 2FA are never repeated per test.
+- Overlays and blocking dialogs are dismissed before the main check.
+- After a test, the browser is returned to Home or All Actions so the next test
+  starts from a known location.
+- A test fails when the expected URL, page content, required test id, or
+  control is missing. Application error messages also cause a failure.
+
+1. HOME AND ACTIONS TESTS
+=========================
+File: refua_tests/tests/meditikHomeAndActionsSanity.py
+
+1. test_home_widgets_present
+----------------------------
+Opens the Home dashboard and checks that all expected dashboard widgets are
+visible:
+- My requests
+- Future appointments
+- Referrals
+- Medicines and prescriptions
+- Exemptions
+
+The widget test ids are the hard requirement. Text labels are also checked and
+reported as a soft warning if the label differs.
+
+2. test_home_speed_dial_actions
+-------------------------------
+Opens the Home dashboard and checks that the floating speed-dial button exists.
+It verifies that the expected quick actions are listed, including new referral,
+prescription, referral answer, mental-health support, and the support center.
+The speed dial is then closed.
+
+3. test_home_cta_send_doctor_request
+------------------------------------
+Clicks the Home link for sending a request to a doctor. It checks that the
+application navigates to the All Actions page and does not show an application
+error.
+
+4. test_home_last_update_time
+-----------------------------
+Clicks the "last update time" area on Home. It waits for the data request and
+checks that a timestamp appears in the form "updated on DD.MM.YY | HH:MM".
+An error message instead of a timestamp fails the test.
+
+5. test_home_widget_user_requests
+---------------------------------
+Clicks the My Requests dashboard widget and checks that the URL changes to
+/user-requests. It also checks that no application error is displayed.
+
+6. test_home_widget_appointments
+--------------------------------
+Clicks the Future Appointments dashboard widget and checks that the URL changes
+to /zimun-torim. It also checks that no application error is displayed.
+
+7. test_home_widget_referrals
+-----------------------------
+Clicks the Referrals dashboard widget and checks that the URL changes to
+/referrals. It also checks that no application error is displayed.
+
+8. test_home_widget_medicines
+-----------------------------
+Clicks the Medicines and Prescriptions dashboard widget and checks that the URL
+changes to /medicines. It also checks that no application error is displayed.
+
+9. test_home_widget_exemptions
+------------------------------
+Clicks the Exemptions dashboard widget and checks that the URL changes to
+/exemptions. It also checks that no application error is displayed.
+
+10-15. test_speed_dial_on_screen[path]
+--------------------------------------
+This is one parametrized test that runs six times. Each run opens one content
+screen directly and checks that the speed-dial button appears with the correct
+actions for that screen. If the button is delayed, the page is reloaded once
+and checked again.
+
+The six runs are:
+- /user-requests: speed dial is available on My Requests.
+- /zimun-torim: speed dial is available on Appointments.
+- /medicines: speed dial is available on Medicines.
+- /referrals: speed dial is available on Referrals.
+- /lab-results: speed dial is available on Lab Results.
+- /sick-days: speed dial is available on Sick Days.
+
+Each run also checks that the page finishes loading and has no application
+error. The speed dial is closed at the end.
+
+2. SIDE-MENU NAVIGATION TESTS
+=============================
+File: refua_tests/tests/meditikMenuSanity.py
+
+Each test opens the hamburger menu, selects one menu item, checks the destination
+screen, verifies that the expected content or empty state is loaded, and then
+returns to Home.
+
+1. test_meditik_navigation_ZimunTor
+-----------------------------------
+Opens Appointment Booking from the side menu. This flow goes to the external
+Torim booking application. The test checks the external Torim host and verifies
+that the page title contains the appointment-booking title.
+
+2. test_meditik_navigationToShlihatBakashaLeRofe
+------------------------------------------------
+Opens the All Actions page from the side menu. It checks that the page loads and
+that the request/action tiles are available.
+
+3. test_meditik_navigation_RefuaDchufa
+--------------------------------------
+Opens Urgent Care. It checks that the urgent-care route loads and that no
+application error is shown.
+
+4. test_meditik_navigation_ATorimSheli
+--------------------------------------
+Opens My Appointments. It checks that the appointments content loads as either
+real appointment rows/cards or a valid empty-state message.
+
+5. test_meditik_navigation_HaBakashotSheli
+-------------------------------------------
+Opens My Requests. It checks that submitted-request content loads as rows/cards
+or a valid empty-state message.
+
+6. test_meditik_navigation_TotzaotBdikot
+----------------------------------------
+Opens Lab Results. It checks the available lab-result sections and verifies that
+each section contains rows/cards or a valid empty-state message.
+
+7. test_meditik_navigation_TrufotVeMirshamim
+--------------------------------------------
+Opens Medicines and Prescriptions. It checks that the medicines/prescriptions
+content loads, including the relevant sections when present.
+
+8. test_meditik_navigation_SikumeiBikur
+---------------------------------------
+Opens Visit Summaries. It checks that the visit-summary content loads or shows a
+valid empty state instead of a broken page.
+
+9. test_meditik_navigation_Pturim
+---------------------------------
+Opens Exemptions. It checks that exemption content loads, including available
+sections, rows/cards, or a valid empty state.
+
+10. test_meditik_navigation_YemeiMachala
+----------------------------------------
+Opens Sick Days. It checks that sick-day records load as rows/cards or that the
+screen shows a valid empty-state message.
+
+11. test_meditik_navigation_Hapniyot
+------------------------------------
+Opens Referrals. It checks that referral content loads, including relevant
+sections, rows/cards, or a valid empty state.
+
+12. test_meditik_navigation_Hisunim
+-----------------------------------
+Opens Vaccinations. It checks that vaccination records load as rows/cards or a
+valid empty state, and that there is no application error.
+
+13. test_meditik_navigationToProfilRefui
+----------------------------------------
+Opens the Medical Profile screen. It checks that the medical-profile content
+loads using its card/profile layout and is not mistaken for a page containing
+only the application shell.
+
+14. test_meditik_navigation_FeedbackButton
+------------------------------------------
+Opens Feedback from the side menu. It checks that the feedback modal appears
+with a rating control, text field, submit button, and close button. It also
+checks that the close button is enabled and that clicking it hides the modal.
+
+3. REQUEST FORM TESTS
+=====================
+File: refua_tests/tests/meditikRequestFormsSanity.py
+
+The first six tests below are generated by one parametrized test method. For
+each request tile, the test opens All Actions, clicks the tile, checks the URL
+and page title/content, and verifies every required form control by test id.
+No form is submitted.
+
+1. test_request_form_opens_from_all_actions[referral-request]
+---------------------------------------------------------------
+Opens the New Referral form at /referral-request. Checks the phone-number
+field, the submit button, and referral/phone content.
+
+2. test_request_form_opens_from_all_actions[prescription-request]
+------------------------------------------------------------------
+Opens the Prescription form at /prescription-request. Checks the phone-number
+field, the submit button, and prescription/request content.
+
+3. test_request_form_opens_from_all_actions[sick-days-request]
+----------------------------------------------------------------
+Opens the Sick Days request form at /sick-days-request. Checks the phone-number
+field, submit button, reason field, and date-range field.
+
+4. test_request_form_opens_from_all_actions[insoles-request]
+--------------------------------------------------------------
+Opens the Insoles voucher form at /insoles-request. Checks the phone-number
+field, submit button, and insoles/request content.
+
+5. test_request_form_opens_from_all_actions[referral-answers-request]
+----------------------------------------------------------------------
+Opens the Referral Answer form at /referral-answers-request. Checks the
+phone-number field, submit button, and referral content.
+
+6. test_request_form_opens_from_all_actions[dentist-request]
+--------------------------------------------------------------
+Opens the Home Dental Hygienist form at /dentist-request. Checks the
+phone-number field, submit button, and provider-chain selection control.
+
+7. test_request_form_required_controls_are_visible[form]
+----------------------------------------------------------
+Runs for each of the six request forms. After opening the form, it checks that
+every control declared for that form is actually visible to the user, including
+the phone field, any form-specific fields, and the submit button.
+
+8. test_request_form_input_controls_are_interactive[form]
+----------------------------------------------------------
+Runs for each of the six request forms. It checks that every non-submit control
+declared for the form is enabled and available for user interaction. It does
+not enter real patient data and does not submit the request.
+
+9. test_request_form_required_content_is_complete[form]
+--------------------------------------------------------
+Runs for each of the six request forms. It checks that all form-specific
+labels/content declared in the form registry are present, rather than accepting
+only a matching URL or a single test id as proof that the form loaded.
+
+10. test_urgent_care_from_all_actions
+------------------------------------
+Opens Urgent Care from the All Actions page instead of treating it as a normal
+request form. It checks the /urgent-care URL, the urgent-care text, and the
+absence of a 404 or application error.
+
+11. test_speed_dial_opens_prescription_form
+------------------------------------------
+Opens the speed dial from Home and selects the Prescription action. It checks
+that the browser reaches /prescription-request and that the same required
+prescription-form controls used by the normal form test are present.
+
+The three new parametrized checks above run once for each of the six forms. The
+request-form suite now contains 40 test cases in total, including the valid
+phone, invalid phone, and form-specific control interaction checks documented
+below.
+
+12. test_request_form_accepts_valid_phone_input[form]
+--------------------------------------------------------
+Runs for each of the six forms. Enters a valid-format phone number, verifies
+that the value is retained, and checks that the field is not marked invalid.
+The form is not submitted.
+
+13. test_request_form_rejects_invalid_phone_input[form]
+--------------------------------------------------------
+Runs for each of the six forms. Enters an invalid phone number, leaves the
+field, and verifies that the form displays an invalid state or validation
+feedback. The form is not submitted.
+
+14. test_request_form_extra_controls_are_usable[form]
+------------------------------------------------------
+Runs for the Sick Days and Dentist forms. It interacts with the Sick Days
+cause/date controls and Dentist provider-chain control without submitting a
+request.
+
+What a passing run means
+========================
+A passing run means the tested navigation routes opened, the expected screens
+mounted, required controls were present, and no known application error was
+observed during those flows. It does not mean that a request was submitted or
+that every possible validation rule inside a form was tested.
