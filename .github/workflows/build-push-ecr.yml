@@ -1,0 +1,196 @@
+name: Docker - Build and push to ECR
+
+# One workflow, two images, built in order and pushed to ECR:
+#   1. refua-automation-core   (Playwright + refua_core, from the refuaAutomationCore repo)  -> base image
+#   2. refua-automation-tests  (FROM the core image: runner API + UI + Allure + this repo's tests)
+# Setup and the required variables/secrets: docs/guides/DOCKER_PIPELINE.md
+
+on:
+  workflow_dispatch:
+    inputs:
+      core_ref:
+        description: "refuaAutomationCore branch/tag/SHA to bake into the base image (blank = repo variable CORE_REF)"
+        required: false
+        type: string
+      extra_tag:
+        description: "Optional extra tag for the tests image, e.g. v1.4.0"
+        required: false
+        type: string
+      push_latest:
+        description: "Also move the 'latest' tag (turn off when the ECR repository has immutable tags)"
+        required: true
+        type: boolean
+        default: true
+  push:
+    branches: [main]
+    paths:
+      - "docker/**"
+      - "refua_service/**"
+      - "refua_tests/**"
+      - "tools/update_bdd_tags.py"
+      - "requirements*.txt"
+      - "run_tests.py"
+      - "conftest.py"
+      - "pytest.ini"
+      - ".dockerignore"
+      - ".github/workflows/build-push-ecr.yml"
+
+permissions:
+  contents: read
+  id-token: write # AWS OIDC (no long-lived keys); unused when static keys are configured
+
+concurrency:
+  group: build-push-ecr
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  BASE_IMAGE: ${{ vars.BASE_IMAGE }}
+  CORE_REPOSITORY: ${{ vars.ECR_CORE_REPOSITORY || 'refua-automation-core' }}
+  TESTS_REPOSITORY: ${{ vars.ECR_TESTS_REPOSITORY || 'refua-automation-tests' }}
+  # Tests need refua-core >= 2.0.1 (automation login). Until it is on the core default branch, build from this ref.
+  CORE_REF: ${{ inputs.core_ref || vars.CORE_REF || 'feat/meditik-element-scraper' }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Validate inputs and configuration
+        env:
+          EXTRA_TAG: ${{ inputs.extra_tag }}
+          AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        run: |
+          [[ -n "$AWS_REGION" ]] || { echo "::error::Repository variable AWS_REGION is not set (see docs/guides/DOCKER_PIPELINE.md)"; exit 1; }
+          [[ -n "$BASE_IMAGE" ]] || { echo "::error::Repository variable BASE_IMAGE (the Nexus base image with Python + Chromium) is not set yet"; exit 1; }
+          [[ -n "$AWS_ROLE_ARN" || -n "$AWS_ACCESS_KEY_ID" ]] \
+            || { echo "::error::Set repository variable AWS_ROLE_ARN (OIDC) or secrets AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY"; exit 1; }
+          if [[ -n "$EXTRA_TAG" && ! "$EXTRA_TAG" =~ ^[A-Za-z0-9_.-]{1,64}$ ]]; then
+            echo "::error::extra_tag may only contain letters, digits, '_', '.', '-'"; exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          path: refuaAutomationTests
+
+      - uses: actions/checkout@v4
+        with:
+          repository: DigitalIDF/refuaAutomationCore
+          ref: ${{ env.CORE_REF }}
+          token: ${{ secrets.CORE_REPO_TOKEN }}
+          path: refuaAutomationCore
+
+      - name: Resolve image names and tags
+        id: meta
+        env:
+          EXTRA_TAG: ${{ inputs.extra_tag }}
+          PUSH_LATEST: ${{ github.event_name == 'push' || inputs.push_latest }}
+        run: |
+          core_sha=$(git -C refuaAutomationCore rev-parse --short=12 HEAD)
+          tests_sha=$(git -C refuaAutomationTests rev-parse --short=12 HEAD)
+          core_version=$(python3 -c "exec(open('refuaAutomationCore/refua_core/version.py').read()); print(__version__)")
+          echo "core_sha=$core_sha"         >> "$GITHUB_OUTPUT"
+          echo "tests_sha=$tests_sha"       >> "$GITHUB_OUTPUT"
+          echo "core_version=$core_version" >> "$GITHUB_OUTPUT"
+          echo "push_latest=$PUSH_LATEST"   >> "$GITHUB_OUTPUT"
+          echo "extra_tag=$EXTRA_TAG"       >> "$GITHUB_OUTPUT"
+          if [[ "$core_version" == 1.* ]]; then
+            echo "::error::refuaAutomationCore ref '$CORE_REF' is version $core_version; the tests need >= 2.0.1 (automation login). Set CORE_REF to a newer ref."
+            exit 1
+          fi
+
+      - name: Build core base image
+        run: |
+          docker build \
+            -f refuaAutomationTests/docker/core/Dockerfile \
+            --build-arg "BASE_IMAGE=${BASE_IMAGE}" \
+            --build-arg "CORE_REF=${CORE_REF}" \
+            -t refua-core-local:${{ steps.meta.outputs.core_sha }} \
+            refuaAutomationCore
+
+      - name: Build tests image (FROM the core image)
+        run: |
+          docker build \
+            -f refuaAutomationTests/docker/tests/Dockerfile \
+            --build-arg "CORE_IMAGE=refua-core-local:${{ steps.meta.outputs.core_sha }}" \
+            --build-arg "APP_VERSION=${{ steps.meta.outputs.tests_sha }}" \
+            --build-arg "GIT_SHA=${{ github.sha }}" \
+            -t refua-tests-local:${{ steps.meta.outputs.tests_sha }} \
+            refuaAutomationTests
+
+      - name: Smoke test the tests image (no secrets, no network to the app)
+        run: |
+          image=refua-tests-local:${{ steps.meta.outputs.tests_sha }}
+          docker run --rm "$image" sh -c '
+            "$ALLURE_BIN" --version &&
+            python -c "import refua_core.version as v; print(\"refua-core\", v.__version__)" &&
+            python run_tests.py --list-systems &&
+            python run_tests.py --system meditik --user 4444401 --env test --suite bdd -- --collect-only -q | tail -3'
+          docker run -d --name svc -p 8080:8080 "$image"
+          for _ in $(seq 1 30); do curl -fsS http://127.0.0.1:8080/api/health && break || sleep 2; done
+          curl -fsS http://127.0.0.1:8080/api/options | grep -q '"meditik"'
+          curl -fsS http://127.0.0.1:8080/ | grep -q "Refua automation runner"
+          docker rm -f svc
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Log in to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Check the ECR repositories exist
+        run: |
+          for repo in "$CORE_REPOSITORY" "$TESTS_REPOSITORY"; do
+            aws ecr describe-repositories --repository-names "$repo" >/dev/null \
+              || { echo "::error::ECR repository '$repo' does not exist in ${AWS_REGION}. Create it first (docs/guides/DOCKER_PIPELINE.md)."; exit 1; }
+          done
+
+      - name: Push core base image
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          CORE_SHA: ${{ steps.meta.outputs.core_sha }}
+          CORE_VERSION: ${{ steps.meta.outputs.core_version }}
+          PUSH_LATEST: ${{ steps.meta.outputs.push_latest }}
+        run: |
+          uri="$REGISTRY/$CORE_REPOSITORY"
+          if aws ecr describe-images --repository-name "$CORE_REPOSITORY" --image-ids imageTag="$CORE_SHA" >/dev/null 2>&1; then
+            echo "Core image $CORE_SHA already in ECR - reusing it."
+          else
+            docker tag "refua-core-local:$CORE_SHA" "$uri:$CORE_SHA"
+            docker push "$uri:$CORE_SHA"
+          fi
+          if [[ "$PUSH_LATEST" == "true" ]]; then
+            docker tag "refua-core-local:$CORE_SHA" "$uri:latest"
+            docker push "$uri:latest"
+          fi
+
+      - name: Push tests image
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TESTS_SHA: ${{ steps.meta.outputs.tests_sha }}
+          PUSH_LATEST: ${{ steps.meta.outputs.push_latest }}
+          EXTRA_TAG: ${{ steps.meta.outputs.extra_tag }}
+        run: |
+          uri="$REGISTRY/$TESTS_REPOSITORY"
+          local_image="refua-tests-local:$TESTS_SHA"
+          tags=("$TESTS_SHA")
+          [[ "$PUSH_LATEST" == "true" ]] && tags+=("latest")
+          [[ -n "$EXTRA_TAG" ]] && tags+=("$EXTRA_TAG")
+          for tag in "${tags[@]}"; do
+            docker tag "$local_image" "$uri:$tag"
+            docker push "$uri:$tag"
+          done
+          {
+            echo "### Images pushed to ECR"
+            echo "| Image | Tags |"
+            echo "|---|---|"
+            echo "| \`$REGISTRY/$CORE_REPOSITORY\` | \`${{ steps.meta.outputs.core_sha }}\` (refua-core ${{ steps.meta.outputs.core_version }}, ref \`$CORE_REF\`) |"
+            echo "| \`$uri\` | $(printf '`%s` ' "${tags[@]}") |"
+          } >> "$GITHUB_STEP_SUMMARY"

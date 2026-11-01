@@ -264,7 +264,9 @@ def _soft_notes_session_log(auth_state_session, request):
         return
     # categories.json is copied here so Allure can group broken/soft-warning tests under custom category labels.
     clear_session_soft_notes()
-    results_dir = REPO_ROOT / "allure" / "results"
+    # Follow --alluredir (run_tests.py --allure-dir, the container service) instead of a fixed folder.
+    alluredir = Path(request.config.getoption("allure_report_dir", default=None) or "allure/results")
+    results_dir = alluredir if alluredir.is_absolute() else REPO_ROOT / alluredir
     results_dir.mkdir(parents=True, exist_ok=True)
     categories_src = REPO_ROOT / "allure" / "categories.json"
     if categories_src.exists():

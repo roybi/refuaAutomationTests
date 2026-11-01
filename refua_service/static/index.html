@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Refua automation runner</title>
+<style>
+  :root { --bg:#f4f6f8; --card:#fff; --line:#d9dee4; --text:#1c2733; --muted:#5d6b7a; --accent:#0b63ce;
+          --ok:#1a7f37; --bad:#c62828; --warn:#b26a00; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.45 system-ui, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
+  header { background:#16222f; color:#fff; padding:12px 24px; display:flex; align-items:center; gap:16px; }
+  header h1 { font-size:18px; margin:0; flex:1; }
+  header a { color:#9cc4ff; }
+  main { max-width:1200px; margin:20px auto; padding:0 16px; display:grid; gap:16px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:16px; }
+  h2 { font-size:15px; margin:0 0 12px; }
+  form { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:12px; align-items:end; }
+  label { display:grid; gap:4px; font-weight:600; font-size:12px; color:var(--muted); }
+  select, input[type=text], input[type=password] { padding:7px 8px; border:1px solid var(--line); border-radius:6px; font:inherit; }
+  .check { display:flex; align-items:center; gap:6px; font-weight:400; color:var(--text); padding-bottom:8px; }
+  button { padding:8px 14px; border:0; border-radius:6px; background:var(--accent); color:#fff; font:inherit; cursor:pointer; }
+  button.secondary { background:#e8edf3; color:var(--text); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  code, pre { font-family: Consolas, "SFMono-Regular", monospace; }
+  .preview { margin-top:12px; padding:8px 10px; background:#eef2f6; border-radius:6px; overflow-x:auto; white-space:nowrap; }
+  .msg { margin-top:8px; min-height:18px; }
+  .msg.error { color:var(--bad); }
+  table { width:100%; border-collapse:collapse; }
+  th, td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { font-size:12px; color:var(--muted); }
+  tr.row { cursor:pointer; } tr.row:hover, tr.selected { background:#eef4fc; }
+  .badge { display:inline-block; padding:1px 8px; border-radius:10px; font-size:12px; color:#fff; background:var(--muted); }
+  .badge.passed { background:var(--ok); } .badge.failed, .badge.error, .badge.timed_out { background:var(--bad); }
+  .badge.running { background:var(--accent); } .badge.queued, .badge.cancelled, .badge.interrupted { background:var(--warn); }
+  .stats span { margin-right:8px; } .stats .p { color:var(--ok); } .stats .f { color:var(--bad); }
+  #log { background:#10161d; color:#d6e2ee; padding:12px; border-radius:6px; height:360px; overflow:auto; white-space:pre-wrap; margin:8px 0 0; font-size:12px; }
+  .actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .muted { color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Refua automation runner</h1>
+  <a href="/reports/latest" target="_blank" rel="noopener">Latest report</a>
+</header>
+<main>
+  <section>
+    <h2>New run</h2>
+    <form id="form">
+      <label>System <select id="system"></select></label>
+      <label>Suite <select id="suite"></select></label>
+      <label>Tag <select id="tags"></select></label>
+      <label>User <input type="text" id="user" list="users" inputmode="numeric" autocomplete="off" required></label>
+      <datalist id="users"></datalist>
+      <label>Environment <select id="env"></select></label>
+      <label id="tokenLabel" hidden>API token <input type="password" id="token" autocomplete="off"></label>
+      <label class="check"><input type="checkbox" id="clean" checked> Clean results dir</label>
+      <button type="submit" id="start">Start run</button>
+    </form>
+    <div class="preview"><code id="preview"></code></div>
+    <div class="msg" id="msg"></div>
+  </section>
+
+  <section>
+    <h2>Runs <span class="muted" id="refreshNote"></span></h2>
+    <table>
+      <thead><tr><th>Started</th><th>System</th><th>Suite</th><th>Tag</th><th>User</th><th>Env</th><th>Status</th><th>Results</th><th>Report</th></tr></thead>
+      <tbody id="runs"></tbody>
+    </table>
+  </section>
+
+  <section id="detail" hidden>
+    <h2>Run <code id="detailId"></code> <span class="badge" id="detailStatus"></span></h2>
+    <div class="actions">
+      <a id="detailReport" href="#" target="_blank" rel="noopener" hidden>Open Allure report</a>
+      <button type="button" class="secondary" id="cancel" hidden>Cancel run</button>
+      <span class="muted" id="detailCommand"></span>
+    </div>
+    <pre id="log"></pre>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let selected = null, logOffset = 0, options = null;
+
+function el(tag, props = {}, text) {
+  const node = Object.assign(document.createElement(tag), props);
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+function fill(select, values, blank) {
+  select.replaceChildren();
+  if (blank) select.append(el('option', { value: '' }, blank));
+  for (const v of values) select.append(el('option', { value: v.value ?? v }, v.label ?? v));
+}
+function headers(json) {
+  const h = {};
+  if (json) h['Content-Type'] = 'application/json';
+  if ($('token').value) h['X-API-Token'] = $('token').value;
+  return h;
+}
+async function api(path, init = {}) {
+  const res = await fetch(path, init);
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail || res.statusText));
+  return body;
+}
+
+function previewCommand() {
+  const parts = ['python run_tests.py', `--system ${$('system').value}`];
+  if ($('suite').value !== 'all') parts.push(`--suite ${$('suite').value}`);
+  if ($('tags').value) parts.push(`--tags ${$('tags').value}`);
+  parts.push(`--user ${$('user').value || '<user>'}`, `--env ${$('env').value}`);
+  if ($('clean').checked) parts.push('--clean');
+  $('preview').textContent = parts.join(' ');
+}
+
+async function loadOptions() {
+  options = await api('/api/options');
+  fill($('system'), options.systems.map(s => ({ value: s.name, label: `${s.name} - ${s.description}` })));
+  fill($('suite'), options.suites);
+  fill($('tags'), options.tags.map(t => ({ value: t.name, label: `${t.name} (${t.runnable} runnable)` })), '(all tests)');
+  fill($('env'), options.envs);
+  fill($('users'), options.users);
+  $('tokenLabel').hidden = !options.token_required;
+  previewCommand();
+}
+
+function stats(run) {
+  const box = el('span', { className: 'stats' });
+  if (!run.summary) return box;
+  const s = run.summary;
+  box.append(el('span', { className: 'p' }, `${s.passed} passed`), el('span', { className: 'f' }, `${s.failed + s.broken} failed`),
+             el('span', { className: 'muted' }, `${s.skipped} skipped`));
+  return box;
+}
+
+function renderRuns(runs) {
+  const body = $('runs');
+  body.replaceChildren();
+  for (const run of runs) {
+    const row = el('tr', { className: 'row' + (run.id === selected ? ' selected' : '') });
+    row.addEventListener('click', () => select(run.id));
+    const started = run.started_at || run.created_at;
+    const report = el('td');
+    if (run.report_url) {
+      const link = el('a', { href: run.report_url, target: '_blank', rel: 'noopener' }, 'Open');
+      link.addEventListener('click', e => e.stopPropagation());
+      report.append(link);
+    }
+    const status = el('td'); status.append(el('span', { className: 'badge ' + run.status }, run.status));
+    const results = el('td'); results.append(stats(run));
+    row.append(el('td', {}, new Date(started).toLocaleString()), el('td', {}, run.system), el('td', {}, run.suite),
+               el('td', {}, run.tags || '-'), el('td', {}, run.user), el('td', {}, run.env), status, results, report);
+    body.append(row);
+  }
+  if (!runs.length) {
+    const row = el('tr'), cell = el('td', { colSpan: 9, className: 'muted' }, 'No runs yet');
+    row.append(cell);
+    body.append(row);
+  }
+}
+
+let refreshing = false;
+async function refresh() {
+  if (refreshing) return;  // overlapping refreshes would append the same log chunk twice
+  refreshing = true;
+  try {
+    const runs = await api('/api/runs?limit=50');
+    renderRuns(runs);
+    if (selected) await showDetail(runs.find(r => r.id === selected));
+    const active = runs.some(r => r.status === 'queued' || r.status === 'running');
+    $('refreshNote').textContent = active ? '(auto-refreshing)' : '';
+  } catch (e) { $('msg').textContent = e.message; $('msg').className = 'msg error'; }
+  finally { refreshing = false; }
+}
+
+function select(id) { selected = id; logOffset = 0; $('log').textContent = ''; refresh(); }
+
+async function showDetail(run) {
+  if (!run) { $('detail').hidden = true; return; }
+  $('detail').hidden = false;
+  $('detailId').textContent = run.id;
+  $('detailStatus').textContent = run.status;
+  $('detailStatus').className = 'badge ' + run.status;
+  $('detailCommand').textContent = run.command ? `run_tests.py ${run.command.split('run_tests.py ').pop()}` : '';
+  $('detailReport').hidden = !run.report_url;
+  if (run.report_url) $('detailReport').href = run.report_url;
+  $('cancel').hidden = !(run.status === 'queued' || run.status === 'running');
+  const log = $('log'), atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 20;
+  for (let guard = 0; guard < 20; guard++) {
+    const chunk = await api(`/api/runs/${run.id}/log?offset=${logOffset}`);
+    if (selected !== run.id) return;  // user picked another run while waiting
+    if (!chunk.text) break;
+    log.textContent += chunk.text;
+    logOffset = chunk.next_offset;
+  }
+  if (atBottom) log.scrollTop = log.scrollHeight;
+}
+
+$('form').addEventListener('submit', async e => {
+  e.preventDefault();
+  $('start').disabled = true; $('msg').className = 'msg'; $('msg').textContent = '';
+  try {
+    const run = await api('/api/runs', { method: 'POST', headers: headers(true), body: JSON.stringify({
+      system: $('system').value, suite: $('suite').value, tags: $('tags').value || null,
+      user: $('user').value.trim(), env: $('env').value, clean: $('clean').checked }) });
+    $('msg').textContent = `Run ${run.id} queued`;
+    select(run.id);
+  } catch (err) { $('msg').textContent = err.message; $('msg').className = 'msg error'; }
+  $('start').disabled = false;
+});
+$('cancel').addEventListener('click', async () => {
+  try { await api(`/api/runs/${selected}/cancel`, { method: 'POST', headers: headers(false) }); refresh(); }
+  catch (err) { $('msg').textContent = err.message; $('msg').className = 'msg error'; }
+});
+for (const id of ['system', 'suite', 'tags', 'user', 'env', 'clean']) $(id).addEventListener('input', previewCommand);
+
+(async () => {
+  await loadOptions();
+  (async function loop() { await refresh(); setTimeout(loop, 3000); })();
+})();
+</script>
+</body>
+</html>

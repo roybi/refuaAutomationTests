@@ -1,0 +1,35 @@
+# Keep secrets, local state and generated output out of the image build context.
+.git
+.github
+.claude
+.kiro
+.vscode
+.playwright-mcp
+.pytest_cache
+.service_data
+venv
+.venv
+**/__pycache__
+**/*.pyc
+
+# Environment files hold credentials: supply them as environment variables at runtime instead.
+.env
+.env.*
+
+allure
+auth_capture.log
+test_execution.log
+*.log
+*.zip
+*.bak
+
+# Not needed at runtime
+docs
+tools/tests
+tools/azure_test_importer
+AGENT_HANDOFF.md
+README.md
+CLAUDE.md
+CONTACT.md
+*.bat
+skills-lock.json

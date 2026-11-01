@@ -24,7 +24,8 @@ from typing import List, Optional
 from refua_tests.systems import ALL, SYSTEMS, resolve_system, system_names
 
 REPO_ROOT = Path(__file__).resolve().parent
-ALLURE_ROOT = REPO_ROOT / "allure"
+# REFUA_ALLURE_ROOT lets the container service keep results on its persistent volume.
+ALLURE_ROOT = Path(os.getenv("REFUA_ALLURE_ROOT") or REPO_ROOT / "allure")
 DEFAULT_ALLURE_DIR = ALLURE_ROOT / "results"
 SUITE_PATHS = {"bdd": ["refua_tests/bdd"], "pytest": ["refua_tests/tests"], "all": []}
 
