@@ -23,7 +23,8 @@ ENV PYTHONPATH=/app \
 # Java runs the Allure CLI; the CLI is verified against its published checksum.
 USER root
 RUN apt-get update \
- && apt-get install -y --no-install-recommends \n      openjdk-17-jre-headless=17.0.* ca-certificates=2* curl=8.5.* \
+ && apt-get install -y --no-install-recommends \
+      openjdk-17-jre-headless=17.0.* ca-certificates=2* curl=8.5.* \
  && rm -rf /var/lib/apt/lists/* \
  && base="https://repo.maven.apache.org/maven2/io/qameta/allure/allure-commandline/${ALLURE_VERSION}" \
  && curl -fsSL "${base}/allure-commandline-${ALLURE_VERSION}.tgz" -o /tmp/allure.tgz \
