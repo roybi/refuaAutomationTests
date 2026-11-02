@@ -39,6 +39,7 @@ COPY requirements.txt requirements-service.txt ./
 RUN pip install --no-cache-dir -r requirements.txt -r requirements-service.txt
 
 COPY run_tests.py conftest.py pytest.ini ./
+COPY docs/setup ./docs/setup
 COPY refua_tests ./refua_tests
 COPY refua_service ./refua_service
 COPY tools ./tools
