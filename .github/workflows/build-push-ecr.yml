@@ -132,7 +132,10 @@ jobs:
             "$ALLURE_BIN" --version &&
             python -c "import refua_core.version as v; print(\"refua-core\", v.__version__)" &&
             python run_tests.py --list-systems &&
-            python run_tests.py --system meditik --user 4444401 --env test --suite bdd -- --collect-only -q | tail -3'
+            python run_tests.py --system meditik --user 4444401 --env test -- --collect-only -q > /tmp/collect.txt 2>&1
+            code=$?
+            tail -3 /tmp/collect.txt
+            exit $code'
           docker run -d --name svc -p 8080:8080 "$image"
           for _ in $(seq 1 30); do curl -fsS http://127.0.0.1:8080/api/health && break || sleep 2; done
           curl -fsS http://127.0.0.1:8080/api/options | grep -q '"meditik"'
