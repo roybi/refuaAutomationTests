@@ -35,7 +35,7 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY requirements.txt requirements-service.txt ./
-RUN pip install -r requirements.txt -r requirements-service.txt
+RUN pip install --no-cache-dir -r requirements.txt -r requirements-service.txt
 
 COPY run_tests.py conftest.py pytest.ini ./
 COPY refua_tests ./refua_tests

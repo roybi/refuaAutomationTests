@@ -22,8 +22,12 @@ COPY scripts ./scripts
 
 # Editable on purpose: setup.py declares no package_data, so a regular install would drop
 # refua_core/config/devices.json. The "db" extra brings psycopg2 and boto3 (DB seeding, Secrets Manager).
-RUN pip install -e ".[db]" \
+RUN pip install --no-cache-dir -e ".[db]" \
  && python -c "from refua_core.config.environment import EnvironmentManager; import refua_core.version as v; print('refua-core', v.__version__)"
+
+# Run as the non-root user of the Playwright image; the tests image switches back to root only to install Java/Allure.
+USER pwuser
+HEALTHCHECK NONE
 
 ARG CORE_REF=unknown
 LABEL org.opencontainers.image.title="refua-automation-core" \
