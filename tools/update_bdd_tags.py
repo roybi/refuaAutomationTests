@@ -12,7 +12,6 @@ Usage: python tools/update_bdd_tags.py
 
 from __future__ import annotations
 
-import re
 from collections import defaultdict
 from pathlib import Path
 
@@ -22,8 +21,15 @@ TAGS_FILE = ROOT / "BDD_TAGS.md"
 WORKFLOW = ROOT / ".github" / "workflows" / "bdd-run-by-tag.yml"
 BEGIN = "# BEGIN BDD TAG OPTIONS"
 END = "# END BDD TAG OPTIONS"
-SCENARIO = re.compile(r"^\s*Scenario( Outline)?:")
-TAG_LINE = re.compile(r"^\s*(@\S+(\s+@\S+)*)\s*$")
+SCENARIO_PREFIXES = ("Scenario:", "Scenario Outline:")
+
+
+def parse_tag_line(line: str) -> list[str] | None:
+    """Return the tags of a line made only of @tags, otherwise None (plain string handling, no regex)."""
+    tokens = line.split()
+    if tokens and all(len(token) > 1 and token.startswith("@") for token in tokens):
+        return [token[1:] for token in tokens]
+    return None
 
 
 def collect() -> dict[str, dict]:
@@ -34,12 +40,12 @@ def collect() -> dict[str, dict]:
         pending_tags: list[str] = []
         in_feature = False
         for line in feature.read_text(encoding="utf-8-sig").splitlines():
-            match = TAG_LINE.match(line)
-            if match:
-                pending_tags += [t[1:] for t in match.group(1).split()]
+            line_tags = parse_tag_line(line)
+            if line_tags is not None:
+                pending_tags += line_tags
             elif line.strip().startswith("Feature:"):
                 feature_tags, pending_tags, in_feature = pending_tags, [], True
-            elif in_feature and SCENARIO.match(line):
+            elif in_feature and line.lstrip().startswith(SCENARIO_PREFIXES):
                 for tag in set(feature_tags + pending_tags):
                     tags[tag]["total"] += 1
                     tags[tag]["runnable"] += 0 if pending else 1

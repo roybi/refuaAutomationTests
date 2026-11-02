@@ -35,9 +35,9 @@ import re
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timedelta
+from html import escape as _escape_markup
 from pathlib import Path
 from typing import Any, Optional
-from xml.sax.saxutils import escape
 from zoneinfo import ZoneInfo
 
 from dotenv import dotenv_values
@@ -414,6 +414,11 @@ def seed(env: str, personal_number: str, dataset: str, state: str = "both") -> S
         raise
 
 
+def escape_xml_text(text: str) -> str:
+    """Escape &, < and > for XML text nodes; the XML is only built here and parsed by PostgreSQL."""
+    return _escape_markup(text, quote=False)
+
+
 def build_request_xml(request_type: int, request_id: int, request_time: datetime,
                       values: dict[str, Any]) -> Optional[str]:
     """Render request_xml in the app's format, or None for types the app sends without XML."""
@@ -430,7 +435,7 @@ def build_request_xml(request_type: int, request_id: int, request_time: datetime
             value = value.strftime("%d/%m/%Y")
         lines += ["      <NATUN_REFUI>", f"        <N_ORDER>{order}</N_ORDER>",
                   f"        <N_KOD_NAME>{code}</N_KOD_NAME>",
-                  f"        <N_TEXT>{escape('' if value is None else str(value))}</N_TEXT>", "      </NATUN_REFUI>"]
+                  f"        <N_TEXT>{escape_xml_text('' if value is None else str(value))}</N_TEXT>", "      </NATUN_REFUI>"]
     lines += [f"      <P_ID>{request_id}</P_ID>", f"      <P_SUG>{p_sug}</P_SUG>", "      <P_ORDER>1</P_ORDER>",
               f"      <P_DATE>{request_time.astimezone(TZ).strftime('%d/%m/%Y %H:%M:%S')}</P_DATE>",
               "    </PARIT_REFUI>", "  </MESSER_METUPAL>", "</MESER>"]
