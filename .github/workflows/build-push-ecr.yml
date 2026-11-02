@@ -134,6 +134,7 @@ jobs:
             python run_tests.py --list-systems &&
             python run_tests.py --system meditik --user 4444401 --env test -- --collect-only -q > /tmp/collect.txt 2>&1
             code=$?
+            grep -E "^(ERROR|E  )" /tmp/collect.txt | head -30
             tail -3 /tmp/collect.txt
             exit $code'
           docker run -d --name svc -p 8080:8080 "$image"
