@@ -1,0 +1,163 @@
+"""FastAPI backend: run parameters in, test runs and Allure reports out.
+
+Start locally:  uvicorn refua_service.app:app --port 8080
+"""
+
+import hmac
+import re
+from contextlib import asynccontextmanager
+from functools import lru_cache
+from pathlib import Path
+from typing import List, Optional
+
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
+
+from refua_tests.systems import ALL, SYSTEMS, resolve_system, system_names
+from tools import update_bdd_tags
+
+from . import reports
+from .runs import DuplicateRunError, RunManager
+from .settings import load_settings
+
+SUITES = ("all", "bdd", "pytest")
+TAG_PATTERN = re.compile(r"^[A-Za-z0-9_]+$")
+STATIC_DIR = Path(__file__).parent / "static"
+
+settings = load_settings()
+manager: Optional[RunManager] = None
+
+
+def get_manager() -> RunManager:
+    global manager
+    if manager is None:
+        manager = RunManager(settings)
+    return manager
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    get_manager()
+    yield
+    if manager is not None:
+        manager.shutdown()
+
+
+app = FastAPI(title="Refua automation runner", lifespan=lifespan)
+
+
+def require_token(x_api_token: Optional[str] = Header(default=None)) -> None:
+    """Triggering or cancelling runs needs the token when SERVICE_API_TOKEN is set; reads stay open."""
+    if settings.api_token and not (x_api_token and hmac.compare_digest(x_api_token, settings.api_token)):
+        raise HTTPException(status_code=401, detail="Missing or invalid X-API-Token")
+
+
+@lru_cache(maxsize=1)
+def available_tags() -> List[dict]:
+    """Tags with at least one runnable scenario; the feature files are fixed for the life of the image."""
+    try:
+        collected = update_bdd_tags.collect()
+    except OSError:
+        return []
+    return [{"name": name, "total": info["total"], "runnable": info["runnable"]}
+            for name, info in sorted(collected.items()) if info["runnable"] > 0]
+
+
+class RunRequest(BaseModel):
+    system: str = Field(min_length=1, max_length=32)
+    suite: str = "all"
+    tags: Optional[str] = Field(default=None, max_length=64)
+    user: str = Field(pattern=r"^[0-9]{3,12}$")
+    env: str = "test"
+    clean: bool = True
+
+
+@app.get("/api/health")
+def health() -> dict:
+    return {"status": "ok", "allure": bool(settings.allure_bin), "data_dir": str(settings.data_dir)}
+
+
+@app.get("/api/options")
+def options() -> dict:
+    return {
+        "systems": [{"name": s.name, "description": s.description} for s in SYSTEMS.values()] + [
+            {"name": ALL, "description": "Every registered system"}],
+        "suites": list(SUITES),
+        "envs": list(settings.allowed_envs),
+        "tags": available_tags(),
+        "users": settings.selectable_users(),
+        "restrict_users": bool(settings.user_ranges),
+        "token_required": bool(settings.api_token),
+        "max_concurrent_runs": settings.max_concurrent_runs,
+    }
+
+
+@app.post("/api/runs", status_code=201, dependencies=[Depends(require_token)])
+def create_run(request: RunRequest) -> dict:
+    try:
+        spec = resolve_system(request.system)
+    except ValueError as error:
+        raise HTTPException(422, str(error))
+    system = spec.name if spec else ALL
+    if request.suite not in SUITES:
+        raise HTTPException(422, f"suite must be one of {', '.join(SUITES)}")
+    if request.env.lower() not in settings.allowed_envs:
+        raise HTTPException(422, f"env must be one of {', '.join(settings.allowed_envs)}")
+    if not settings.is_user_allowed(request.user):
+        raise HTTPException(422, f"user {request.user} is not in the allowed user list")
+    tags = (request.tags or "").strip() or None
+    if tags and (not TAG_PATTERN.match(tags) or tags not in {t["name"] for t in available_tags()}):
+        raise HTTPException(422, f"tag '{tags}' is not an available runnable tag")
+    try:
+        return get_manager().submit(system, request.suite, tags, request.user, request.env.lower(), request.clean)
+    except DuplicateRunError as error:
+        raise HTTPException(409, str(error))
+
+
+@app.get("/api/runs")
+def list_runs(limit: int = Query(default=50, ge=1, le=500)) -> List[dict]:
+    return get_manager().list(limit)
+
+
+@app.get("/api/runs/{run_id}")
+def get_run(run_id: str) -> dict:
+    run = get_manager().get(run_id)
+    if run is None:
+        raise HTTPException(404, "Run not found")
+    return run
+
+
+@app.get("/api/runs/{run_id}/log")
+def get_log(run_id: str, offset: int = Query(default=0, ge=0)) -> dict:
+    chunk = get_manager().read_log(run_id, offset)
+    if chunk is None:
+        raise HTTPException(404, "Run not found")
+    return chunk
+
+
+@app.post("/api/runs/{run_id}/cancel", dependencies=[Depends(require_token)])
+def cancel_run(run_id: str) -> dict:
+    run = get_manager().cancel(run_id)
+    if run is None:
+        raise HTTPException(404, "Run not found")
+    return run
+
+
+@app.get("/reports/latest")
+@app.get("/reports/latest/")
+def latest_report() -> RedirectResponse:
+    run_id = reports.latest_report_id(settings)
+    if run_id is None:
+        raise HTTPException(404, "No report has been generated yet")
+    return RedirectResponse(f"/reports/{run_id}/")
+
+
+settings.ensure_directories()
+app.mount("/reports", StaticFiles(directory=settings.reports_dir, html=True), name="reports")
+
+
+@app.get("/")
+def index() -> FileResponse:
+    return FileResponse(STATIC_DIR / "index.html")

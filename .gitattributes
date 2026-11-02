@@ -1,0 +1,3 @@
+# Dockerfiles run in Linux: CRLF would break the multi-line RUN commands
+**/Dockerfile text eol=lf
+*.sh text eol=lf
