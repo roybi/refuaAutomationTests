@@ -23,8 +23,13 @@ test_execution.log
 *.zip
 *.bak
 
-# Not needed at runtime
-docs
+# Not needed at runtime. docs/setup stays: pending-test modules read docs/setup/*_CASES.json at collection time.
+docs/guides
+docs/bdd
+docs/architecture
+docs/reports
+docs/db
+docs/*.txt
 tools/tests
 tools/azure_test_importer
 AGENT_HANDOFF.md
