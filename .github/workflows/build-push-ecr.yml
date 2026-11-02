@@ -56,16 +56,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - name: Validate inputs and configuration
+      - name: Validate inputs and detect whether ECR push is configured
+        id: config
         env:
           EXTRA_TAG: ${{ inputs.extra_tag }}
           AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         run: |
-          [[ -n "$AWS_REGION" ]] || { echo "::error::Repository variable AWS_REGION is not set (see docs/guides/DOCKER_PIPELINE.md)"; exit 1; }
-          [[ -n "$BASE_IMAGE" ]] || { echo "::error::Repository variable BASE_IMAGE (the Nexus base image with Python + Chromium) is not set yet"; exit 1; }
-          [[ -n "$AWS_ROLE_ARN" || -n "$AWS_ACCESS_KEY_ID" ]] \
-            || { echo "::error::Set repository variable AWS_ROLE_ARN (OIDC) or secrets AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY"; exit 1; }
+          # Build + smoke test always run. The ECR push only happens once AWS is configured (docs/guides/LATER_ACTION_ITEMS.md).
+          if [[ -n "$AWS_REGION" && ( -n "$AWS_ROLE_ARN" || -n "$AWS_ACCESS_KEY_ID" ) ]]; then
+            echo "ecr=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ecr=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::AWS is not configured: images are built and smoke-tested but NOT pushed to ECR."
+          fi
           if [[ -n "$EXTRA_TAG" && ! "$EXTRA_TAG" =~ ^[A-Za-z0-9_.-]{1,64}$ ]]; then
             echo "::error::extra_tag may only contain letters, digits, '_', '.', '-'"; exit 1
           fi
@@ -102,9 +106,11 @@ jobs:
 
       - name: Build core base image
         run: |
+          base_args=()
+          [[ -n "$BASE_IMAGE" ]] && base_args=(--build-arg "BASE_IMAGE=${BASE_IMAGE}")  # blank = Microsoft's Playwright image
           docker build \
             -f refuaAutomationTests/docker/core/Dockerfile \
-            --build-arg "BASE_IMAGE=${BASE_IMAGE}" \
+            "${base_args[@]}" \
             --build-arg "CORE_REF=${CORE_REF}" \
             -t refua-core-local:${{ steps.meta.outputs.core_sha }} \
             refuaAutomationCore
@@ -134,6 +140,7 @@ jobs:
           docker rm -f svc
 
       - name: Configure AWS credentials
+        if: steps.config.outputs.ecr == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ vars.AWS_REGION }}
@@ -142,10 +149,12 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Log in to ECR
+        if: steps.config.outputs.ecr == 'true'
         id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Check the ECR repositories exist
+        if: steps.config.outputs.ecr == 'true'
         run: |
           for repo in "$CORE_REPOSITORY" "$TESTS_REPOSITORY"; do
             aws ecr describe-repositories --repository-names "$repo" >/dev/null \
@@ -153,6 +162,7 @@ jobs:
           done
 
       - name: Push core base image
+        if: steps.config.outputs.ecr == 'true'
         env:
           REGISTRY: ${{ steps.ecr.outputs.registry }}
           CORE_SHA: ${{ steps.meta.outputs.core_sha }}
@@ -172,6 +182,7 @@ jobs:
           fi
 
       - name: Push tests image
+        if: steps.config.outputs.ecr == 'true'
         env:
           REGISTRY: ${{ steps.ecr.outputs.registry }}
           TESTS_SHA: ${{ steps.meta.outputs.tests_sha }}

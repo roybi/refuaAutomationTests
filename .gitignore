@@ -125,3 +125,6 @@ install-scoop.ps1
 
 # One-off local artifacts
 session-bypass-simulation.png
+
+# Local data of the runner website (runs, logs, Allure results/reports)
+.service_data/

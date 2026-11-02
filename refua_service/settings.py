@@ -84,9 +84,19 @@ class Settings:
             directory.mkdir(parents=True, exist_ok=True)
 
 
+def _users_from_env_file() -> str:
+    """Local runs: take the approved users from .env.test (only this key; the pod gets it as an env var)."""
+    try:
+        from dotenv import dotenv_values
+        return dotenv_values(REPO_ROOT / ".env.test").get("SEED_ALLOWED_PERSONAL_NUMBERS") or ""
+    except ImportError:
+        return ""
+
+
 def load_settings() -> Settings:
     data_dir = Path(os.getenv("DATA_DIR") or REPO_ROOT / ".service_data").resolve()
-    users = os.getenv("SERVICE_ALLOWED_USERS") or os.getenv("SEED_ALLOWED_PERSONAL_NUMBERS", "")
+    users = (os.getenv("SERVICE_ALLOWED_USERS") or os.getenv("SEED_ALLOWED_PERSONAL_NUMBERS")
+             or _users_from_env_file())
     envs = tuple(e.strip().lower() for e in os.getenv("SERVICE_ALLOWED_ENVS", "test,preprod").split(",") if e.strip())
     return Settings(
         data_dir=data_dir,

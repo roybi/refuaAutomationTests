@@ -18,29 +18,31 @@ One workflow, `.github/workflows/build-push-ecr.yml` (Actions → "Docker - Buil
 order, smoke-tests the tests image, then pushes both to ECR. It runs on push to `main` (when image-relevant files change)
 and manually.
 
-## One-time setup
+## Run it without Docker (your machine)
+`runService.bat` (or `venv\Scripts\python.exe -m uvicorn refua_service.app:app --port 8080`) starts the same website on
+http://localhost:8080 using your venv, `.env.test`, Java and the Allure CLI. Data goes to `.service_data\`.
+Step-by-step: [DOCKER_PIPELINE_ROLLOUT_PLAN.md](DOCKER_PIPELINE_ROLLOUT_PLAN.md). Hosting 24/7 and ECR: [LATER_ACTION_ITEMS.md](LATER_ACTION_ITEMS.md).
+
+## GitHub workflow settings
+Everything is optional except the core token. Without AWS settings the workflow builds and smoke-tests but does not push.
 
 | Where | Name | Value |
 |---|---|---|
-| Variable | `BASE_IMAGE` | **Nexus base image with Python 3.9+ and Chromium + OS libs** (e.g. `<nexus>/<repo>/playwright/python:v1.56.0-noble`). Empty for now: the workflow fails until it is set. |
-| Variable | `AWS_REGION` | ECR region |
-| Variable | `AWS_ROLE_ARN` | IAM role for GitHub OIDC (needs ECR push + `ecr:DescribeRepositories/DescribeImages`) |
-| Secrets (alternative) | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Use instead of the role |
+| Secret | `CORE_REPO_TOKEN` | Token that can read `DigitalIDF/refuaAutomationCore` (required) |
+| Variable | `AWS_REGION` + `AWS_ROLE_ARN` | Enables the ECR push (OIDC role). Alternative: secrets `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` |
 | Variable (optional) | `ECR_CORE_REPOSITORY` / `ECR_TESTS_REPOSITORY` | Default `refua-automation-core` / `refua-automation-tests`; create both repositories first |
 | Variable (optional) | `CORE_REF` | refuaAutomationCore ref to build. Default `feat/meditik-element-scraper` |
-| Secret | `CORE_REPO_TOKEN` | Token that can read `DigitalIDF/refuaAutomationCore` |
+| Variable (optional) | `BASE_IMAGE` | Mirror of the Playwright base image; blank = Microsoft's public `playwright/python` image |
 
 **Core version:** the tests need refua-core >= 2.0.1 (automation login). On `DigitalIDF/refuaAutomationCore` that is only on
 `feat/meditik-element-scraper`; `main` is 1.0.1. The workflow fails if the chosen ref is 1.x. Once 2.0.1 is merged, set
 `CORE_REF=main`.
 
-If the Nexus network also has to serve pip/apt/Maven, the tests image downloads: Python packages (pip), Java (apt) and the
-Allure CLI (Maven Central). Add mirrors via `PIP_INDEX_URL` / apt sources / `ALLURE_VERSION` build args when needed.
 
 ## Build locally
 
 ```bash
-docker build -f docker/core/Dockerfile --build-arg BASE_IMAGE=<nexus base> -t refua-automation-core ../refuaAutomationCore
+docker build -f docker/core/Dockerfile -t refua-automation-core ../refuaAutomationCore
 docker build -f docker/tests/Dockerfile --build-arg CORE_IMAGE=refua-automation-core -t refua-automation-tests .
 docker run --rm -p 8080:8080 -v refua-data:/data --env-file .env.test refua-automation-tests
 ```
@@ -124,7 +126,7 @@ spec:
 
 | Symptom | Fix |
 |---|---|
-| Workflow: `BASE_IMAGE ... is not set` | Set the repository variable (see setup) |
+| Workflow says AWS is not configured | Expected until `AWS_REGION` + `AWS_ROLE_ARN` are set; the images are still built and tested |
 | Workflow: core version is 1.x | Set `CORE_REF` to a ref containing refua-core >= 2.0.1 |
 | `ECR repository ... does not exist` | Create both repositories |
 | Push of `latest` rejected | The repository has immutable tags: run manually with `push_latest` off |

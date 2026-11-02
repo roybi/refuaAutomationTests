@@ -4,9 +4,10 @@
 #   docker build -f docker/core/Dockerfile -t refua-automation-core ../refuaAutomationCore
 # refuaAutomationTests builds FROM this image (docker/tests/Dockerfile).
 
-# BASE_IMAGE is intentionally empty until the Nexus image is chosen: any image with Python 3.9+ and Chromium
-# plus its OS libraries (e.g. <nexus-host>/<repo>/playwright/python:v1.56.0-noble). The build fails without it.
-ARG BASE_IMAGE=
+# Default = Microsoft's public Playwright image (Python + Chromium + OS libs). To use a mirror (e.g. Nexus) later,
+# pass --build-arg BASE_IMAGE=<registry>/<repo>/playwright/python:v1.56.0-noble
+ARG PLAYWRIGHT_VERSION=1.56.0
+ARG BASE_IMAGE=mcr.microsoft.com/playwright/python:v${PLAYWRIGHT_VERSION}-noble
 FROM ${BASE_IMAGE}
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
