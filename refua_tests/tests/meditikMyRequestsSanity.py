@@ -24,7 +24,7 @@ import pytest
 from refua_tests.pages.common.popUpInfo import PopUpInfo
 from refua_tests.pages.meditikBasePage import MeditekBasePage
 from refua_tests.pages.myRequestsTabbedPage import (DEFAULT_TAB_KEY,
-                                                     MyRequestsTabbedPage)
+                                                    MyRequestsTabbedPage)
 
 
 @pytest.fixture(scope="class")

@@ -24,8 +24,8 @@
 **TASK NAME**: `Workbook v2 pytest and BDD implementation`
 **STARTED**: `2026-09-08`
 **LAST AGENT**: `GitHub Copilot`
-**LAST UPDATED**: `2026-09-27`
-**BRANCH**: `roy_dev_automationTests`
+**LAST UPDATED**: `2026-10-11`
+**BRANCH**: `royShfiutMeditik`
 
 ### Task description
 
@@ -50,6 +50,14 @@ Preserve source case IDs/actions/results, maintain tracker mappings, implement a
 ---
 
 ## RESUME POINT
+
+Docker/ECR pipeline + runner service (2026-11-01, Claude Code): files written and committed: `docker/core/Dockerfile` (BASE_IMAGE build arg, intentionally EMPTY until the user supplies the Nexus image), `docker/tests/Dockerfile`, `.dockerignore`, `.github/workflows/build-push-ecr.yml`, `refua_service/` (FastAPI runner + UI + Allure), `requirements-service.txt`, `tools/tests/test_service.py`, `docs/guides/DOCKER_PIPELINE.md`; `run_tests.py` (REFUA_ALLURE_ROOT) and `tests/conftest.py` (soft-notes log follows --alluredir). Verified: tools/tests pass; real Allure generation + history; run_tests contract. NOT verified: images never built (Microsoft registry pull ~70KB/s; user will supply a Nexus base image — needs repo var BASE_IMAGE; Nexus may also be needed for pip/apt/Allure downloads), workflow never run, UI browser e2e not completed. Next: user sets BASE_IMAGE (+AWS vars, CORE_REPO_TOKEN); build both images and run the workflow smoke steps; tests need refua-core >= 2.0.1 which is only on DigitalIDF core branch `feat/meditik-element-scraper` (workflow CORE_REF defaults to it).
+
+Single entry point + system/user parameters (2026-10-12): implemented and verified; no further action pending. `run_tests.py --system meditik|all --user <PN> [--suite --tags --env --allure-dir --clean --dry-run --list-systems] [-- pytest args]` builds a pytest command; native option `--system` (root `conftest.py`) selects tests by the system marker from the registry `refua_tests/systems.py`, sets `TEST_APP`, and gates `auth_state_session`, `_soft_notes_session_log` and `meditik_seed_session` to runs where meditik is active. `--system` is required (exit code 4) whenever system-owned tests are collected, including `--collect-only` (use `--system all`); `tools/tests` run without it. User is one per run (`--personal-number`). Next system (CPR GO): follow RUNBOOK "Adding a new system". The live smoke run from 2026-10-12 (My Requests @smoke BDD, user 4444401) had 8 passed / 7 failed because the TEST app redirected to Microsoft login and the DB was unreachable; not investigated further.
+
+Separate Azure importer action (2026-10-11): implemented `.github/workflows/azure-import-test-cases.yml`, `tools/azure_testcase_importer.py`, standalone dependencies and unit tests, and `docs/guides/AZURE_TEST_CASE_IMPORT.md`. Validation: 30 self-contained unit tests pass; the original 28 external tests also passed against the ported importer. YAML safety contracts and the exact workflow shell passed synthetic dry-run, filename-with-spaces, missing-PAT, outside-path, and invalid-sheet checks. actionlint download was blocked by network access; no GitHub-hosted run or Azure writes occurred. User explicitly requested commit/push to DigitalIDF/refuaAutomationTests main. Publish only this feature from an isolated checkout of digitalIDF/main (base 6bcaafb), not the four unrelated local branch commits. After publication, the next action is for the user to configure a GitHub Environment secret AZURE_DEVOPS_PAT, upload an approved workbook, run dry-run, and explicitly select a live import. Never ask for the PAT in chat. Existing workbook task remains BLOCKED.
+
+Commit/push validation (2026-10-11): pending source, documentation, and BDD workflows passed Python compilation, collection of 735 tests, tag-generator output comparison (19 tags), and whitespace checks. Collection reports an unregistered `main_page` marker warning. Generated Allure reports, the workbook ZIP, and local `.kiro/` settings are excluded from the requested Git snapshot. No live UI tests, authentication, or DB operations ran; the workbook task remains BLOCKED. No source implementation was resumed. For the next implementation task, start from the latest 2026-09-27 WORK LOG entry below; do not repeat the older authentication investigation in this section.
 
 Separate senior DBA skill task completed (2026-09-27). Created identical `.github/skills/senior-dba/SKILL.md` and `.claude/skills/senior-dba/SKILL.md`; validated frontmatter, description length, required contracts, and matching SHA256 hashes. No DB connection, credential persistence, seed script, or UI execution in this task. Next action when implementation is requested: load senior-dba, resolve the explicit execution environment and user, privately configure the connection including the still-unverified database/schema, and discover the medicines relationship graph read-only before designing inserts. User confirmed repository scope for both agents and rolling non-working dates forward. Requirements: feature-scoped beforeAll creation, at least three date cases (+2 days, +1 week, +1 calendar month), Asia/Jerusalem, exclude Israeli weekends/holidays, TEST/PREPROD only, command-selected user, and best-effort soft deletion with visible leftover warnings. Do not assume these workflow approvals establish the schema or permit changing unrelated records. Earlier blocked task status remains unchanged.
 
@@ -99,8 +107,8 @@ Next action (when resumed): either (a) get a fresh manual login in the integrate
 
 <!-- Decisions already made — the next agent must NOT re-litigate these. -->
 
-- _(e.g. "Using Page Object Model — locators as @property, per CLAUDE.md")_
-- _(e.g. "Tests run with TEST_ENV=test; session bypass enabled via SKIP_2FA")_
+- Tests are run through `run_tests.py` (or native pytest) with an explicit `--system` and exactly one `--user` per run; the system registry is `refua_tests/systems.py` (decided 2026-10-12, non-breaking: file locations unchanged, per-system BDD loaders such as `test_meditik_bdd.py`).
+- `--system` is required (no default); `all` runs every registered system.
 
 ---
 
@@ -164,118 +172,21 @@ Next action (when resumed): either (a) get a fresh manual login in the integrate
 
 | 2026-09-27 | GitHub Copilot | Ran `pytest -m referrals --personal-number 4444401` headed with TEST_AUTH_METHOD=session_state. DB seed OK (run 95a8920a6c3e, 33 rows, kept). Suite aborted in auth_state_session: capture_session reported success but saved 0 cookies/0 origins, so session still redirects to Microsoft (likely MSAL tokens in sessionStorage, not captured by storage_state). No UI tests executed. Next: user sets AUTOMATION_SECRET privately in the terminal and reruns with automation login; then verify seeded rows in UI (/user-requests lobby). |
 
-| 2026-09-27 | GitHub Copilot | Root cause of AUTH page: after /automation/login/:pn the app keeps the session in sessionStorage (`patient`), which Playwright storage_state cannot carry to a new browser. Refactor: tests/conftest.py `AppSession` + session fixture `app_session` = ONE browser + ONE tab for the whole run, automation login once in that tab (re-login only if logged out/closed); `browser_page` returns that tab; all 10 meditik*Sanity class fixtures use `app_session.ensure_page()` (no per-class browser). AUTOMATION_SECRET stored in ignored .env.test. Collect OK (677). Rerun of -m referrals blocked: VPN/network down (DNS getaddrinfo failed for meditik.test.medical.idf.il, DB connection closed). Next: reconnect VPN, rerun `pytest -m referrals --personal-number 4444401`, then check /user-requests for seeded rows. |
+| 2026-09-27 | GitHub Copilot | Root cause of AUTH page: after /automation/login/:pn the app keeps the session in sessionStorage (`patient`), which Playwright storage_state cannot carry to a new browser. Refactor: tests/conftest.py `AppSession` + session fixture `app_session` = ONE browser + ONE tab for the whole run, automation login once in that tab (re-login only if logged out/closed); `browser_page` returns that tab; all 10 meditik\*Sanity class fixtures use `app_session.ensure_page()` (no per-class browser). AUTOMATION_SECRET stored in ignored .env.test. Collect OK (677). Rerun of -m referrals blocked: VPN/network down (DNS getaddrinfo failed for meditik.test.medical.idf.il, DB connection closed). Next: reconnect VPN, rerun `pytest -m referrals --personal-number 4444401`, then check /user-requests for seeded rows. |
 
 | 2026-09-27 | GitHub Copilot | Found automation session is in-memory only: any full page load (goto/reload) of the app logs out (probe: same-tab goto /home -> login screen). AppSession now wraps page.goto/reload for app URLs into history.pushState+popstate, re-running automation login when logged out. app_session + automation env check cached on request.config so tests/ and bdd/ share ONE browser (fixed "Sync API inside asyncio loop"). Seed fixture now depends on auth_state_session (seed only after env check). Result: meditikReferralsSanity 5 passed (3 empty-state skipped: data present). BDD referrals not yet run: TEST returned HTTP 429 (rate limit) after repeated runs. Seed runs today for 4444401 (rows kept): 1388dc91b378, 95a8920a6c3e, b4b9908017db, c7afb930bbd0, ebc49ca9a8e4, af7820324820. Next: wait for 429 to clear, rerun -m referrals, check /user-requests for seeded rows. |
 
-## SEPARATE TASK: Azure Excel Import Workflow (2026-10-11)
+| 2026-10-11 | GitHub Copilot | Prepared user-requested commit/push on royShfiutMeditik to its existing origin upstream. Included pending source/docs and new BDD workflows/tag generator; excluded generated reports, workbook ZIP, and local Kiro settings. Validation: 735 tests collected without fixture execution, changed Python files compiled, 19 generated BDD tags matched both output files, and git diff --check passed. Collection emitted an unregistered main_page marker warning. No live UI or DB validation; earlier workbook task remains BLOCKED. |
 
-**STATUS**: `BLOCKED` (PR #4 awaiting required checks and merge)
-**LAST AGENT**: `GitHub Copilot`
-**LAST UPDATED**: `2026-10-11`
-**BRANCH**: `copilot/azure-local-upload` (PR route approved after main rejection)
+| 2026-10-11 | GitHub Copilot | Implemented the Azure Excel importer manual GitHub Action with per-environment PAT secrets, committed-workbook input, default dry-run, serialized imports, standalone dependencies, and 30 passing synthetic/mocked unit tests ported from the supplied suite. Validated YAML contracts and shell behavior without Azure requests. Documented PAT scopes, approved workbook upload, project-wide ID updates, and partial failure behavior. User approved publication to DigitalIDF/refuaAutomationTests main; isolated the feature from unrelated royShfiutMeditik commits. No PAT collected, no private workbook copied, no Azure writes, no Meditik UI/DB execution. |
 
-The earlier workbook/application task remains BLOCKED and is unchanged.
-
-### Plan and definition of done
-
-- [x] Inspect repository instructions and obtain approval to publish to main.
-- [x] Integrate the standalone importer, isolated dependencies, tests, and workflow.
-- [x] Pass focused unit tests, compilation, and workbook dry-run.
-- [x] Commit/push to a feature branch and open PR #3 after main rejected direct push.
-- [ ] After PR merge, verify the GitHub workflow with synthetic data only.
-- [x] Add native local file selection and temporary draft-release workbook transport.
-- [x] Require a masked personal PAT prompt for each live run, using a unique temporary GitHub secret.
-- [x] Validate 69 isolated tests, actionlint, and editor diagnostics without real credentials or remote writes.
-- [x] Publish the local-upload extension PR and inspect required repository checks.
-- [x] Remove secret-name logging and validate success/failure output with 70 isolated tests.
-
-### Resume point
-
-PR #3 is merged on main at a349e89. The user encountered a hosted failure because
-EXCEL_PATH was a local Windows Downloads path, then requested a native local file
-picker and a personal PAT supplied on every live execution. The current extension
-is in the separate worktree `C:/_Dev/python/refuaAutomationTests-azure-local-upload`.
-`tools/azure_test_importer/local_upload.py` now selects/validates the workbook,
-uploads it as an owned draft-release asset, and dispatches the existing Action.
-Live mode prompts with a masked Tkinter field, sends the PAT only on stdin to
-`gh secret set`, uses a unique AZURE_IMPORT_PAT_<UPLOAD_ID> secret, monitors the
-exact Action run, and attempts secret deletion in finally. The Action downloads
-and verifies SHA256/ownership, uses only that run's PAT, and cleans up the draft.
-No shared PAT fallback. Live use requires repository secret-management permission
-and the protected default branch. Abrupt interruption can leave resources; the
-README documents manual cleanup and PAT revocation.
-
-PR #4: https://github.com/DigitalIDF/refuaAutomationTests/pull/4 (feature commit ca8c7f9).
-CodeQL follow-up: removed generated secret names from both print calls in
-`tools/azure_test_importer/local_upload.py` (publish_workbook, line 165).
-Success, workflow-failure, and cleanup-failure logging checks pass (70 tests total).
-Next action after publication: review the new CodeQL scan on PR #4 and merge
-through normal protection rules. Alert closure is not yet
-verified. Do not publish the older duplicate
-importer worktree. 69 unit tests, actionlint, Python compilation, and editor diagnostics
-passed. No real PAT was collected; GitHub upload/secret APIs are mocked in tests;
-no real workbook upload, workflow dispatch, Azure writes, or Meditik DB/UI runs
-were performed. Earlier worktrees and unrelated changes are preserved.
-
-### Work log (append only)
-
-- 2026-10-11: Inspected main and repository instructions; admin access verified.
-	User explicitly approved direct push to main. Added the manual workflow and
-	dedicated tool documentation, preserving existing root dependencies and tests.
-- 2026-10-11: Imported the existing tool verbatim with isolated dependencies,
-	adjusted workflow/test paths, added a root documentation link and a synthetic
-	one-case workbook. All 35 unittest cases and the integrated workflow's actual
-	workbook-validation step passed; no application fixtures or Azure API writes.
-- 2026-10-11: Committed implementation as `e155785`. Direct main push was rejected
-	by required organization security workflows and CodeQL rules. With explicit
-	user approval, pushed `feature/upload-test-plan-to-azure` and opened PR #3.
-	Hosted dry-run is deferred until merge; the same check passed locally.
-- 2026-10-11: Addressed Code Scanning alerts #15-18: upgraded requests to 2.33.0
-	for CVE-2026-25645, switched XML test parsing to defusedxml, and replaced test
-	execution of YAML Python strings with direct calls to `workflow_runner.py`.
-	Workflow steps now call that module's validate/upload/summary entry points.
-	All 37 tests passed in an isolated environment, including a real no-PAT CLI
-	dry-run; compilation, dependency consistency, and editor diagnostics passed.
-	No alert dismissals or scanner exclusions were added. GitHub's rescan will
-	determine alert closure. The user's separately edited local importer is intact.
-
-- 2026-10-11: Removed workflow subprocess calls after the rescan cleared alerts
-  #15-18 but reported WS-I013-PYTHON-00141 as alerts #19-20. The workflow now calls
-  `importer.main(arguments)` directly and persists only importer arguments, not
-  executable commands. Existing CLI usage remains compatible; importer failures
-  still fail the workflow. All 38 tests, compilation, and editor checks passed.
-  Publishing this follow-up to PR #3 for another required security scan.
-
-- 2026-10-11: Continued from published PR #3 rather than the obsolete duplicate
-	importer worktree. User selected a local native file picker and required a
-	personal expiring PAT on every live run. Added local_upload.py, draft-release
-	transport, checksum/ownership guards, per-run secret creation/deletion, exact
-	Action monitoring, and masked PAT entry; updated the existing runner/workflow
-	and README. 69 mocked/synthetic tests and checksum-verified actionlint passed.
-	GitHub CLI authenticated HTTPS worked after ordinary HTTPS/SSH fetch failures.
-	No secrets were requested in chat or included in files, dispatch inputs, or
-	release assets. Publication is via copilot/azure-local-upload PR, not main bypass.
-
-	- 2026-10-11: Committed the local-upload/personal-PAT extension as ca8c7f9,
-	  pushed copilot/azure-local-upload to DigitalIDF, and opened PR #4 against main.
-	  Initial required-check inspection found passing/pending checks and no failures.
-	  PR is not merged; hosted local-upload execution and real Azure authentication
-	  remain unverified. No user PAT was collected or stored during development.
-
-- 2026-10-11: Addressed the reported CodeQL clear-text logging finding in
-	publish_workbook. The logged value was a generated secret name, not the PAT;
-	both normal and cleanup-warning messages now use static text. Added output
-	assertions for success, workflow failure, and cleanup failure, and updated
-	manual-cleanup instructions. All 70 standalone tests, editor diagnostics,
-	and diff whitespace checks passed. Publishing to existing PR #4 for rescan;
-	no scanner suppression, real credentials, or remote import execution.
+| 2026-10-12 | GitHub Copilot | Added the single test entry point. New `refua_tests/systems.py` registry (meditik, alias meditek), root `conftest.py` `--system` option (required, deselects other systems' tests, sets TEST_APP, header `System/User/Env`), gating of the Meditik login/seed/soft-notes session fixtures, `run_tests.py` wrapper (system, one user per run, suite, tags, env, allure-dir auto/clean, dry-run), added missing `meditik` markers (3 smoke classes, new-referral guard test, mainPage.feature). Verified: `--collect-only` 735 for `--system meditik` and `all` (baseline 735), 216 smoke, 15 My Requests smoke BDD; omitted/unknown system exit 4; 14 new unit tests in `tools/tests/test_system_selection.py` (44 pass in tools/tests without `--system`). Docs updated: README, RUNBOOK (incl. "Adding a new system"), QUICK_START_BDD, both qa-automation skills. Earlier live My Requests smoke run: 8 passed/7 failed (TEST app redirected to Microsoft login, DB unreachable). No live tests executed for this change. |
 
 ## PROJECT QUICK REFERENCE (static — rarely changes)
 
 - **Project**: refuaAutomationTests — Playwright/pytest test automation for the MEDITEK medical app.
 - **Structure**: page objects in `refua_tests/pages/`, tests in `refua_tests/tests/`, fixtures in `refua_tests/tests/conftest.py`.
-- **Run tests**: `TEST_ENV=test pytest refua_tests/tests/ -v`
-- **Run one test**: `TEST_ENV=test pytest refua_tests/tests/test_<file>.py -v -k "<name>"`
+- **Run tests**: `python run_tests.py --system meditik --user <PN> --env test` (native: `TEST_ENV=test pytest --system meditik --personal-number <PN>`)
+- **Run one test**: `TEST_ENV=test pytest refua_tests/tests/test_<file>.py -v -k "<name>" --system meditik --personal-number <PN>`
 - **Conventions**: see `CLAUDE.md` (page objects inherit `BasePage`, tests named `test_<feature>.py`, markers in `pytest.ini`).
 - **Commit style**: `test: <description>` / `fix: <description>`; commit + push after validated changes.

@@ -174,17 +174,22 @@ hooks.
 
 ## Validation commands
 
-Use the project's Python entry point when direct `pytest` is restricted:
+Run everything through the single entry point, which requires an explicit system
+and one user per run (`--system meditik|all`, `--user <personalNumber>`). It builds
+`python -m pytest ... --system <system> --personal-number <user>`, so direct `pytest`
+is not needed. A new system must be registered in `refua_tests/systems.py` and
+its tests/features must carry its marker (`@pytest.mark.<system>` / `@<system>`).
 
 ```powershell
-$env:TEST_ENV='test'; .\\venv\\Scripts\\python.exe -m pytest refua_tests/tests/ --collect-only -q
-$env:TEST_ENV='test'; .\\venv\\Scripts\\python.exe -m pytest refua_tests/tests/ -m smoke -v --alluredir=./allure/results
+.\\venv\\Scripts\\python.exe run_tests.py --system meditik --user 4444401 -- --collect-only -q
+.\\venv\\Scripts\\python.exe run_tests.py --system meditik --suite pytest --tags smoke --user 4444401 --env test
+.\\venv\\Scripts\\python.exe run_tests.py --system meditik --suite bdd --tags smoke --user 4444401 --allure-dir auto
 ```
 
-For a focused test:
+For a focused test (native pytest still needs `--system`):
 
 ```powershell
-$env:TEST_ENV='test'; .\\venv\\Scripts\\python.exe -m pytest refua_tests/tests/<file>.py -k <test_name> -v
+$env:TEST_ENV='test'; .\\venv\\Scripts\\python.exe -m pytest refua_tests/tests/<file>.py -k <test_name> -v --system meditik --personal-number <PN>
 ```
 
 Do not claim a test passed unless the command completed successfully. Separate

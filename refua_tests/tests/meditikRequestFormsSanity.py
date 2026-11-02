@@ -70,6 +70,7 @@ def _back_to_all_actions_or_home(forms_page):
             print(f"[request_forms] teardown failed: {error}")
 
 
+@pytest.mark.meditik
 @pytest.mark.smoke
 @pytest.mark.ui
 class MeditikRequestFormsSanity:

@@ -10,18 +10,25 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session", autouse=True)
-def meditik_seed_session(auth_state_session):
+def meditik_seed_session(auth_state_session, request):
     """BEFORE ALL: seed 3 requests of every Meditik request type. AFTER ALL: cleanup per MEDITIK_SEED_CLEANUP.
 
     Per execution: --personal-number 4444410 (or TEST_PERSONAL_NUMBER); it must match
     SEED_ALLOWED_PERSONAL_NUMBERS (numbers/ranges). Configured in .env.<env>: MEDITIK_SEED_ENV
-    (must equal TEST_ENV), optional MEDITIK_SEED_DATASET (default "all") and
+    (must equal TEST_ENV), optional MEDITIK_SEED_DATASET (default "all"), MEDITIK_SEED_STATE
+    ("saved", "approved" or "both", default "both") and
     MEDITIK_SEED_CLEANUP ("report" keeps rows, "delete-owned" removes them). A blocked or
     failed seed is reported as a warning and yields None; it never fails the suite.
     """
     from dotenv import load_dotenv
 
     from refua_tests.utils import meditik_seed as ms
+
+    from refua_tests.systems import is_system_active
+
+    if not is_system_active(request.config, "meditik"):
+        yield None
+        return
 
     test_env = os.getenv("TEST_ENV", "").strip().lower()
     if test_env:
@@ -39,8 +46,9 @@ def meditik_seed_session(auth_state_session):
         return
 
     dataset = os.getenv("MEDITIK_SEED_DATASET", "all")
+    state = os.getenv("MEDITIK_SEED_STATE", "both")
     try:
-        manifest = ms.seed(seed_env, os.getenv("TEST_PERSONAL_NUMBER", ""), dataset)
+        manifest = ms.seed(seed_env, os.getenv("TEST_PERSONAL_NUMBER", ""), dataset, state)
     except Exception as error:  # noqa: BLE001 - seeding problems must not abort unrelated tests
         message = f"Meditik DB seed skipped ({type(error).__name__}: {error})"
         logger.warning(message)

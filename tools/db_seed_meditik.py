@@ -1,7 +1,7 @@
 """CLI for Meditik direct-DB test data: plan (read-only, default), seed, cleanup, leftovers.
 
     venv\\Scripts\\python.exe tools\\db_seed_meditik.py plan      --env test --user 4444401 --dataset prescriptions
-    venv\\Scripts\\python.exe tools\\db_seed_meditik.py seed      --env test --user 4444401 --dataset all
+    venv\\Scripts\\python.exe tools\\db_seed_meditik.py seed      --env test --user 4444401 --dataset all [--state both]
     venv\\Scripts\\python.exe tools\\db_seed_meditik.py verify    --env test --run-id <id>
     venv\\Scripts\\python.exe tools\\db_seed_meditik.py cleanup   --env test --run-id <id> [--mode delete-owned]
     venv\\Scripts\\python.exe tools\\db_seed_meditik.py leftovers --env test --user 4444401
@@ -36,6 +36,8 @@ def main() -> int:
         p.add_argument("--env", required=True, choices=ms.ALLOWED_ENVS)
         p.add_argument("--user", required=True, help="Personal number of the approved automation user")
         p.add_argument("--dataset", required=True, choices=ms.DATASETS)
+        p.add_argument("--state", default="both", choices=ms.STATES,
+                       help="saved (New tab), approved (Approved tab, approvable types only) or both")
     p = sub.add_parser("cleanup")
     p.add_argument("--env", required=True, choices=ms.ALLOWED_ENVS)
     p.add_argument("--run-id", required=True)
@@ -50,9 +52,9 @@ def main() -> int:
 
     try:
         if args.command == "plan":
-            _print_manifest(ms.plan(args.env, args.user, args.dataset))
+            _print_manifest(ms.plan(args.env, args.user, args.dataset, args.state))
         elif args.command == "seed":
-            _print_manifest(ms.seed(args.env, args.user, args.dataset))
+            _print_manifest(ms.seed(args.env, args.user, args.dataset, args.state))
         elif args.command == "cleanup":
             ms.load_env(args.env)
             manifest = ms.SeedManifest.load(args.env, args.run_id)
@@ -66,7 +68,8 @@ def main() -> int:
             rows = ms.verify(ms.SeedManifest.load(args.env, args.run_id))
             for row in rows:
                 print(f"  {'OK  ' if row['ok'] else 'FAIL'} {row['kind']:<25} request {row['request_id']} "
-                      f"type={row['type']} state={row['state']} {row['child_table']}={row['children']}")
+                      f"type={row['type']} state={row['state']} xml={row['xml']} "
+                      f"{row['child_table']}={row['children']}")
             print(f"{sum(r['ok'] for r in rows)}/{len(rows)} verified")
             return 0 if rows and all(r["ok"] for r in rows) else 1
         else:

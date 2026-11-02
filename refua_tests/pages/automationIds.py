@@ -2,6 +2,9 @@
 
 Format: meditik-[page/section]-[element-type]-[description]
 Attribute: data-testid
+Last live inventory: TEST, 2026-10-05 (automation login, read-only). Constants marked
+"not seen live" were absent in that pass; on that day /zimun-torim hit the app error
+boundary and several pages rendered without content, so absence is not proof of removal.
 """
 
 
@@ -12,14 +15,17 @@ class MeditikIds:
     NAVBAR_TOOLBAR = "meditik-navbar-toolbar"
     NAVBAR_BTN_HAMBURGER = "meditik-navbar-btn-hamburger"
     NAVBAR_IMG_HAMBURGER = "meditik-navbar-img-hamburger"
-    NAVBAR_BTN_BACK = "meditik-navbar-btn-back"
+    NAVBAR_BTN_BACK = "meditik-navbar-btn-back"  # not seen live
     NAVBAR_BTN_HOME = "meditik-navbar-btn-home"
+    NAVBAR_IMG_HOME = "meditik-navbar-img-home"
     NAVBAR_BTN_LOGO = "meditik-navbar-btn-logo"
     NAVBAR_IMG_LOGO = "meditik-navbar-img-logo"
     NAVBAR_TABS_PORTAL = "meditik-navbar-tabs-portal"
     NAVBAR_BTN_CLOSE_MENU = "meditik-navbar-btn-close-menu"
+    NAVBAR_IMG_CLOSE_MENU = "meditik-navbar-img-close-menu"
     NAVBAR_DRAWER_MENU = "meditik-navbar-drawer-menu"
-    NAVBAR_BTN_ADMIN_ANNOUNCEMENTS = "meditik-navbar-btn-admin-announcements"
+    NAVBAR_IMG_DRAWER_LOGO = "meditik-navbar-img-drawer-logo"
+    NAVBAR_BTN_ADMIN_ANNOUNCEMENTS = "meditik-navbar-btn-admin-announcements"  # not seen live (admin only?)
     NAVBAR_BTN_DEBUG_SOLDIER = "meditik-navbar-btn-debug-soldier"
     NAVBAR_BTN_INSTALL = "meditik-navbar-btn-install"
     NAVBAR_BTN_SHARE = "meditik-navbar-btn-share"
@@ -62,14 +68,21 @@ class MeditikIds:
     HOME_BTN_USER_REQUESTS = "meditik-home-btn-user-requests"
     HOME_BTN_USER_REQUESTS_WIDGET = "meditik-home-btn-user-requests-widget"
     HOME_BTN_ANNOUNCEMENTS = "meditik-home-btn-announcements"
+    # Not seen live: every HOME_BTN_* above except the user-requests and
+    # future-appointments widgets (medicines/referrals/exemptions widgets were absent).
+    HOME_SUPPORT_PHONE_LINK = "meditik-home-support-phone-link"
+    HOME_SUPPORT_PHONE_IMG = "meditik-home-support-phone-img"
+    HOME_FUTURE_APPOINTMENTS_WIDGET_ERROR_IMG = "meditik-future-appointments-widget-widget-error-img"
     # Last-update control on home footer — no data-testid in mapping yet.
     # Located via version.svg icon + Hebrew label in home_page_meditek.py.
 
     # --- All Actions ---
+    # Not seen live: tiles and page root have no data-testid (tests match tile text).
     ALL_ACTIONS_PAGE = "meditik-all-actions-page"
     ALL_ACTIONS_INPUT_SEARCH = "meditik-all-actions-input-search"
 
     # --- Appointments / ZimunTorim ---
+    # Unverified: /zimun-torim showed the app error boundary in the 2026-10-05 pass.
     APPOINTMENTS_PAGE = "meditik-appointments-page"
     APPOINTMENTS_TAB_UPCOMING = "meditik-appointments-tab-upcoming"
     APPOINTMENTS_TAB_HISTORY = "meditik-appointments-tab-history"
@@ -80,6 +93,10 @@ class MeditikIds:
 
     # --- Lab Results ---
     LAB_RESULTS_PAGE = "meditik-lab-results-page"
+    LAB_RESULTS_PAGE_ERROR_IMG = "meditik-lab-results-page-error-error-img"
+    LAB_RESULTS_SECTION_ERROR = "meditik-lab-results-section-error"
+    LAB_RESULTS_SECTION_ERROR_ACTION = "meditik-lab-results-section-error-action"
+    # Not seen live (page showed its section error): tabs, rows, details.
     LAB_RESULTS_TAB_REGULAR = "meditik-lab-results-tab-regular"
     LAB_RESULTS_TAB_CULTURE = "meditik-lab-results-tab-culture"
     LAB_RESULTS_TAB_IMAGING = "meditik-lab-results-tab-imaging"
@@ -122,8 +139,13 @@ class MeditikIds:
         "meditik-tabs-panel-referrals-waiting-for-approval"
     )
     REFERRALS_PANEL_PAST = "meditik-tabs-panel-past-referrals"
+    # Live referral cards in the My Referrals panel: valid-referrals-tab-{index}.
+    REFERRALS_CARD_TEMPLATE = "valid-referrals-tab-{index}"
+    REFERRALS_CARD_PREFIX = "valid-referrals-tab-"
+    REFERRALS_CARD_EXTRA_INFO_TEMPLATE = "meditik-card-valid-referrals-tab-{index}-extra-info"
 
     # --- Referrals ---
+    # Not seen live: page root, rows and per-row buttons (cards above replace rows).
     REFERRALS_PAGE = "meditik-referrals-page"
     REFERRALS_ROW_PREFIX = "meditik-referrals-row-"
     REFERRALS_BTN_DETAILS_PREFIX = "meditik-referrals-btn-details-"
@@ -157,11 +179,18 @@ class MeditikIds:
     SICK_DAYS_EXPECTED_EMPTY_TEXT = "ימי מחלה שיתקבלו עבורך יופיעו כאן"
 
     # --- Sick Days ---
+    # Not seen live: page root, rows, download buttons.
     SICK_DAYS_PAGE = "meditik-sick-days-page"
     SICK_DAYS_ROW_PREFIX = "meditik-sick-days-row-"
     SICK_DAYS_BTN_DOWNLOAD_PREFIX = "meditik-sick-days-btn-download-"
 
     # --- Exemptions ---
+    EXEMPTIONS_TABBED_PATH = "/exemptions"
+    EXEMPTIONS_TAB_VALID = "valid-exemptions-tab-tab"
+    EXEMPTIONS_TAB_INVALID = "invalid-exemptions-tab-tab"
+    EXEMPTIONS_PANEL_VALID = "meditik-tabs-panel-valid-exemptions-tab"
+    EXEMPTIONS_PANEL_INVALID = "meditik-tabs-panel-invalid-exemptions-tab"
+    # Not seen live: page root, rows, details buttons.
     EXEMPTIONS_PAGE = "meditik-exemptions-page"
     EXEMPTIONS_ROW_PREFIX = "meditik-exemptions-row-"
     EXEMPTIONS_BTN_DETAILS_PREFIX = "meditik-exemptions-btn-details-"
@@ -175,6 +204,7 @@ class MeditikIds:
     VACCINATIONS_EXPECTED_EMPTY_TEXT = "חיסונים שביצעת יופיעו כאן"
 
     # --- Vaccinations ---
+    # Not seen live: page root, rows.
     VACCINATIONS_PAGE = "meditik-vaccinations-page"
     VACCINATIONS_ROW_PREFIX = "meditik-vaccinations-row-"
 
@@ -185,7 +215,7 @@ class MeditikIds:
     # ids are the shared application shell (navbar, menu, logo, tabs portal)
     # and the global quick-action control. Every content-level expectation is
     # therefore a clarification-blocked case, NOT a missing page object.
-    MEDICAL_PROFILE_PAGE = "meditik-medical-profile-page"
+    MEDICAL_PROFILE_PAGE = "meditik-medical-profile-page"  # not seen live
     MEDICAL_PROFILE_PATH = "/medical-profile"
     # The chrome this workbook grounds, named per case for traceability.
     MEDICAL_PROFILE_NAVBAR_TOOLBAR = NAVBAR_TOOLBAR
@@ -199,6 +229,7 @@ class MeditikIds:
     MEDICAL_PROFILE_SPEED_DIAL_ADD_ICON = "AddIcon"
 
     # --- Urgent Care ---
+    # Not seen live: page root, start button.
     URGENT_CARE_PAGE = "meditik-urgent-care-page"
     URGENT_CARE_BTN_START = "meditik-urgent-care-btn-start"
 
@@ -255,6 +286,7 @@ class MeditikIds:
     # Upcoming / Waiting Lists / Past Appointments tabs + shared empty state,
     # a Past-appointments card list, a filter entry and a booking link.
     MY_APPOINTMENTS_PATH = "/zimun-torim"
+    # Unverified live (error boundary on 2026-10-05); the home widget ids were confirmed.
     MY_APPOINTMENTS_PAGE = "meditik-appointments-page"
 
     # Tabs header + per-category tabs and their panels. NOTE: the Upcoming tab
@@ -290,6 +322,7 @@ class MeditikIds:
     )
 
     # --- User Requests ---
+    # Not seen live: legacy action-page ids; the live /user-requests is the tabbed screen above.
     USER_REQUESTS_PAGE = "meditik-user-requests-page"
     USER_REQUESTS_BTN_PRESCRIPTION = "meditik-user-requests-btn-prescription"
     USER_REQUESTS_BTN_REFERRAL = "meditik-user-requests-btn-referral"
@@ -302,11 +335,13 @@ class MeditikIds:
     USER_REQUESTS_ROW_PREFIX = "meditik-user-requests-row-"
 
     # --- Announcements ---
+    # Not seen live (admin screen, not opened).
     ANNOUNCEMENTS_PAGE = "meditik-announcements-page"
     ANNOUNCEMENTS_BTN_ADD = "meditik-announcements-btn-add"
     ANNOUNCEMENTS_ROW_PREFIX = "meditik-announcements-row-"
 
     # --- Feedback ---
+    # Only the open button was seen live; the modal did not open in the headless pass.
     FEEDBACK_BTN_OPEN = "meditik-feedback-btn-open"
     FEEDBACK_MODAL = "meditik-feedback-modal"
     FEEDBACK_INPUT_RATING = "meditik-feedback-input-rating"
@@ -315,6 +350,7 @@ class MeditikIds:
     FEEDBACK_BTN_CLOSE = "meditik-feedback-btn-close"
 
     # --- Filter ---
+    # Not seen live (only rendered on /zimun-torim, which errored).
     FILTER_BTN_OPEN = "meditik-filter-btn-open"
     FILTER_BTN_CLEAR = "meditik-filter-btn-clear"
     FILTER_BTN_CONFIRM = "meditik-filter-btn-confirm"
@@ -324,11 +360,13 @@ class MeditikIds:
     SPEED_DIAL_TRIGGER = "meditik-speed-dial-btn-trigger"
     SPEED_DIAL_FAB = "meditik-speed-dial-btn-fab"
     SPEED_DIAL_ADD_ICON = "AddIcon"
+    SPEED_DIAL_ACTIONS = "meditik-speed-dial-actions"
     SPEED_DIAL_ACTION_PREFIX = "meditik-speed-dial-btn-"
     # Stable action ids (numeric) observed on test env
     SPEED_DIAL_BOOK_APPOINTMENT = "meditik-speed-dial-btn-15"
-    SPEED_DIAL_SICK_DAYS = "meditik-speed-dial-btn-16"
+    SPEED_DIAL_SICK_DAYS = "meditik-speed-dial-btn-16"  # not seen live
     SPEED_DIAL_NEW_REFERRAL = "meditik-speed-dial-btn-18"
+    SPEED_DIAL_GLASSES_VOUCHER = "meditik-speed-dial-btn-19"
     SPEED_DIAL_PRESCRIPTION = "meditik-speed-dial-btn-20"
     SPEED_DIAL_INSOLES = "meditik-speed-dial-btn-21"
     SPEED_DIAL_REFERRAL_ANSWER = "meditik-speed-dial-btn-22"
@@ -342,6 +380,7 @@ class MeditikIds:
     DOWNLOAD_PWA_TOGGLE_DONT_SHOW = "meditik-download-pwa-toggle-dont-show"
 
     # --- Navigation apps ---
+    # Not seen live (appointment-detail only).
     NAVIGATION_BTN_OPEN = "meditik-navigation-btn-open"
     NAVIGATION_BTN_WAZE = "meditik-navigation-btn-waze"
     NAVIGATION_BTN_GOOGLE_MAPS = "meditik-navigation-btn-google-maps"
@@ -355,9 +394,25 @@ class MeditikIds:
     EMPTY_STATE_TITLE = "meditik-empty-state-title"
     EMPTY_STATE_ICON = "meditik-empty-state-icon"
     INPUT_PHONE_NUMBER = "meditik-input-phone-number"
+    PHONE_NUMBER_BTN_EDIT = "meditik-phone-number-btn-edit"
+    UPLOAD_FILES_BTN_ADD = "meditik-upload-files-btn-add"
+    UPLOAD_FILES_INPUT = "meditik-upload-files-input"
+    CLOSE_ICON = "CloseIcon"
     PREV_NEXT_BTN_BACK = "meditik-prev-next-btn-back"
     PREV_NEXT_BTN_NEXT = "meditik-prev-next-btn-next"
     POPUP_MODAL_PREFIX = "meditik-popup-modal-"
     POPUP_BTN_CONFIRM_PREFIX = "meditik-popup-btn-confirm-"
     POPUP_BTN_CANCEL_PREFIX = "meditik-popup-btn-cancel-"
     POPUP_BTN_CLOSE_PREFIX = "meditik-popup-btn-close-"
+
+    # --- Request forms (opened from All Actions tiles) ---
+    INSOLES_REQUEST_BTN_SUBMIT = "meditik-insoles-request-btn-submit"
+    REFERRAL_ANSWER_REQUEST_BTN_SUBMIT = "meditik-referral-answer-request-btn-submit"
+
+    # --- Application error screens ---
+    ERROR_BOUNDARY_IMG = "meditik-error-boundary-error-img"
+    ERROR_BOUNDARY_BTN_ACTION = "meditik-error-boundary-error-btn-action"
+    PAGE_NOT_FOUND_IMG = "meditik-page-not-found-error-img"
+    PAGE_NOT_FOUND_BTN_ACTION = "meditik-page-not-found-error-btn-action"
+    UNKNOWN_ERROR_IMG = "meditik-unknown-error-error-img"
+    UNKNOWN_ERROR_BTN_ACTION = "meditik-unknown-error-error-btn-action"
