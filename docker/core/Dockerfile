@@ -9,6 +9,8 @@
 ARG PLAYWRIGHT_VERSION=1.56.0
 ARG BASE_IMAGE=mcr.microsoft.com/playwright/python:v${PLAYWRIGHT_VERSION}-noble
 FROM ${BASE_IMAGE}
+# The base image ships only the browsers (built for this Playwright version); the Python package must match them.
+ARG PLAYWRIGHT_VERSION
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -22,7 +24,7 @@ COPY scripts ./scripts
 
 # Editable on purpose: setup.py declares no package_data, so a regular install would drop
 # refua_core/config/devices.json. The "db" extra brings psycopg2 and boto3 (DB seeding, Secrets Manager).
-RUN pip install --no-cache-dir -e ".[db]" \
+RUN pip install --no-cache-dir "playwright==${PLAYWRIGHT_VERSION}" -e ".[db]" \
  && python -c "from refua_core.config.environment import EnvironmentManager; import refua_core.version as v; print('refua-core', v.__version__)"
 
 # Run as the non-root user of the Playwright image; the tests image switches back to root only to install Java/Allure.

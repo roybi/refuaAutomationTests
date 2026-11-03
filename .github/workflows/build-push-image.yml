@@ -138,6 +138,7 @@ jobs:
           docker run --rm "$image" sh -c '
             "$ALLURE_BIN" --version &&
             python -c "import refua_core.version as v; print(\"refua-core\", v.__version__)" &&
+            python -c "from playwright.sync_api import sync_playwright; p = sync_playwright().start(); b = p.chromium.launch(headless=True); print(\"chromium\", b.version); b.close(); p.stop()" &&
             python run_tests.py --list-systems &&
             python run_tests.py --system meditik --user 4444401 --env test -- --collect-only -q > /tmp/collect.txt 2>&1
             code=$?

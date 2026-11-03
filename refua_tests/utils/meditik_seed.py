@@ -222,9 +222,13 @@ def load_env(env: str) -> None:
     if env not in ALLOWED_ENVS:
         raise SeedGuardError(f"Seeding is allowed only on {ALLOWED_ENVS}, got '{env}'.")
     env_file = REPO_ROOT / f".env.{env}"
-    if not env_file.exists():
-        raise SeedGuardError(f"Missing {env_file.name}; no fallback to another environment.")
-    load_dotenv(env_file, override=False)  # execution settings take precedence
+    if env_file.exists():
+        load_dotenv(env_file, override=False)  # execution settings take precedence
+    elif os.getenv("MEDITIK_SEED_ENV", "").strip().lower() != env or not os.getenv("ORM_DB_HOST"):
+        # Containers have no .env file: the settings come as environment variables, but only an explicit
+        # MEDITIK_SEED_ENV=<env> plus a DB host counts, so a missing file never silently targets another environment.
+        raise SeedGuardError(f"Missing {env_file.name} and the environment does not set MEDITIK_SEED_ENV={env} "
+                             "with ORM_DB_HOST; no fallback to another environment.")
     prod = dotenv_values(REPO_ROOT / ".env.prod")
     prod_target = (prod.get("ORM_DB_HOST"), prod.get("ORM_DB_DATABASE"))
     if all(prod_target) and prod_target == (os.getenv("ORM_DB_HOST"), os.getenv("ORM_DB_DATABASE")):

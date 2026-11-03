@@ -43,6 +43,9 @@ Image names (lowercase) and tags (commit SHA, `latest`, optional extra tag):
 `CORE_REF=main`.
 
 
+## Run the published image with real tests
+Step by step (env file, network check, first run, restart check): [RUN_IMAGE_WITH_REAL_TESTS.md](RUN_IMAGE_WITH_REAL_TESTS.md).
+
 ## Build locally
 
 ```bash
