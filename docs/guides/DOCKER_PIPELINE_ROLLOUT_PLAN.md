@@ -1,12 +1,12 @@
-# Rollout plan: test-runner website, Allure reports, images in ECR
+# Rollout plan: test-runner website, Allure reports, images in GHCR (ECR pull-through)
 
 Three parts, in order of who can act:
 
 | Part | What | Who | Needs AWS? |
 |---|---|---|---|
 | A | Run the website on your machine; open Allure reports | You | No |
-| B | Check on GitHub that both Docker images build and start | You | No |
-| C | Put the images in ECR (and then host them) | You + whoever has AWS access | Yes |
+| B | Build, test and publish both images with GitHub (to ghcr.io) | You | No |
+| C | Pull the image through ECR and run it 24/7 | You + platform team | Platform team only |
 
 Reference for details: [DOCKER_PIPELINE.md](DOCKER_PIPELINE.md). Other later items (hosting 24/7, login, backups):
 [LATER_ACTION_ITEMS.md](LATER_ACTION_ITEMS.md).
@@ -45,83 +45,55 @@ Notes:
 Check it works: the page loads with filled dropdowns; a small run (e.g. tag `home`) goes queued -> running -> passed/failed;
 the report opens; after two runs the report's trend shows both; after restarting the site the old runs are still listed.
 
-## Part B - Check the Docker images build on GitHub (no AWS)
+## Part B - Build, test and publish the images with GitHub (no AWS)
 
-The workflow **Docker - Build and push to ECR** (`.github/workflows/build-push-ecr.yml`) builds both images and smoke-tests
-them (starts the website inside the image and checks it). While AWS is not configured it **pushes nothing**.
+DigitalIDF does not use ECR repositories that you create. You push to **GitHub Container Registry** (`ghcr.io/digitalidf/...`)
+and AWS mirrors it automatically (**ECR pull-through cache**), so the workflow needs no AWS role, keys or repositories.
 
-1. The workflow only appears under Actions when it is on the default branch. Merge to `main`:
-   `.github/workflows/build-push-ecr.yml`, `docker/`, `refua_service/`, `.dockerignore`, `.gitattributes`,
-   `requirements-service.txt`, `run_tests.py`, `refua_tests/tests/conftest.py`.
+The workflow **Docker - Build and push to GHCR (ECR pull-through)** (`.github/workflows/build-push-image.yml`) builds both images,
+smoke-tests the tests image (starts the website inside it, collects all tests), then pushes with the built-in `GITHUB_TOKEN`.
+
+1. The workflow file must be on the default branch (`main`). Merge your pull request.
 2. Repository -> Settings -> Secrets and variables -> Actions -> **Secrets**: `CORE_REPO_TOKEN` = a token that can read
-   `DigitalIDF/refuaAutomationCore` (the existing "BDD - Run by tag" workflow already uses it; skip if it is set).
-3. Actions -> **Docker - Build and push to ECR** -> Run workflow (leave the fields).
-4. Expected: build core, build tests, smoke test are green; the AWS/ECR steps are skipped, with the notice
-   "AWS is not configured". Failures: DOCKER_PIPELINE.md -> Troubleshooting.
+   `DigitalIDF/refuaAutomationCore` (fine-grained, Contents: Read-only). Set it with
+   `gh secret set CORE_REPO_TOKEN --repo DigitalIDF/refuaAutomationTests`.
+3. Actions -> **Docker - Build and push to GHCR (ECR pull-through)** -> Run workflow. Leave "push_images" and "push_latest" on.
+   (It also runs by itself on every push to `main` that changes the image, service or tests.)
+4. Expected: every step green; the run summary lists the pushed images and tags. They appear in the organization's
+   **Packages**: `refua-automation-core` and `refua-automation-tests` under `ghcr.io/digitalidf/refuaautomationtests/`.
+5. Tags: the commit SHA, `latest`, and an optional extra tag (e.g. `v1.0.0`) typed into "extra_tag".
 
+Names (all lowercase, as the registry requires):
+```
+ghcr.io/digitalidf/refuaautomationtests/refua-automation-core:<tag>
+ghcr.io/digitalidf/refuaautomationtests/refua-automation-tests:<tag>
+```
 Heads-up: the tests need refua-core >= 2.0.1, which on DigitalIDF is only on branch `feat/meditik-element-scraper` (`main` is
 1.0.1). The workflow builds that branch by default and fails if it resolves to 1.x. After merging it into core `main`, set the
 repository variable `CORE_REF=main`.
 
-Optional, not needed: building the images on your own machine. The public Playwright base image is ~2 GB and was very slow
-on your network; GitHub's runners are faster.
+First publish only: if the package is not visible to the pull-through cache, check the package's access settings
+(Packages -> the package -> Package settings -> link it to the repository / give the organization access).
 
 ---
 
-## Part C - Images in ECR (when AWS access is available)
+## Part C - Pull it through ECR and run it 24/7  [you + platform team]
 
-The workflow already contains the push; it switches on by itself once the two variables in C3 exist.
-What is pushed: `refua-automation-core` (base) and `refua-automation-tests` (the one you run), tagged with the commit SHA;
-`latest` is added on pushes to `main` or when `push_latest` is on.
-
-### C1. Create the two ECR repositories  [AWS admin]
-Same region, names exactly (or set `ECR_CORE_REPOSITORY` / `ECR_TESTS_REPOSITORY`):
+Anything that runs on AWS uses the pull-through address (the platform team's cache fetches it from ghcr.io on first pull):
 ```
-aws ecr create-repository --repository-name refua-automation-core  --region <region>
-aws ecr create-repository --repository-name refua-automation-tests --region <region>
+373007444960.dkr.ecr.il-central-1.amazonaws.com/ghcr/digitalidf/refuaautomationtests/refua-automation-tests:<tag>
 ```
-The workflow does not create them; it checks and fails with a clear message if one is missing.
-If you enable "immutable tags", `latest` cannot be moved: run the workflow manually with `push_latest` off.
+Use that as the `image:` in the deployment manifest instead of the ghcr.io address.
 
-### C2. Let GitHub log in to AWS  [AWS admin] - choose one
-**Role (recommended, no stored keys)**
-1. IAM -> Identity providers -> add OpenID Connect: provider URL `https://token.actions.githubusercontent.com`, audience `sts.amazonaws.com`.
-2. Create a role (e.g. `refua-github-ecr-push`) with this trust policy:
-```json
-{ "Version": "2012-10-17", "Statement": [{
-  "Effect": "Allow",
-  "Principal": { "Federated": "arn:aws:iam::<account-id>:oidc-provider/token.actions.githubusercontent.com" },
-  "Action": "sts:AssumeRoleWithWebIdentity",
-  "Condition": {
-    "StringEquals": { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com" },
-    "StringLike":   { "token.actions.githubusercontent.com:sub": "repo:DigitalIDF/refuaAutomationTests:*" } } }] }
-```
-3. Attach this permission policy:
-```json
-{ "Version": "2012-10-17", "Statement": [
-  { "Effect": "Allow", "Action": "ecr:GetAuthorizationToken", "Resource": "*" },
-  { "Effect": "Allow",
-    "Action": ["ecr:BatchCheckLayerAvailability","ecr:InitiateLayerUpload","ecr:UploadLayerPart","ecr:CompleteLayerUpload",
-               "ecr:PutImage","ecr:BatchGetImage","ecr:GetDownloadUrlForLayer","ecr:DescribeRepositories","ecr:DescribeImages"],
-    "Resource": ["arn:aws:ecr:<region>:<account-id>:repository/refua-automation-core",
-                 "arn:aws:ecr:<region>:<account-id>:repository/refua-automation-tests"] }] }
-```
-**Access keys (alternative)**: an IAM user with the same permission policy; store its keys as the GitHub secrets
-`AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
+Run it with:
+- the `.env.test` values as environment variables (a Kubernetes Secret, never inside the image) plus `SERVICE_API_TOKEN`;
+- a persistent volume at `/data` (runs, logs, Allure results and reports, seed manifests); the container user is `pwuser`
+  (set `fsGroup` so the volume is writable);
+- exactly **one** replica; readiness check `/api/health`; the website on port 8080;
+- network access to the TEST application and its database.
 
-### C3. Turn the push on  [repo admin]
-Settings -> Secrets and variables -> Actions -> **Variables**: `AWS_REGION` and `AWS_ROLE_ARN`
-(with access keys: `AWS_REGION` plus the two secrets). Optional: `ECR_CORE_REPOSITORY`, `ECR_TESTS_REPOSITORY`, `CORE_REF`.
-Run the workflow again. Expected: all steps green including "Push core base image" and "Push tests image";
-the run summary lists the pushed tags; the images appear in the ECR console.
+Environment variables, volume layout and a Kubernetes sketch: DOCKER_PIPELINE.md. Protection (VPN/SSO), retention, backups and
+updating to a new tag: LATER_ACTION_ITEMS.md.
 
-### C4. Run the image 24/7  [platform team]
-Pull `refua-automation-tests:<tag>` on a host that can reach the TEST app and its DB, with:
-- the `.env.test` values as environment variables (never inside the image) plus `SERVICE_API_TOKEN`;
-- a persistent volume at `/data` (runs, logs, Allure results and reports, seed manifests);
-- exactly **one** replica; readiness check `/api/health`; the website on port 8080.
-Environment variables, volume layout and a Kubernetes sketch: DOCKER_PIPELINE.md. Protection (VPN/SSO), retention, backups
-and updating to a new tag: LATER_ACTION_ITEMS.md.
-
-Check it works: the pod/container is Ready; `/api/health` returns `allure: true`; a run from the page produces a report; after
-restarting the container the previous runs and reports are still there.
+Check it works: the pod is Ready; `/api/health` returns `allure: true`; a run started from the page produces a report; after
+restarting the pod the previous runs and reports are still there.

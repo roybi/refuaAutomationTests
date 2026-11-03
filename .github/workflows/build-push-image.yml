@@ -1,8 +1,11 @@
-name: Docker - Build and push to ECR
+name: Docker - Build and push to GHCR (ECR pull-through)
 
-# One workflow, two images, built in order and pushed to ECR:
+# One workflow, two images, built in order and pushed to GitHub Container Registry (ghcr.io):
 #   1. refua-automation-core   (Playwright + refua_core, from the refuaAutomationCore repo)  -> base image
 #   2. refua-automation-tests  (FROM the core image: runner API + UI + Allure + this repo's tests)
+# DigitalIDF mirrors ghcr.io/digitalidf/... into ECR automatically (ECR pull-through cache), so no AWS credentials or
+# ECR repositories are needed here. Pull address after the push:
+#   373007444960.dkr.ecr.il-central-1.amazonaws.com/ghcr/digitalidf/<repo>/<image>:<tag>
 # Setup and the required variables/secrets: docs/guides/DOCKER_PIPELINE.md
 
 on:
@@ -16,8 +19,13 @@ on:
         description: "Optional extra tag for the tests image, e.g. v1.4.0"
         required: false
         type: string
+      push_images:
+        description: "Push the images to ghcr.io (turn off for a build + smoke test only)"
+        required: true
+        type: boolean
+        default: true
       push_latest:
-        description: "Also move the 'latest' tag (turn off when the ECR repository has immutable tags)"
+        description: "Also move the 'latest' tag"
         required: true
         type: boolean
         default: true
@@ -33,21 +41,18 @@ on:
       - "conftest.py"
       - "pytest.ini"
       - ".dockerignore"
-      - ".github/workflows/build-push-ecr.yml"
+      - ".github/workflows/build-push-image.yml"
 
 permissions:
   contents: read
-  id-token: write # AWS OIDC (no long-lived keys); unused when static keys are configured
+  packages: write # push to ghcr.io with the built-in GITHUB_TOKEN
 
 concurrency:
-  group: build-push-ecr
+  group: build-push-image
   cancel-in-progress: false
 
 env:
-  AWS_REGION: ${{ vars.AWS_REGION }}
   BASE_IMAGE: ${{ vars.BASE_IMAGE }}
-  CORE_REPOSITORY: ${{ vars.ECR_CORE_REPOSITORY || 'refua-automation-core' }}
-  TESTS_REPOSITORY: ${{ vars.ECR_TESTS_REPOSITORY || 'refua-automation-tests' }}
   # Tests need refua-core >= 2.0.1 (automation login). Until it is on the core default branch, build from this ref.
   CORE_REF: ${{ inputs.core_ref || vars.CORE_REF || 'feat/meditik-element-scraper' }}
 
@@ -56,20 +61,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - name: Validate inputs and detect whether ECR push is configured
-        id: config
+      - name: Validate inputs
         env:
           EXTRA_TAG: ${{ inputs.extra_tag }}
-          AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         run: |
-          # Build + smoke test always run. The ECR push only happens once AWS is configured (docs/guides/LATER_ACTION_ITEMS.md).
-          if [[ -n "$AWS_REGION" && ( -n "$AWS_ROLE_ARN" || -n "$AWS_ACCESS_KEY_ID" ) ]]; then
-            echo "ecr=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ecr=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::AWS is not configured: images are built and smoke-tested but NOT pushed to ECR."
-          fi
           if [[ -n "$EXTRA_TAG" && ! "$EXTRA_TAG" =~ ^[A-Za-z0-9_.-]{1,64}$ ]]; then
             echo "::error::extra_tag may only contain letters, digits, '_', '.', '-'"; exit 1
           fi
@@ -89,16 +84,26 @@ jobs:
         id: meta
         env:
           EXTRA_TAG: ${{ inputs.extra_tag }}
+          PUSH_IMAGES: ${{ github.event_name == 'push' || inputs.push_images }}
           PUSH_LATEST: ${{ github.event_name == 'push' || inputs.push_latest }}
         run: |
           core_sha=$(git -C refuaAutomationCore rev-parse --short=12 HEAD)
           tests_sha=$(git -C refuaAutomationTests rev-parse --short=12 HEAD)
           core_version=$(python3 -c "exec(open('refuaAutomationCore/refua_core/version.py').read()); print(__version__)")
-          echo "core_sha=$core_sha"         >> "$GITHUB_OUTPUT"
-          echo "tests_sha=$tests_sha"       >> "$GITHUB_OUTPUT"
-          echo "core_version=$core_version" >> "$GITHUB_OUTPUT"
-          echo "push_latest=$PUSH_LATEST"   >> "$GITHUB_OUTPUT"
-          echo "extra_tag=$EXTRA_TAG"       >> "$GITHUB_OUTPUT"
+          # ghcr.io/<owner>/<repo>/<image> - all lowercase, as required by the registry and the ECR pull-through rule
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          repo="${GITHUB_REPOSITORY#*/}"; repo="${repo,,}"
+          {
+            echo "core_sha=$core_sha"
+            echo "tests_sha=$tests_sha"
+            echo "core_version=$core_version"
+            echo "push_images=$PUSH_IMAGES"
+            echo "push_latest=$PUSH_LATEST"
+            echo "extra_tag=$EXTRA_TAG"
+            echo "core_image=ghcr.io/$owner/$repo/refua-automation-core"
+            echo "tests_image=ghcr.io/$owner/$repo/refua-automation-tests"
+            echo "ecr_prefix=373007444960.dkr.ecr.il-central-1.amazonaws.com/ghcr/$owner/$repo"
+          } >> "$GITHUB_OUTPUT"
           if [[ "$core_version" == 1.* ]]; then
             echo "::error::refuaAutomationCore ref '$CORE_REF' is version $core_version; the tests need >= 2.0.1 (automation login). Set CORE_REF to a newer ref."
             exit 1
@@ -112,6 +117,7 @@ jobs:
             -f refuaAutomationTests/docker/core/Dockerfile \
             "${base_args[@]}" \
             --build-arg "CORE_REF=${CORE_REF}" \
+            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
             -t refua-core-local:${{ steps.meta.outputs.core_sha }} \
             refuaAutomationCore
 
@@ -122,6 +128,7 @@ jobs:
             --build-arg "CORE_IMAGE=refua-core-local:${{ steps.meta.outputs.core_sha }}" \
             --build-arg "APP_VERSION=${{ steps.meta.outputs.tests_sha }}" \
             --build-arg "GIT_SHA=${{ github.sha }}" \
+            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
             -t refua-tests-local:${{ steps.meta.outputs.tests_sha }} \
             refuaAutomationTests
 
@@ -143,69 +150,42 @@ jobs:
           curl -fsS http://127.0.0.1:8080/ | grep -q "Refua automation runner"
           docker rm -f svc
 
-      - name: Configure AWS credentials
-        if: steps.config.outputs.ecr == 'true'
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
-        with:
-          aws-region: ${{ vars.AWS_REGION }}
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
-      - name: Log in to ECR
-        if: steps.config.outputs.ecr == 'true'
-        id: ecr
-        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2.1.7
-
-      - name: Check the ECR repositories exist
-        if: steps.config.outputs.ecr == 'true'
-        run: |
-          for repo in "$CORE_REPOSITORY" "$TESTS_REPOSITORY"; do
-            aws ecr describe-repositories --repository-names "$repo" >/dev/null \
-              || { echo "::error::ECR repository '$repo' does not exist in ${AWS_REGION}. Create it first (docs/guides/DOCKER_PIPELINE.md)."; exit 1; }
-          done
-
-      - name: Push core base image
-        if: steps.config.outputs.ecr == 'true'
+      - name: Log in to ghcr.io
+        if: steps.meta.outputs.push_images == 'true'
         env:
-          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+      - name: Push images
+        if: steps.meta.outputs.push_images == 'true'
+        env:
+          CORE_IMAGE: ${{ steps.meta.outputs.core_image }}
+          TESTS_IMAGE: ${{ steps.meta.outputs.tests_image }}
           CORE_SHA: ${{ steps.meta.outputs.core_sha }}
-          CORE_VERSION: ${{ steps.meta.outputs.core_version }}
-          PUSH_LATEST: ${{ steps.meta.outputs.push_latest }}
-        run: |
-          uri="$REGISTRY/$CORE_REPOSITORY"
-          if aws ecr describe-images --repository-name "$CORE_REPOSITORY" --image-ids imageTag="$CORE_SHA" >/dev/null 2>&1; then
-            echo "Core image $CORE_SHA already in ECR - reusing it."
-          else
-            docker tag "refua-core-local:$CORE_SHA" "$uri:$CORE_SHA"
-            docker push "$uri:$CORE_SHA"
-          fi
-          if [[ "$PUSH_LATEST" == "true" ]]; then
-            docker tag "refua-core-local:$CORE_SHA" "$uri:latest"
-            docker push "$uri:latest"
-          fi
-
-      - name: Push tests image
-        if: steps.config.outputs.ecr == 'true'
-        env:
-          REGISTRY: ${{ steps.ecr.outputs.registry }}
           TESTS_SHA: ${{ steps.meta.outputs.tests_sha }}
           PUSH_LATEST: ${{ steps.meta.outputs.push_latest }}
           EXTRA_TAG: ${{ steps.meta.outputs.extra_tag }}
+          ECR_PREFIX: ${{ steps.meta.outputs.ecr_prefix }}
         run: |
-          uri="$REGISTRY/$TESTS_REPOSITORY"
-          local_image="refua-tests-local:$TESTS_SHA"
-          tags=("$TESTS_SHA")
-          [[ "$PUSH_LATEST" == "true" ]] && tags+=("latest")
-          [[ -n "$EXTRA_TAG" ]] && tags+=("$EXTRA_TAG")
-          for tag in "${tags[@]}"; do
-            docker tag "$local_image" "$uri:$tag"
-            docker push "$uri:$tag"
-          done
+          push_tags() {  # <local image> <registry image> <tag>...
+            local src="$1" dest="$2"; shift 2
+            for tag in "$@"; do
+              docker tag "$src" "$dest:$tag"
+              docker push "$dest:$tag"
+            done
+          }
+          core_tags=("$CORE_SHA");  [[ "$PUSH_LATEST" == "true" ]] && core_tags+=("latest")
+          tests_tags=("$TESTS_SHA"); [[ "$PUSH_LATEST" == "true" ]] && tests_tags+=("latest")
+          [[ -n "$EXTRA_TAG" ]] && tests_tags+=("$EXTRA_TAG")
+          push_tags "refua-core-local:$CORE_SHA"   "$CORE_IMAGE"  "${core_tags[@]}"
+          push_tags "refua-tests-local:$TESTS_SHA" "$TESTS_IMAGE" "${tests_tags[@]}"
           {
-            echo "### Images pushed to ECR"
+            echo "### Images pushed to ghcr.io"
             echo "| Image | Tags |"
             echo "|---|---|"
-            echo "| \`$REGISTRY/$CORE_REPOSITORY\` | \`${{ steps.meta.outputs.core_sha }}\` (refua-core ${{ steps.meta.outputs.core_version }}, ref \`$CORE_REF\`) |"
-            echo "| \`$uri\` | $(printf '`%s` ' "${tags[@]}") |"
+            echo "| \`$CORE_IMAGE\` | $(printf '`%s` ' "${core_tags[@]}") (refua-core ${{ steps.meta.outputs.core_version }}, ref \`$CORE_REF\`) |"
+            echo "| \`$TESTS_IMAGE\` | $(printf '`%s` ' "${tests_tags[@]}") |"
+            echo
+            echo "Pull through ECR (after the pull-through cache fetches it):"
+            echo "\`$ECR_PREFIX/refua-automation-tests:$TESTS_SHA\`"
           } >> "$GITHUB_STEP_SUMMARY"

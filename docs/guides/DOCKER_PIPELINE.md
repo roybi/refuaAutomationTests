@@ -1,6 +1,6 @@
-# Docker image, ECR pipeline and runner service
+# Docker images, GHCR/ECR pipeline and runner service
 
-How `refuaAutomationTests` is packaged as a backend service and pushed to ECR.
+How `refuaAutomationTests` is packaged as a backend service and published to ghcr.io (mirrored into ECR by the organization's pull-through cache).
 
 ## Overview
 
@@ -14,25 +14,29 @@ refuaAutomationTests repo ─► refua-automation-tests image  (docker/tests/Doc
                        python run_tests.py --system … --tags … --user … --env … --clean
 ```
 
-One workflow, `.github/workflows/build-push-ecr.yml` (Actions → "Docker - Build and push to ECR"), builds both images in
-order, smoke-tests the tests image, then pushes both to ECR. It runs on push to `main` (when image-relevant files change)
-and manually.
+One workflow, `.github/workflows/build-push-image.yml` (Actions -> "Docker - Build and push to GHCR (ECR pull-through)"),
+builds both images in order, smoke-tests the tests image, then pushes both to `ghcr.io/digitalidf/refuaautomationtests/...`
+with the built-in `GITHUB_TOKEN`. It runs on push to `main` (when image-relevant files change) and manually.
+No AWS role, keys or ECR repositories are involved: DigitalIDF's ECR pull-through cache fetches the image from ghcr.io the first
+time it is pulled, at
+`373007444960.dkr.ecr.il-central-1.amazonaws.com/ghcr/digitalidf/refuaautomationtests/<image>:<tag>`.
 
 ## Run it without Docker (your machine)
 `runService.bat` (or `venv\Scripts\python.exe -m uvicorn refua_service.app:app --port 8080`) starts the same website on
 http://localhost:8080 using your venv, `.env.test`, Java and the Allure CLI. Data goes to `.service_data\`.
-Step-by-step: [DOCKER_PIPELINE_ROLLOUT_PLAN.md](DOCKER_PIPELINE_ROLLOUT_PLAN.md). Hosting 24/7 and ECR: [LATER_ACTION_ITEMS.md](LATER_ACTION_ITEMS.md).
+Step-by-step: [DOCKER_PIPELINE_ROLLOUT_PLAN.md](DOCKER_PIPELINE_ROLLOUT_PLAN.md). Hosting 24/7: [LATER_ACTION_ITEMS.md](LATER_ACTION_ITEMS.md).
 
 ## GitHub workflow settings
-Everything is optional except the core token. Without AWS settings the workflow builds and smoke-tests but does not push.
+Only the core token is required.
 
 | Where | Name | Value |
 |---|---|---|
 | Secret | `CORE_REPO_TOKEN` | Token that can read `DigitalIDF/refuaAutomationCore` (required) |
-| Variable | `AWS_REGION` + `AWS_ROLE_ARN` | Enables the ECR push (OIDC role). Alternative: secrets `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` |
-| Variable (optional) | `ECR_CORE_REPOSITORY` / `ECR_TESTS_REPOSITORY` | Default `refua-automation-core` / `refua-automation-tests`; create both repositories first |
 | Variable (optional) | `CORE_REF` | refuaAutomationCore ref to build. Default `feat/meditik-element-scraper` |
 | Variable (optional) | `BASE_IMAGE` | Mirror of the Playwright base image; blank = Microsoft's public `playwright/python` image |
+
+Image names (lowercase) and tags (commit SHA, `latest`, optional extra tag):
+`ghcr.io/digitalidf/refuaautomationtests/refua-automation-core` and `.../refua-automation-tests`.
 
 **Core version:** the tests need refua-core >= 2.0.1 (automation login). On `DigitalIDF/refuaAutomationCore` that is only on
 `feat/meditik-element-scraper`; `main` is 1.0.1. The workflow fails if the chosen ref is 1.x. Once 2.0.1 is merged, set
@@ -113,7 +117,7 @@ spec:
       securityContext: { fsGroup: 1000 }
       containers:
         - name: runner
-          image: <account>.dkr.ecr.<region>.amazonaws.com/refua-automation-tests:<tag>
+          image: 373007444960.dkr.ecr.il-central-1.amazonaws.com/ghcr/digitalidf/refuaautomationtests/refua-automation-tests:<tag>
           ports: [{ containerPort: 8080 }]
           envFrom: [{ secretRef: { name: refua-tests-env } }]
           volumeMounts: [{ name: data, mountPath: /data }]
@@ -126,9 +130,8 @@ spec:
 
 | Symptom | Fix |
 |---|---|
-| Workflow says AWS is not configured | Expected until `AWS_REGION` + `AWS_ROLE_ARN` are set; the images are still built and tested |
+| Push step fails with `denied` / 403 | The workflow needs `packages: write` (set in the file); check that the organization allows GITHUB_TOKEN to publish packages |
 | Workflow: core version is 1.x | Set `CORE_REF` to a ref containing refua-core >= 2.0.1 |
-| `ECR repository ... does not exist` | Create both repositories |
-| Push of `latest` rejected | The repository has immutable tags: run manually with `push_latest` off |
+| ECR pull of the image fails the first time | The package must be visible to the pull-through cache: link/grant it under the package settings on GitHub (platform team) |
 | Report link missing, log says Allure CLI not found | `ALLURE_BIN` must point to the Allure CLI (set in the image) |
 | Runs fail at login/DB | Missing `AUTOMATION_SECRET` / `ORM_DB_*`, or no network path to the environment |

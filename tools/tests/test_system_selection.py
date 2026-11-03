@@ -117,3 +117,18 @@ def test_resolve_system_accepts_names_aliases_and_all():
     assert systems.resolve_system("all") is None
     with pytest.raises(ValueError, match="Registered systems"):
         systems.resolve_system("unknown")
+
+
+@pytest.mark.parametrize("tags", ["smoke", "smoke and not known_issue", "(home or menu) and bdd"])
+def test_run_tests_accepts_marker_expressions(tags):
+    import run_tests
+    args = run_tests.build_parser().parse_args(["--system", "meditik", "--user", "4444401", f"--tags={tags}"])
+    run_tests.validate(args)
+
+
+@pytest.mark.parametrize("tags", ["--co", "smoke;rm -rf /", "a|b", "$(id)", "x\ny", "   "])
+def test_run_tests_rejects_anything_that_is_not_a_marker_expression(tags):
+    import run_tests
+    args = run_tests.build_parser().parse_args(["--system", "meditik", "--user", "4444401", f"--tags={tags}"])
+    with pytest.raises(SystemExit):
+        run_tests.validate(args)

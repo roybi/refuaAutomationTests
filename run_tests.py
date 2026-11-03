@@ -27,6 +27,8 @@ REPO_ROOT = Path(__file__).resolve().parent
 # REFUA_ALLURE_ROOT lets the container service keep results on its persistent volume.
 ALLURE_ROOT = Path(os.getenv("REFUA_ALLURE_ROOT") or REPO_ROOT / "allure")
 DEFAULT_ALLURE_DIR = ALLURE_ROOT / "results"
+# A pytest marker expression: names, 'and'/'or'/'not' and parentheses only (nothing that could act as an option).
+TAGS_ALLOWED = frozenset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_ ()")
 SUITE_PATHS = {"bdd": ["refua_tests/bdd"], "pytest": ["refua_tests/tests"], "all": []}
 
 
@@ -93,6 +95,8 @@ def validate(args: argparse.Namespace) -> None:
             "--user is required for this selection: pass exactly one personal number, e.g. --user 4444401")
     if args.user and not (args.user.isascii() and args.user.isdigit()):
         raise SystemExit(f"--user must contain digits only, got '{args.user}'")
+    if args.tags and not (args.tags.strip() and set(args.tags) <= TAGS_ALLOWED):
+        raise SystemExit(f"--tags may only contain letters, digits, '_', spaces and parentheses, got '{args.tags}'")
 
 
 def build_command(args: argparse.Namespace, extra: List[str], allure_dir: Path) -> List[str]:
