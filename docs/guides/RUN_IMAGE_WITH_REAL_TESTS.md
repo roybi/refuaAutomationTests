@@ -116,4 +116,7 @@ Seeded rows stay in the TEST DB, as with any run (cleanup mode `report`).
 | Run redirects to Microsoft login | The automation secret is wrong/expired for TEST |
 | User rejected (HTTP 422) | The user is outside `SEED_ALLOWED_PERSONAL_NUMBERS`; use an allowed number |
 | `Port 8080 is already in use` | Use `-p 8081:8080` and open http://localhost:8081, or stop `runService.bat` |
+| Every scenario fails at once with `Executable doesn't exist at /ms-playwright/...` | The image is older than 2026-11-03: its Playwright package did not match the installed browsers. Pull/build the latest image |
+| `Meditik DB seed skipped (... Missing .env.test ...)` | Same old image: the seed guard did not accept settings from environment variables. Pull/build the latest image |
+| `2FA bypass enabled but session file missing` at the top of the log | Harmless: automation login does not use a saved session |
 | Everything fails the same way | `docker logs refua-svc` and the run's log in the website, then send me the first error |
