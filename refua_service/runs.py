@@ -78,12 +78,25 @@ class RunManager:
                 time.sleep(0.02 * (attempt + 1))
         return None
 
-    def list(self, limit: int = 100) -> List[dict]:
-        runs = []
-        for path in sorted(self.settings.runs_dir.glob("*.json"), reverse=True)[:limit]:
+    def list(self, limit: int = 100, offset: int = 0, status: Optional[str] = None, system: Optional[str] = None,
+             date_from: Optional[str] = None, date_to: Optional[str] = None) -> List[dict]:
+        """Newest first. Filters match status, system and the UTC creation date (YYYY-MM-DD, inclusive);
+        ``offset`` counts matching runs, so paging through a filtered list is stable."""
+        runs, skipped = [], 0
+        for path in sorted(self.settings.runs_dir.glob("*.json"), reverse=True):
             run = self.get(path.stem)
-            if run:
-                runs.append(run)
+            if not run:
+                continue
+            created = (run.get("created_at") or "")[:10]
+            if ((status and run["status"] != status) or (system and run["system"] != system)
+                    or (date_from and created < date_from) or (date_to and created > date_to)):
+                continue
+            if skipped < offset:
+                skipped += 1
+                continue
+            runs.append(run)
+            if len(runs) >= limit:
+                break
         return runs
 
     def _update(self, run_id: str, **fields) -> dict:

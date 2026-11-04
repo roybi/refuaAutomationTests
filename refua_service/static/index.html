@@ -38,11 +38,14 @@
   #log { background:#10161d; color:#d6e2ee; padding:12px; border-radius:6px; height:360px; overflow:auto; white-space:pre-wrap; margin:8px 0 0; font-size:12px; }
   .actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .muted { color:var(--muted); }
+  .filters { margin-bottom:12px; }
+  input[type=date] { padding:6px 8px; border:1px solid var(--line); border-radius:6px; font:inherit; }
 </style>
 </head>
 <body>
 <header>
   <h1>Refua automation runner</h1>
+  <a href="/reports/" target="_blank" rel="noopener">All reports</a>
   <a href="/reports/latest" target="_blank" rel="noopener">Latest report</a>
 </header>
 <main>
@@ -65,10 +68,21 @@
 
   <section>
     <h2>Runs <span class="muted" id="refreshNote"></span></h2>
+    <form id="filters" class="filters">
+      <label>Status <select id="fStatus"></select></label>
+      <label>System <select id="fSystem"></select></label>
+      <label>From <input type="date" id="fFrom"></label>
+      <label>To <input type="date" id="fTo"></label>
+      <button type="button" class="secondary" id="fClear">Clear filters</button>
+    </form>
     <table>
       <thead><tr><th>Started</th><th>System</th><th>Suite</th><th>Tag</th><th>User</th><th>Env</th><th>Status</th><th>Results</th><th>Report</th></tr></thead>
       <tbody id="runs"></tbody>
     </table>
+    <div class="actions" style="margin-top:12px">
+      <button type="button" class="secondary" id="loadMore" hidden>Load more</button>
+      <span class="muted" id="runCount"></span>
+    </div>
   </section>
 
   <section id="detail" hidden>
@@ -125,6 +139,8 @@ async function loadOptions() {
   fill($('tags'), options.tags.map(t => ({ value: t.name, label: `${t.name} (${t.runnable} runnable)` })), '(all tests)');
   fill($('env'), options.envs);
   fill($('users'), options.users);
+  fill($('fStatus'), ['queued', 'running', 'passed', 'failed', 'error', 'timed_out', 'cancelled', 'interrupted'], 'All');
+  fill($('fSystem'), options.systems.map(s => s.name), 'All');
   $('tokenLabel').hidden = !options.token_required;
   previewCommand();
 }
@@ -164,19 +180,56 @@ function renderRuns(runs) {
   }
 }
 
-let refreshing = false;
+const PAGE = 50;
+let refreshing = false, newest = [], older = [], moreAvailable = false, loadingMore = false;
+
+function filterQuery() {
+  const q = new URLSearchParams();
+  for (const [key, id] of [['status', 'fStatus'], ['system', 'fSystem'], ['date_from', 'fFrom'], ['date_to', 'fTo']])
+    if ($(id).value) q.set(key, $(id).value);
+  return q;
+}
+function visibleRuns() {  // the newest page refreshes live; older pages load on demand (a new run can shift them, so dedupe)
+  const seen = new Set(newest.map(r => r.id));
+  return newest.concat(older.filter(r => !seen.has(r.id)));
+}
+function renderAll() {
+  const runs = visibleRuns();
+  renderRuns(runs);
+  $('loadMore').hidden = !moreAvailable;
+  $('runCount').textContent = runs.length ? `${runs.length} runs shown` : '';
+  return runs;
+}
+
 async function refresh() {
   if (refreshing) return;  // overlapping refreshes would append the same log chunk twice
   refreshing = true;
   try {
-    const runs = await api('/api/runs?limit=50');
-    renderRuns(runs);
+    const q = filterQuery(); q.set('limit', PAGE);
+    newest = await api('/api/runs?' + q);
+    if (!older.length) moreAvailable = newest.length === PAGE;
+    const runs = renderAll();
     if (selected) await showDetail(runs.find(r => r.id === selected));
     const active = runs.some(r => r.status === 'queued' || r.status === 'running');
     $('refreshNote').textContent = active ? '(auto-refreshing)' : '';
   } catch (e) { $('msg').textContent = e.message; $('msg').className = 'msg error'; }
   finally { refreshing = false; }
 }
+
+async function loadMore() {
+  if (loadingMore) return;
+  loadingMore = true;
+  try {
+    const q = filterQuery(); q.set('limit', PAGE); q.set('offset', visibleRuns().length);
+    const page = await api('/api/runs?' + q);
+    older = older.concat(page);
+    moreAvailable = page.length === PAGE;
+    renderAll();
+  } catch (e) { $('msg').textContent = e.message; $('msg').className = 'msg error'; }
+  finally { loadingMore = false; }
+}
+
+function filtersChanged() { older = []; moreAvailable = false; refresh(); }
 
 function select(id) { selected = id; logOffset = 0; $('log').textContent = ''; refresh(); }
 
@@ -218,6 +271,13 @@ $('cancel').addEventListener('click', async () => {
   catch (err) { $('msg').textContent = err.message; $('msg').className = 'msg error'; }
 });
 for (const id of ['system', 'suite', 'tags', 'user', 'env', 'clean']) $(id).addEventListener('input', previewCommand);
+for (const id of ['fStatus', 'fSystem', 'fFrom', 'fTo']) $(id).addEventListener('change', filtersChanged);
+$('fClear').addEventListener('click', () => {
+  for (const id of ['fStatus', 'fSystem', 'fFrom', 'fTo']) $(id).value = '';
+  filtersChanged();
+});
+$('loadMore').addEventListener('click', loadMore);
+$('filters').addEventListener('submit', e => e.preventDefault());
 
 (async () => {
   await loadOptions();

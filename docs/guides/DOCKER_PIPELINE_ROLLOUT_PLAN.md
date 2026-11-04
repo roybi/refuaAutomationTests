@@ -8,7 +8,9 @@ Three parts, in order of who can act:
 | B | Build, test and publish both images with GitHub (to ghcr.io) | You | No |
 | C | Pull the image through ECR and run it 24/7 | You + platform team | Platform team only |
 
-Reference for details: [DOCKER_PIPELINE.md](DOCKER_PIPELINE.md). Other later items (hosting 24/7, login, backups):
+Reference for details: [DOCKER_PIPELINE.md](DOCKER_PIPELINE.md). Step-by-step run of the image with real tests:
+[RUN_IMAGE_WITH_REAL_TESTS.md](RUN_IMAGE_WITH_REAL_TESTS.md). Full AWS pipeline plan:
+[PIPELINE_IMPLEMENTATION_PLAN.md](PIPELINE_IMPLEMENTATION_PLAN.md). Other later items (hosting 24/7, login, backups):
 [LATER_ACTION_ITEMS.md](LATER_ACTION_ITEMS.md).
 
 ## What the website does
@@ -16,7 +18,8 @@ It replaces typing `python run_tests.py --system meditik --tags home --user 4444
 
 - Dropdowns for **system, suite, tag, user, environment**, a **clean** checkbox, and a preview of the exact command.
 - **Start run** -> runs `run_tests.py`, live log, status, pass/fail counts, **Cancel**.
-- **Open Allure report** per run, and `/reports/latest`. Allure history carries over between runs (trend graphs).
+- **Open Allure report** per run, `/reports/` (all stored reports) and `/reports/latest`. Allure history carries over between runs (trend graphs).
+- The runs table filters by status, system and date and loads older runs on demand.
 - Every run (parameters, log, raw results, report) is stored on disk and survives restarts.
 - Same actions as a REST API (`/api/runs`, ...) for scripts or scheduled jobs.
 

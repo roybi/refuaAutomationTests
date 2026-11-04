@@ -4,6 +4,7 @@ Start locally:  uvicorn refua_service.app:app --port 8080
 """
 
 import hmac
+import html
 import re
 from contextlib import asynccontextmanager
 from functools import lru_cache
@@ -11,7 +12,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -24,6 +25,7 @@ from .settings import load_settings
 
 SUITES = ("all", "bdd", "pytest")
 TAG_PATTERN = re.compile(r"^[A-Za-z0-9_]+$")
+DATE_PATTERN = r"^\d{4}-\d{2}-\d{2}$"
 STATIC_DIR = Path(__file__).parent / "static"
 
 settings = load_settings()
@@ -117,8 +119,12 @@ def create_run(request: RunRequest) -> dict:
 
 
 @app.get("/api/runs")
-def list_runs(limit: int = Query(default=50, ge=1, le=500)) -> List[dict]:
-    return get_manager().list(limit)
+def list_runs(limit: int = Query(default=50, ge=1, le=500), offset: int = Query(default=0, ge=0),
+              status: Optional[str] = Query(default=None, pattern=r"^[a-z_]{1,20}$"),
+              system: Optional[str] = Query(default=None, max_length=32),
+              date_from: Optional[str] = Query(default=None, pattern=DATE_PATTERN),
+              date_to: Optional[str] = Query(default=None, pattern=DATE_PATTERN)) -> List[dict]:
+    return get_manager().list(limit, offset, status, system, date_from, date_to)
 
 
 @app.get("/api/runs/{run_id}")
@@ -152,6 +158,31 @@ def latest_report() -> RedirectResponse:
     if run_id is None:
         raise HTTPException(404, "No report has been generated yet")
     return RedirectResponse(f"/reports/{run_id}/")
+
+
+@app.get("/reports", include_in_schema=False)
+@app.get("/reports/")
+def reports_index() -> HTMLResponse:
+    """Every stored report, newest first (the static mount below has no directory listing)."""
+    rows = []
+    for report_id in reports.stored_report_ids(settings):
+        run = get_manager().get(report_id) or {}
+        summary = run.get("summary") or {}
+        started = (run.get("started_at") or run.get("created_at") or "-").replace("T", " ")[:19]
+        counts = (f"{summary.get('passed', 0)} passed, {summary.get('failed', 0) + summary.get('broken', 0)} failed, "
+                  f"{summary.get('skipped', 0)} skipped") if summary else "-"
+        cells = [started, run.get("system", "-"), run.get("tags") or "-", run.get("user", "-"), run.get("env", "-"),
+                 run.get("status", "-"), counts]
+        rows.append(f'<tr><td><a href="/reports/{html.escape(report_id)}/">{html.escape(report_id)}</a></td>'
+                    + "".join(f"<td>{html.escape(str(cell))}</td>" for cell in cells) + "</tr>")
+    body = "".join(rows) or '<tr><td colspan="8">No reports yet</td></tr>'
+    return HTMLResponse(
+        '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Reports</title>'
+        "<style>body{font:14px system-ui,sans-serif;margin:24px}table{border-collapse:collapse}"
+        "th,td{text-align:left;padding:6px 12px;border-bottom:1px solid #d9dee4}</style></head><body>"
+        f'<h1>Reports ({len(rows)})</h1><p><a href="/">Back to runs</a></p><table><thead><tr><th>Run</th>'
+        "<th>Started</th><th>System</th><th>Tag</th><th>User</th><th>Env</th><th>Status</th><th>Results</th></tr></thead>"
+        f"<tbody>{body}</tbody></table></body></html>")
 
 
 settings.ensure_directories()
