@@ -20,7 +20,8 @@ ENV PYTHONPATH=/app \
     TEST_ENV=test \
     SERVICE_PORT=8080 \
     IMAGE_TAG=${APP_VERSION} \
-    GIT_SHA=${GIT_SHA}
+    GIT_SHA=${GIT_SHA} \
+    SERVICE_REQUIRE_TOKEN=true
 
 # Java runs the Allure CLI; the CLI is verified against its published checksum.
 USER root

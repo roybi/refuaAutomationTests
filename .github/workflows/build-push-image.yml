@@ -145,7 +145,10 @@ jobs:
             grep -E "^(ERROR|E  )" /tmp/collect.txt | head -30
             tail -3 /tmp/collect.txt
             exit $code'
-          docker run -d --name svc -p 8080:8080 "$image"
+          if docker run --rm "$image" python -c "from refua_service.settings import load_settings; load_settings()" >/dev/null 2>&1; then
+            echo "::error::the image started without SERVICE_API_TOKEN (SERVICE_REQUIRE_TOKEN must be on in the image)"; exit 1
+          fi
+          docker run -d --name svc -p 8080:8080 -e SERVICE_API_TOKEN=smoke-test-token-not-a-secret "$image"
           for _ in $(seq 1 30); do curl -fsS http://127.0.0.1:8080/api/health && break || sleep 2; done
           curl -fsS http://127.0.0.1:8080/api/options | grep -q '"meditik"'
           curl -fsS http://127.0.0.1:8080/ | grep -q "Refua automation runner"

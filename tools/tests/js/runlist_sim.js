@@ -2,7 +2,9 @@
 // Run from the repository root: node tools/tests/js/runlist_sim.js (exit code 1 on any FAIL). Used by tools/tests/test_homepage_run_list.py.
 const fs = require('fs'), vm = require('vm');
 const html = fs.readFileSync('refua_service/static/index.html', 'utf8');
-const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+// Plain string search (case-insensitive), not a regular expression over HTML.
+const lower = html.toLowerCase();
+const script = html.slice(lower.indexOf('<script>') + '<script>'.length, lower.lastIndexOf('</script>'));
 const block = script.slice(script.indexOf('const PAGE = 50'), script.indexOf('function select(id)'));
 
 function makeWorld(total) {

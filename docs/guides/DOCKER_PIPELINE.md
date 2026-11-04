@@ -54,7 +54,7 @@ Step by step (env file, network check, first run, restart check): [RUN_IMAGE_WIT
 ```bash
 docker build -f docker/core/Dockerfile -t refua-automation-core ../refuaAutomationCore
 docker build -f docker/tests/Dockerfile --build-arg CORE_IMAGE=refua-automation-core -t refua-automation-tests .
-docker run --rm -p 8080:8080 -v refua-data:/data --env-file .env.test refua-automation-tests
+docker run --rm -p 8080:8080 -v refua-data:/data --env-file .env.test -e SERVICE_API_TOKEN=<random, 16+ characters> refua-automation-tests
 ```
 
 Open http://localhost:8080. Never bake `.env.*` into the image (`.dockerignore` excludes them); pass the content as
@@ -76,7 +76,8 @@ environment variables (`.env.test` is loaded with `override=False`, so env vars 
 | `ARCHIVE_PREFIX` | `runs` | Key prefix of the archive |
 | `SERVICE_PORT` | `8080` | Port uvicorn listens on in the image |
 | `IMAGE_TAG`, `GIT_SHA` | set by the image build | Stored in every run record under `build` (with refua-core and Playwright versions) |
-| `SERVICE_API_TOKEN` | unset | If set, starting/cancelling runs needs header `X-API-Token`. Reads and reports stay open: restrict access at ingress/VPN |
+| `SERVICE_API_TOKEN` | unset | If set, starting/cancelling runs needs header `X-API-Token`. Reads and reports stay open: restrict access at ingress/VPN. **Required by the image** (see `SERVICE_REQUIRE_TOKEN`); use a random value of at least 16 characters, from a Secret |
+| `SERVICE_REQUIRE_TOKEN` | `true` in the image, unset outside it | If on, the service refuses to start without `SERVICE_API_TOKEN` (min. 16 characters). Without a token anyone who can reach the service can start runs. Local runs (`runService.bat`) do not set it. Set `SERVICE_REQUIRE_TOKEN=false` only for a container used on your own machine |
 
 The pod also needs network access to the application under test and its database.
 
