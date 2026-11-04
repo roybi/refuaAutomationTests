@@ -31,7 +31,7 @@ Out of scope here: the LLM analysis agent itself. Section 9 only prepares its da
 | Allure trends | After each run the previous report's `history/` is copied into the new results (`reports.py`) |
 | Storage | Everything under `DATA_DIR` (`/data`): run JSON, console log, raw Allure results, HTML reports |
 | Retention | `RETENTION_DAYS`, default **60** (changed from 30 in `17a872d`, merged). `prune()` deletes the run JSON, log, raw results and report together, at service start and after each run, and skips runs whose archive upload is pending |
-| Auth | None for reads. Only start/cancel need `SERVICE_API_TOKEN` |
+| Auth | None for reads. Start/cancel need `SERVICE_API_TOKEN`, and **the image refuses to start without a token** (`SERVICE_REQUIRE_TOKEN=true`, token of 16+ characters; branch `feat/service-auth`). Reads and reports stay open, see D2 |
 | Off-pod copy of logs/results | **Built and merged** (`refua_service/archive.py`, S3 or folder). Not yet tried against a real bucket |
 | ECR | The organization already runs an ECR Pull Through Cache for `ghcr.io/digitalidf/...` (platform team). Only the image address in the manifest is ours to set. Not yet tested with this project's images |
 | PR checks | PR #13 fails only `ScanLi / Checking Scanning Results`: it fails when the repo has any open code-scanning alert. The one open alert (#23, `actions/excessive-secrets-exposure`, `.github/workflows/upload-test-plan-to-azure.yml` line 92, on `main`) is outside this pipeline. CodeQL, Dependabot, version check and the Dockerfile scans pass |
@@ -84,7 +84,7 @@ Decisions behind it:
 | # | Question | Decision |
 |---|---|---|
 | D1 | Kubernetes (EKS) or a single EC2/ECS host? | Not final. Reaching AWS requires the VPN. Exact platform (EKS or Docker host) is decided at Phase 3, when the first deployment is tried by hand |
-| D2 | How do users reach the page? | **VPN only** (internal address, no public ingress). `SERVICE_API_TOKEN` stays on as a second control for start/cancel. SSO in front is optional later |
+| D2 | How do users reach the page? | **Corrected 2026-11-04:** the VPN is needed to reach AWS from the developer PC, but the service itself is not guaranteed to be VPN-only, so it must not rely on the network. Done: starting and cancelling runs always needs `SERVICE_API_TOKEN` (the image will not start without it). Open: reads (run list, logs, reports) are still unauthenticated. Either confirm with the platform team that the internal address is reachable only from company networks, or add the opt-in read protection (login with the same token, cookie for report links) |
 | D3 | What goes to S3? | **Raw data only**: console log, raw Allure results and the run record. The HTML report is not archived (it can be regenerated from the raw results) |
 | D4 | Is 60 days the final retention for the S3 archive, or only for the website? | 60 days for both; the lifecycle days are a parameter, so a longer archive for the LLM is a one-value change |
 | D5 | Do logs contain personal data or tokens? | **No** (confirmed 2026-11-04). No redaction step is built; if that changes, add one in `archive.py` before upload |
@@ -150,7 +150,7 @@ Always reference the commit SHA.
 | # | Action | Check |
 |---|---|---|
 | 3.1 | Create namespace `refua-tests` | `kubectl get ns` |
-| 3.2 | Create Secret `refua-tests-env` from the `.env.<env>` content plus `SERVICE_API_TOKEN` (never in the image or in git) | `kubectl describe secret` lists the keys |
+| 3.2 | Create Secret `refua-tests-env` from the `.env.<env>` content plus `SERVICE_API_TOKEN`: a random value of 16+ characters; the pod does not start without it (never in the image or in git) | `kubectl describe secret` lists the keys |
 | 3.3 | Create the PVC (EBS gp3, start at 50 GiB, `allowVolumeExpansion: true`) | Bound |
 | 3.4 | Create an IAM role for the service account (IRSA) with `s3:PutObject`, `s3:GetObject`, `s3:ListBucket` on the archive bucket only | `aws sts get-caller-identity` inside the pod shows the role |
 | 3.5 | Apply the Deployment/Service/Ingress below with the SHA tag | Pod Ready |
@@ -254,7 +254,7 @@ The report index (5.7) and the archive cover the full period.
 
 | # | Action | Check |
 |---|---|---|
-| 6.1 | Keep the service reachable only over the VPN (D2); keep `SERVICE_API_TOKEN` as a second control for start/cancel. SSO in front is optional later | A request from outside the VPN is refused |
+| 6.1 | **PARTLY DONE.** Start/cancel are protected by a mandatory token (`SERVICE_REQUIRE_TOKEN`). Still open: protect reads. Ask the platform team who can reach the internal address; if it is wider than intended, build the opt-in read protection or put SSO in front (D2) | A start request without the token returns 401, the pod fails to start without a token; reads decided as above |
 | 6.2 | Use TLS on the ingress | HTTPS only |
 | 6.3 | Run the container as non-root (already `pwuser`), read-only root filesystem if the tests allow it, drop capabilities | Pod security admission passes |
 | 6.4 | Restrict who can start runs against `preprod` (`SERVICE_ALLOWED_USERS`, `SERVICE_ALLOWED_ENVS`) | A disallowed env or user returns 422 |

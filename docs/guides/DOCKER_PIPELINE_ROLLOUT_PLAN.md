@@ -89,7 +89,7 @@ Anything that runs on AWS uses the pull-through address (the platform team's cac
 Use that as the `image:` in the deployment manifest instead of the ghcr.io address.
 
 Run it with:
-- the `.env.test` values as environment variables (a Kubernetes Secret, never inside the image) plus `SERVICE_API_TOKEN`;
+- the `.env.test` values as environment variables (a Kubernetes Secret, never inside the image) plus `SERVICE_API_TOKEN` (required: the image does not start without it);
 - a persistent volume at `/data` (runs, logs, Allure results and reports, seed manifests); the container user is `pwuser`
   (set `fsGroup` so the volume is writable);
 - exactly **one** replica; readiness check `/api/health`; the website on port 8080;

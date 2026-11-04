@@ -63,17 +63,20 @@ Expected: `app http 200` and `db port reachable`. If one fails, fix the network 
 ## Step 4 - Start the service
 ```powershell
 docker volume create refua-data
-docker run -d --name refua-svc -p 8080:8080 -v refua-data:/data --env-file "$dir\env.test" $IMAGE
+$TOKEN = [Convert]::ToBase64String((1..24 | ForEach-Object { Get-Random -Maximum 256 }))   # any random value of 16+ characters
+docker run -d --name refua-svc -p 8080:8080 -v refua-data:/data --env-file "$dir\env.test" -e SERVICE_API_TOKEN=$TOKEN $IMAGE
 Start-Sleep 8
 Invoke-RestMethod http://localhost:8080/api/health
 ```
 Expected: `status ok` and `allure True`. If not: `docker logs refua-svc`.
+The image refuses to start without `SERVICE_API_TOKEN` (at least 16 characters; the log says `SERVICE_REQUIRE_TOKEN is on but SERVICE_API_TOKEN is not set`). Keep `echo $TOKEN` for step 5.
 
 ## Step 5 - Open the website and start a run
 1. Open http://localhost:8080
 2. System `meditik`, Suite `bdd`, Tag `home` (a small set, about 15 scenarios), User = your test user, Environment `test`, Clean on.
-3. Check the command preview matches what you expect, then **Start run**.
-4. Watch the live log. A healthy start shows `System: meditik | User: <your user> | Env: test`, then the DB seeding lines, then scenarios.
+3. Enter the token from step 4 in the **API token** field (starting and cancelling runs need it).
+4. Check the command preview matches what you expect, then **Start run**.
+5. Watch the live log. A healthy start shows `System: meditik | User: <your user> | Env: test`, then the DB seeding lines, then scenarios.
 
 ## Step 6 - Judge the result
 - Status ends as `passed` or `failed` (red scenarios are normal if the application has issues; what matters is that tests **ran**).

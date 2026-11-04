@@ -28,6 +28,18 @@ def _int(name: str, default: int) -> int:
         return default
 
 
+class SettingsError(RuntimeError):
+    """The configuration is unsafe or incomplete; the service refuses to start."""
+
+
+MIN_TOKEN_LENGTH = 16
+_TRUE = ("1", "true", "yes", "on")
+
+
+def _flag(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in _TRUE
+
+
 def parse_user_spec(spec: str) -> List[Tuple[int, int]]:
     """'4444401,4444400-4444499' -> [(4444401, 4444401), (4444400, 4444499)] (same grammar as the DB seed guard)."""
     ranges = []
@@ -51,6 +63,7 @@ class Settings:
     archive_bucket: Optional[str] = None  # ARCHIVE_S3_BUCKET: finished runs are copied to S3 (wins over archive_dir)
     archive_dir: Optional[Path] = None  # ARCHIVE_DIR: same layout in a local/mounted folder (no AWS needed)
     archive_prefix: str = "runs"  # ARCHIVE_PREFIX: key prefix inside the bucket/folder
+    require_token: bool = False  # SERVICE_REQUIRE_TOKEN: refuse to start without SERVICE_API_TOKEN (set in the image)
 
     @property
     def archive_enabled(self) -> bool:
@@ -112,16 +125,26 @@ def load_settings() -> Settings:
     users = (os.getenv("SERVICE_ALLOWED_USERS") or os.getenv("SEED_ALLOWED_PERSONAL_NUMBERS")
              or _users_from_env_file())
     envs = tuple(e.strip().lower() for e in os.getenv("SERVICE_ALLOWED_ENVS", "test,preprod").split(",") if e.strip())
+    token = os.getenv("SERVICE_API_TOKEN") or None
+    require_token = _flag("SERVICE_REQUIRE_TOKEN")
+    if require_token and not token:
+        raise SettingsError("SERVICE_REQUIRE_TOKEN is on but SERVICE_API_TOKEN is not set: without a token anyone who can "
+                            "reach the service can start runs. Set SERVICE_API_TOKEN (a random value of at least "
+                            f"{MIN_TOKEN_LENGTH} characters), or SERVICE_REQUIRE_TOKEN=false for a local-only run.")
+    if require_token and len(token) < MIN_TOKEN_LENGTH:
+        raise SettingsError(f"SERVICE_API_TOKEN must have at least {MIN_TOKEN_LENGTH} characters when "
+                            "SERVICE_REQUIRE_TOKEN is on.")
     return Settings(
         data_dir=data_dir,
         allure_bin=os.getenv("ALLURE_BIN") or shutil.which("allure"),
         max_concurrent_runs=max(1, _int("MAX_CONCURRENT_RUNS", 1)),
         retention_days=max(0, _int("RETENTION_DAYS", DEFAULT_RETENTION_DAYS)),
-        api_token=os.getenv("SERVICE_API_TOKEN") or None,
+        api_token=token,
         allowed_envs=envs,
         user_ranges=tuple(parse_user_spec(users)),
         run_timeout_minutes=max(1, _int("RUN_TIMEOUT_MINUTES", 180)),
         archive_bucket=os.getenv("ARCHIVE_S3_BUCKET") or None,
         archive_dir=Path(os.environ["ARCHIVE_DIR"]).resolve() if os.getenv("ARCHIVE_DIR") else None,
         archive_prefix=(os.getenv("ARCHIVE_PREFIX") or "runs").strip("/") or "runs",
+        require_token=require_token,
     )

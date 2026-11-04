@@ -25,7 +25,7 @@ Follow DOCKER_PIPELINE.md (environment variables, `/data` volume, Kubernetes ske
 - Optional: a scheduled job that calls `POST /api/runs` (replaces cron).
 
 ## 4. Protect it  [platform team]
-Reports and the run list are readable without a token; only start/cancel need `SERVICE_API_TOKEN`. Put the service behind
+Reports and the run list are readable without a token; only start/cancel need `SERVICE_API_TOKEN`, which the image requires (it will not start without one). Put the service behind
 the company network/VPN or an authenticating proxy (SSO) before exposing it.
 
 ## 5. Operations  [QA]
