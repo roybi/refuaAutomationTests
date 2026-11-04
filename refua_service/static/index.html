@@ -180,8 +180,12 @@ function renderRuns(runs) {
   }
 }
 
-const PAGE = 50;
-let refreshing = false, newest = [], older = [], moreAvailable = false, loadingMore = false;
+const PAGE = 50, MAX_LIMIT = 500;  // MAX_LIMIT is the most runs one API call returns
+let refreshing = false, newest = [], older = [], moreAvailable = false, loadingMore = false, lastFirstId = null, generation = 0;  // generation changes with the filters, so late answers for old filters are dropped
+
+// All changes to the run list go through this queue, so a refresh and a "Load more" can never interleave.
+let lock = Promise.resolve();
+function exclusive(task) { const run = lock.then(task); lock = run.catch(() => {}); return run; }
 
 function filterQuery() {
   const q = new URLSearchParams();
@@ -189,7 +193,18 @@ function filterQuery() {
     if ($(id).value) q.set(key, $(id).value);
   return q;
 }
-function visibleRuns() {  // the newest page refreshes live; older pages load on demand (a new run can shift them, so dedupe)
+async function fetchRange(offset, count) {  // `count` runs starting at `offset`, in chunks the API accepts
+  const got = [];
+  while (got.length < count) {
+    const want = Math.min(MAX_LIMIT, count - got.length);
+    const q = filterQuery(); q.set('limit', want); q.set('offset', offset + got.length);
+    const page = await api('/api/runs?' + q);
+    got.push(...page);
+    if (page.length < want) break;  // reached the end of the list
+  }
+  return got;
+}
+function visibleRuns() {  // the newest page refreshes live and the older pages follow it without a gap (see refresh)
   const seen = new Set(newest.map(r => r.id));
   return newest.concat(older.filter(r => !seen.has(r.id)));
 }
@@ -201,36 +216,51 @@ function renderAll() {
   return runs;
 }
 
-async function refresh() {
-  if (refreshing) return;  // overlapping refreshes would append the same log chunk twice
+function refresh() {
+  if (refreshing) return Promise.resolve();  // overlapping refreshes would append the same log chunk twice
   refreshing = true;
-  try {
-    const q = filterQuery(); q.set('limit', PAGE);
-    newest = await api('/api/runs?' + q);
-    if (!older.length) moreAvailable = newest.length === PAGE;
-    const runs = renderAll();
-    if (selected) await showDetail(runs.find(r => r.id === selected));
-    const active = runs.some(r => r.status === 'queued' || r.status === 'running');
-    $('refreshNote').textContent = active ? '(auto-refreshing)' : '';
-  } catch (e) { $('msg').textContent = e.message; $('msg').className = 'msg error'; }
-  finally { refreshing = false; }
+  return exclusive(async () => {
+    try {
+      const mine = generation;
+      const q = filterQuery(); q.set('limit', PAGE);
+      newest = await api('/api/runs?' + q);
+      const firstId = newest.length ? newest[0].id : null;
+      if (older.length && firstId !== lastFirstId) {
+        // New runs pushed the loaded older pages down: reload the same number of runs right behind the new head.
+        const wanted = older.length;
+        const reloaded = await fetchRange(newest.length, wanted);
+        if (mine !== generation) return;
+        older = reloaded;
+        moreAvailable = older.length === wanted;
+      }
+      lastFirstId = firstId;
+      if (!older.length) moreAvailable = newest.length === PAGE;
+      const runs = renderAll();
+      if (selected) await showDetail(runs.find(r => r.id === selected));
+      const active = runs.some(r => r.status === 'queued' || r.status === 'running');
+      $('refreshNote').textContent = active ? '(auto-refreshing)' : '';
+    } catch (e) { $('msg').textContent = e.message; $('msg').className = 'msg error'; }
+    finally { refreshing = false; }
+  });
 }
 
-async function loadMore() {
-  if (loadingMore) return;
+function loadMore() {
+  if (loadingMore) return Promise.resolve();
   loadingMore = true;
-  try {
-    const q = filterQuery(); q.set('limit', PAGE); q.set('offset', visibleRuns().length);
-    const page = await api('/api/runs?' + q);
-    older = older.concat(page);
-    moreAvailable = page.length === PAGE;
-    renderAll();
-  } catch (e) { $('msg').textContent = e.message; $('msg').className = 'msg error'; }
-  finally { loadingMore = false; }
+  return exclusive(async () => {
+    try {
+      const mine = generation;
+      const page = await fetchRange(newest.length + older.length, PAGE);
+      if (mine !== generation) return;
+      older = older.concat(page);
+      moreAvailable = page.length === PAGE;
+      renderAll();
+    } catch (e) { $('msg').textContent = e.message; $('msg').className = 'msg error'; }
+    finally { loadingMore = false; }
+  });
 }
 
-function filtersChanged() { older = []; moreAvailable = false; refresh(); }
-
+function filtersChanged() { generation++; older = []; moreAvailable = false; refresh(); }
 function select(id) { selected = id; logOffset = 0; $('log').textContent = ''; refresh(); }
 
 async function showDetail(run) {
