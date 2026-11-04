@@ -128,3 +128,6 @@ session-bypass-simulation.png
 
 # Local data of the runner website (runs, logs, Allure results/reports)
 .service_data/
+
+# Kiro CLI local settings (per-machine, not shared)
+.kiro/

@@ -8,6 +8,7 @@ Everything the service persists lives under ``DATA_DIR`` (mount a volume there):
     <DATA_DIR>/allure/reports/<run_id>/      generated Allure HTML report
     <DATA_DIR>/seeds/                        DB seed manifests (MEDITIK_SEED_MANIFEST_DIR)
     <DATA_DIR>/home/                         HOME of the test process (session files)
+    <DATA_DIR>/archive_pending/<run_id>      marker: finished run not yet copied to the archive (see archive.py)
 """
 
 import os
@@ -17,6 +18,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_RETENTION_DAYS = 60
 
 
 def _int(name: str, default: int) -> int:
@@ -46,6 +48,18 @@ class Settings:
     allowed_envs: Tuple[str, ...]
     user_ranges: Tuple[Tuple[int, int], ...]
     run_timeout_minutes: int
+    archive_bucket: Optional[str] = None  # ARCHIVE_S3_BUCKET: finished runs are copied to S3 (wins over archive_dir)
+    archive_dir: Optional[Path] = None  # ARCHIVE_DIR: same layout in a local/mounted folder (no AWS needed)
+    archive_prefix: str = "runs"  # ARCHIVE_PREFIX: key prefix inside the bucket/folder
+
+    @property
+    def archive_enabled(self) -> bool:
+        return bool(self.archive_bucket or self.archive_dir)
+
+    @property
+    def pending_dir(self) -> Path:
+        """One empty marker file per finished run whose archive upload has not succeeded yet."""
+        return self.data_dir / "archive_pending"
 
     @property
     def runs_dir(self) -> Path:
@@ -79,7 +93,7 @@ class Settings:
         return users
 
     def ensure_directories(self) -> None:
-        for directory in (self.runs_dir, self.results_dir, self.reports_dir,
+        for directory in (self.runs_dir, self.results_dir, self.reports_dir, self.pending_dir,
                           self.data_dir / "seeds", self.data_dir / "home"):
             directory.mkdir(parents=True, exist_ok=True)
 
@@ -102,9 +116,12 @@ def load_settings() -> Settings:
         data_dir=data_dir,
         allure_bin=os.getenv("ALLURE_BIN") or shutil.which("allure"),
         max_concurrent_runs=max(1, _int("MAX_CONCURRENT_RUNS", 1)),
-        retention_days=max(0, _int("RETENTION_DAYS", 30)),
+        retention_days=max(0, _int("RETENTION_DAYS", DEFAULT_RETENTION_DAYS)),
         api_token=os.getenv("SERVICE_API_TOKEN") or None,
         allowed_envs=envs,
         user_ranges=tuple(parse_user_spec(users)),
         run_timeout_minutes=max(1, _int("RUN_TIMEOUT_MINUTES", 180)),
+        archive_bucket=os.getenv("ARCHIVE_S3_BUCKET") or None,
+        archive_dir=Path(os.environ["ARCHIVE_DIR"]).resolve() if os.getenv("ARCHIVE_DIR") else None,
+        archive_prefix=(os.getenv("ARCHIVE_PREFIX") or "runs").strip("/") or "runs",
     )

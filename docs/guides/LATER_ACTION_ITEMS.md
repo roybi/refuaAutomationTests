@@ -29,7 +29,8 @@ Reports and the run list are readable without a token; only start/cancel need `S
 the company network/VPN or an authenticating proxy (SSO) before exposing it.
 
 ## 5. Operations  [QA]
-- Retention: `RETENTION_DAYS` (default 30) deletes old runs, results and reports; set 0 to keep everything.
+- Retention: `RETENTION_DAYS` (default 60) deletes old runs, results and reports from the volume; set 0 to keep everything.
+  The S3 archive (`ARCHIVE_S3_BUCKET`) expires through a bucket lifecycle rule. See [PIPELINE_IMPLEMENTATION_PLAN.md](PIPELINE_IMPLEMENTATION_PLAN.md).
 - Backups: snapshot the data volume if report history matters.
 - Updating: merge to `main` -> the workflow pushes a new image -> point the deployment to the new tag; data stays on the volume.
 

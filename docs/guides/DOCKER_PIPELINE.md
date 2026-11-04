@@ -20,6 +20,9 @@ with the built-in `GITHUB_TOKEN`. It runs on push to `main` (when image-relevant
 No AWS role, keys or ECR repositories are involved: DigitalIDF's ECR pull-through cache fetches the image from ghcr.io the first
 time it is pulled, at
 `373007444960.dkr.ecr.il-central-1.amazonaws.com/ghcr/digitalidf/refuaautomationtests/<image>:<tag>`.
+The rule is: take the `ghcr.io/digitalidf/...` address and replace `ghcr.io/` with `373007444960.dkr.ecr.il-central-1.amazonaws.com/ghcr/`.
+Some packages have no separate image name (`ghcr.io/digitalidf/<repository>:<tag>`); copy the exact address from the organization's
+Packages page. The platform team no longer supports the old "build and push to ECR" workflow.
 
 ## Run it without Docker (your machine)
 `runService.bat` (or `venv\Scripts\python.exe -m uvicorn refua_service.app:app --port 8080`) starts the same website on
@@ -67,7 +70,12 @@ environment variables (`.env.test` is loaded with `override=False`, so env vars 
 | `SERVICE_ALLOWED_ENVS` | `test,preprod` | Environments a run may target (`prod` is off by default) |
 | `MAX_CONCURRENT_RUNS` | `1` | Parallel runs (the rest queue) |
 | `RUN_TIMEOUT_MINUTES` | `180` | A run exceeding it is killed (`timed_out`) |
-| `RETENTION_DAYS` | `30` | Older runs, results and reports are deleted; `0` keeps everything |
+| `RETENTION_DAYS` | `60` | Older runs, results and reports are deleted from the volume; `0` keeps everything. A run still waiting for its archive upload is never deleted |
+| `ARCHIVE_S3_BUCKET` | unset | If set, every finished run is copied to this S3 bucket (credentials from the standard AWS chain, e.g. IRSA). Expiry and encryption are bucket settings |
+| `ARCHIVE_DIR` | unset | Same archive written to a folder instead (tests, local use). Ignored when `ARCHIVE_S3_BUCKET` is set |
+| `ARCHIVE_PREFIX` | `runs` | Key prefix of the archive |
+| `SERVICE_PORT` | `8080` | Port uvicorn listens on in the image |
+| `IMAGE_TAG`, `GIT_SHA` | set by the image build | Stored in every run record under `build` (with refua-core and Playwright versions) |
 | `SERVICE_API_TOKEN` | unset | If set, starting/cancelling runs needs header `X-API-Token`. Reads and reports stay open: restrict access at ingress/VPN |
 
 The pod also needs network access to the application under test and its database.
@@ -92,6 +100,20 @@ curl http://HOST:8080/api/options                 # valid values for every param
 Statuses: `queued`, `running`, `passed`, `failed` (pytest exit 1), `error` (other exit codes, e.g. 5 = nothing collected),
 `cancelled`, `timed_out`, `interrupted` (pod restarted mid-run). A second run for the same user and environment is
 rejected while one is active (the DB seed holds a per-user lock). `clean` only empties that run's own results folder.
+
+## Run archive (S3)
+
+With `ARCHIVE_S3_BUCKET` (or `ARCHIVE_DIR`) set, each finished run is copied off the pod:
+
+```
+<prefix>/YYYY/MM/DD/<run_id>/run.json            final run record: parameters, status, counts, build info
+                             console.log         pytest console output
+                             allure-results/...  raw Allure results (the HTML report is not archived)
+                             manifest.json       written last; present = the archive of this run is complete
+```
+
+The date is the run's creation date in UTC. A failed upload never changes the run result: it is retried at service start and after
+every run. Set the 60-day expiry as an S3 lifecycle rule on the prefix; the service does not delete archived objects.
 
 ## Where results are kept
 
