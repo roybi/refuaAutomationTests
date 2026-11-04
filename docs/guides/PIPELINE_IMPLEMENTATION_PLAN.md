@@ -147,13 +147,15 @@ Always reference the commit SHA.
 
 ### Phase 3 - Run it on AWS  [Platform, You]
 
+**Status 2026-11-04: manifests and scripts ready, nothing deployed.** Real manifests (kustomize, overlays `local` and `aws`), `create-secret.ps1` and a local rehearsal script are in `deploy/k8s/`; the step-by-step guide is [DEPLOY_TO_KUBERNETES.md](DEPLOY_TO_KUBERNETES.md). Two corrections found while checking the image: the container user is uid/gid **1001** (not 1000), and `/dev/shm` needs an in-memory volume for Chromium. The sketch below is kept for reference; the files in `deploy/k8s/` are the source of truth. This PC has no EKS context (only local kind clusters), so the AWS steps need the cluster access from the platform team.
+
 | # | Action | Check |
 |---|---|---|
 | 3.1 | Create namespace `refua-tests` | `kubectl get ns` |
 | 3.2 | Create Secret `refua-tests-env` from the `.env.<env>` content plus `SERVICE_API_TOKEN`: a random value of 16+ characters; the pod does not start without it (never in the image or in git) | `kubectl describe secret` lists the keys |
 | 3.3 | Create the PVC (EBS gp3, start at 50 GiB, `allowVolumeExpansion: true`) | Bound |
 | 3.4 | Create an IAM role for the service account (IRSA) with `s3:PutObject`, `s3:GetObject`, `s3:ListBucket` on the archive bucket only | `aws sts get-caller-identity` inside the pod shows the role |
-| 3.5 | Apply the Deployment/Service/Ingress below with the SHA tag | Pod Ready |
+| 3.5 | Apply the manifests with the SHA tag: `kubectl --context <name> apply -k deploy/k8s/overlays/aws` (guide: DEPLOY_TO_KUBERNETES.md, Part 2). This is also the first real test of the ECR pull (Phase 2 is assumed OK) | Pod Ready; `buildinfo.image_tag` equals the SHA |
 | 3.6 | Expose the service on an internal address only, reachable over the VPN (decision D2) | A request from outside the VPN is refused |
 | 3.7 | Allow the pod network egress to the TEST application, its database and S3 | A small run (tag `home`) passes |
 
@@ -187,7 +189,7 @@ spec:
     metadata: { labels: { app: refua-tests } }
     spec:
       serviceAccountName: refua-tests
-      securityContext: { fsGroup: 1000 }
+      securityContext: { fsGroup: 1001 }   # pwuser is uid/gid 1001 in our image
       containers:
         - name: runner
           image: 373007444960.dkr.ecr.il-central-1.amazonaws.com/ghcr/digitalidf/refuaautomationtests/refua-automation-tests:<sha>

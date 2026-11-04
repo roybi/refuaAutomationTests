@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Everything the runner needs except the Secret (see ../create-secret.ps1: the secret never lives in git).
+namespace: refua-tests
+
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - pvc.yaml
+  - deployment.yaml
+  - service.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/name: refua-tests
+      app.kubernetes.io/part-of: refua-automation
+    includeSelectors: false

@@ -1,0 +1,11 @@
+# Run data: run records, console logs, raw Allure results and HTML reports (60 days, RETENTION_DAYS).
+# Size and storage class are set per environment in the overlays.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: refua-tests-data
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 20Gi

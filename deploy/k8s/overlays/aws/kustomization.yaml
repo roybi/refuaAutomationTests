@@ -1,0 +1,25 @@
+# AWS (EKS). The image comes from the organization's ECR pull-through cache of ghcr.io.
+# Always deploy a commit SHA tag, never "latest" (ECR re-checks the upstream only about once a day).
+# Set the tag with:  kustomize edit set image refua-automation-tests=<ecr address>:<tag>   (or edit newTag).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+images:
+  - name: refua-automation-tests
+    newName: 373007444960.dkr.ecr.il-central-1.amazonaws.com/ghcr/digitalidf/refuaautomationtests/refua-automation-tests
+    newTag: f239b6656389
+
+patches:
+  - target:
+      kind: PersistentVolumeClaim
+      name: refua-tests-data
+    patch: |-
+      - op: replace
+        path: /spec/resources/requests/storage
+        value: 50Gi
+      - op: add
+        path: /spec/storageClassName
+        value: gp3
