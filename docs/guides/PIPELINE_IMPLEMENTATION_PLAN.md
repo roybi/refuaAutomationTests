@@ -89,7 +89,7 @@ Decisions behind it:
 | D4 | Is 60 days the final retention for the S3 archive, or only for the website? | 60 days for both; the lifecycle days are a parameter, so a longer archive for the LLM is a one-value change |
 | D5 | Do logs contain personal data or tokens? | **No** (confirmed 2026-11-04). No redaction step is built; if that changes, add one in `archive.py` before upload |
 | D6 | Which environments may be run from AWS (`test`, `preprod`; `prod` stays off)? | `SERVICE_ALLOWED_ENVS=test,preprod` |
-| D7 | Request to the platform team | Not drafted now. When Phase 3 starts, the AWS steps are tried by hand first and the request is written from what was actually needed |
+| D7 | Request to the platform team | **Updated 2026-11-04:** trying the AWS steps by hand is not possible for Phase 2 because the developer has no AWS CLI or CloudShell access. The Phase 2 request is written (see Phase 2). The Phase 3 and 4 request is still to be written from what the platform team says |
 
 ## 5. Phases
 
@@ -144,6 +144,20 @@ Only the tests image is deployed. The core image is used as its base at build ti
 
 Note: ECR re-checks the upstream registry for an already cached tag at most about once a day, so a moving tag like `latest` can be stale.
 Always reference the commit SHA.
+
+**Status 2026-11-04: waiting on the platform team.** The developer PC has no AWS CLI, no AWS profile and no CloudShell access, so the first pull cannot be made from our side. Either the platform team makes it, or it happens on its own when the pod is deployed (Phase 3): an `ImagePullBackOff` with the ECR address means 2.5 applies. What is known: the tests image `f239b6656389` is published on ghcr.io with digest `sha256:9a05879b185deafc58ee7e3a14cb255ae7ea66effed24520822a392b62bc6647` (build run for PR #14). The script `tools/ecr_pull_check.ps1` (PR #15) automates 2.3 and 2.4 for whoever has AWS access.
+
+Request to the platform team (copy and paste):
+
+> Hi, we publish our test-runner image to `ghcr.io/digitalidf/refuaautomationtests/refua-automation-tests` and want to deploy it from the ECR pull-through address. Could you check three things in account 373007444960, region il-central-1?
+>
+> 1. The pull-through cache rule for `ghcr.io` with prefix `ghcr` exists.
+> 2. A pull works: `docker pull 373007444960.dkr.ecr.il-central-1.amazonaws.com/ghcr/digitalidf/refuaautomationtests/refua-automation-tests:f239b6656389`. The digest should be `sha256:9a05879b185deafc58ee7e3a14cb255ae7ea66effed24520822a392b62bc6647`.
+> 3. The role our cluster nodes (or pods) use is allowed to pull from the `ghcr/` prefix in ECR.
+>
+> If the first pull fails, please send us the exact error. Also, which cluster and namespace should we deploy into, and who creates the S3 bucket and the pod's access role? We will send the details.
+
+Replace the tag and digest if a newer build has been published. The expected digest is in the build workflow log ("Push images" step).
 
 ### Phase 3 - Run it on AWS  [Platform, You]
 
