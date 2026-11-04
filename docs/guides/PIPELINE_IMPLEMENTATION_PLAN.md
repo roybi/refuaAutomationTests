@@ -1,6 +1,6 @@
 # Pipeline implementation plan: images -> GHCR -> ECR -> AWS runner with Allure history and 60-day log archive
 
-Status: plan, not yet executed. Written 2026-11-04.
+Status (2026-11-04): Phase 5 (repository changes) is done and merged or in review; Phase 1 is done on our side (images build and publish from `main`, `CORE_REF` set), the remaining items wait on others: core PR #1 (1.1) and the code-scanning alert (1.8). Phases 2 to 4, 6 and 7 are not started. See the status line of each phase.
 
 This document is the single list of actions to take the work from "runs on a developer machine" to "runs on AWS, always on,
 every report visible, every log kept 60 days and ready for a later LLM analysis agent".
@@ -25,17 +25,20 @@ Out of scope here: the LLM analysis agent itself. Section 9 only prepares its da
 
 | Area | State |
 |---|---|
-| Image build | `.github/workflows/build-push-image.yml` builds core then tests image, smoke-tests (starts the site, collects tests, launches Chromium), pushes to ghcr.io with `GITHUB_TOKEN`. Runs on push to `main` and manually |
-| Core version | Builds `feat/meditik-element-scraper` by default because core `main` is 1.0.1 and the tests need >= 2.0.1 |
-| Homepage + API | `refua_service` (FastAPI): start/cancel runs, live log, per-run Allure report at `/reports/<id>/`, `/reports/latest` |
+| Image build | `.github/workflows/build-push-image.yml` builds core then tests image, smoke-tests (starts the site, collects tests, launches Chromium), pushes to ghcr.io with `GITHUB_TOKEN`. Runs on push to `main` and manually. **Checked on GitHub 2026-11-04: all 3 runs on `main` succeeded** (PR #9, #10, #12; the last at 11:30 UTC, 1m46s). The secret `CORE_REPO_TOKEN` exists; the variable `CORE_REF` is set |
+| Core version | Builds `feat/meditik-element-scraper` (refua-core **2.0.1**); the repository variable `CORE_REF` is set to that branch (the workflow keeps the same value as its fallback). Core `main` is still **1.0.1**; the tests need >= 2.0.1. The merge request is core PR #1 (open since 2026-09-24, failing checks). The core repo has branches `main`, `feat/meditik-element-scraper`, `sync/latest-20260813` |
+| Homepage + API | `refua_service` (FastAPI): start/cancel runs, live log, per-run Allure report at `/reports/<id>/`, `/reports/latest`, `/reports/` (all reports), run list paging and filters (PR #13, open) |
 | Allure trends | After each run the previous report's `history/` is copied into the new results (`reports.py`) |
 | Storage | Everything under `DATA_DIR` (`/data`): run JSON, console log, raw Allure results, HTML reports |
-| Retention | `RETENTION_DAYS`, default **30**. `prune()` deletes the run JSON, log, raw results and report together, at service start and after each run |
+| Retention | `RETENTION_DAYS`, default **60** (changed from 30 in `17a872d`, merged). `prune()` deletes the run JSON, log, raw results and report together, at service start and after each run, and skips runs whose archive upload is pending |
 | Auth | None for reads. Only start/cancel need `SERVICE_API_TOKEN` |
-| Off-pod copy of logs/results | **None.** There is no S3 or other export code in `refua_service/` |
+| Off-pod copy of logs/results | **Built and merged** (`refua_service/archive.py`, S3 or folder). Not yet tried against a real bucket |
 | ECR | The organization already runs an ECR Pull Through Cache for `ghcr.io/digitalidf/...` (platform team). Only the image address in the manifest is ours to set. Not yet tested with this project's images |
+| PR checks | PR #13 fails only `ScanLi / Checking Scanning Results`: it fails when the repo has any open code-scanning alert. The one open alert (#23, `actions/excessive-secrets-exposure`, `.github/workflows/upload-test-plan-to-azure.yml` line 92, on `main`) is outside this pipeline. CodeQL, Dependabot, version check and the Dockerfile scans pass |
 
 ### Gaps this plan closes
+
+Status 2026-11-04: the gaps for retention, off-pod copy, run metadata, the 500-run limit, the liveness probe and `SERVICE_PORT` are closed by Phase 5 (code and docs). Still open: login for reads (Phase 6: VPN-only) and the mutable `latest` tag (deploy by SHA, Phase 3).
 
 | Gap | Why it matters | Phase |
 |---|---|---|
@@ -96,13 +99,14 @@ Owners: **You** = this repo's maintainer, **Platform** = platform/DevOps team, *
 
 | # | Action | Check |
 |---|---|---|
-| 1.1 | Merge `feat/meditik-element-scraper` (refua-core 2.0.1) into core `main`  [Core] | `main` reports version >= 2.0.1 |
-| 1.2 | Set repository variable `CORE_REF=main` | Workflow log prints core version 2.x |
-| 1.3 | Set secret `CORE_REPO_TOKEN` (fine-grained, Contents: read on `DigitalIDF/refuaAutomationCore`) | `gh secret list --repo DigitalIDF/refuaAutomationTests` shows it |
-| 1.4 | Merge the open work to `main` (workflow file must be on the default branch) | Workflow listed under Actions |
-| 1.5 | Run the workflow manually with push on; then confirm a push to `main` triggers it | Both packages visible under the organization's Packages with tags `<sha>` and `latest` |
-| 1.6 | Record the digest of the pushed tests image (`docker buildx imagetools inspect <ref>`) | Digest noted in the run summary or release notes |
-| 1.7 | Read the exact image addresses from the organization's Packages page (needed for Phase 2.1). Check the package access settings only if the Phase 2 pull fails | Addresses noted |
+| 1.1 | **OPEN, waiting on the core repo.** Merge `feat/meditik-element-scraper` (refua-core 2.0.1) into core `main`  [Core]. Checked 2026-11-04: `main` is still 1.0.1. The merge request already exists: [refuaAutomationCore PR #1](https://github.com/DigitalIDF/refuaAutomationCore/pull/1), open since 2026-09-24 (3 commits, 8 files, +1014 -94, mergeable, branch is 3 ahead and 0 behind `main`, `main` is protected, no review decision yet). Its checks fail: `CodeQL`, `ScanLi / Checking Scanning Results` and two `comment-and-fail` jobs. The core repo has one open code-scanning alert (#1, rule `WS-I011-PYTHON-00030`, `setup.py` line 7, on branch `sync/latest-20260813`), the same kind of repo-wide alert that fails ScanLi here (1.8). The job logs do not state the reason for `CodeQL` and `comment-and-fail`; the core owner has to open those runs. The PR head `018d4958591f` is exactly the core commit the images are built from | `main` reports version >= 2.0.1 |
+| 1.2 | **DONE for now (2026-11-04 11:56 UTC), final value after 1.1.** Repository variable `CORE_REF` is set to `feat/meditik-element-scraper` (same as the old hardcoded fallback, so builds do not change, but the value is now visible and editable in Settings). After 1.1 is merged, change it to `main` (`gh variable set CORE_REF --repo DigitalIDF/refuaAutomationTests --body main`). To pin a build to an exact core commit, use its SHA instead (the PR head is `018d4958591fc3b24d803831f635e61b12058fc7`). A manual run of the workflow can also override it with the `core_ref` input | Workflow log prints core version 2.x |
+| 1.3 | **DONE.** Secret `CORE_REPO_TOKEN` (fine-grained, Contents: read on `DigitalIDF/refuaAutomationCore`), created 2026-11-02 | `gh secret list --repo DigitalIDF/refuaAutomationTests` shows it (checked 2026-11-04) |
+| 1.4 | **DONE** for the Docker and archive work (PRs #9, #10, #12). PR #13 (run history, reports index) is open. The old `build-push-ecr.yml` is gone from `main` | Workflow "Docker - Build and push to GHCR (ECR pull-through)" is listed under Actions |
+| 1.5 | **DONE.** Push-to-`main` triggers the workflow: 3 successful runs (latest 2026-11-04 11:30 UTC, after PR #12). The log of that run shows: refua-core 2.0.1 installed, Chromium 141 launches, 735 tests collected, both images pushed with tags `<sha>` and `latest` (tests `107d8fffa8ce`, core `018d4958591f`). The Packages page itself was not opened | Both packages visible under the organization's Packages with tags `<sha>` and `latest` |
+| 1.6 | **DIGESTS RECORDED (from the build log of the run for `107d8ff`); build-info check still open.** Tests image `107d8fffa8ce` = `sha256:592bdcbe34a552f4a720f1cc5c77365c2ae2ef64b481ce40fa184a4b2ebc14ad`; core image `018d4958591f` = `sha256:b271358b4b1e0a8f464bbef93334366649989c677317256ae64587b6f752c219`. Compare the tests digest with what ECR returns after the first pull (Phase 2.4). Still to check: that the image reports `build.image_tag` and `git_sha` (step 5.4), which needs the image to be started (Phase 7.2) | Digest noted in the run summary or release notes |
+| 1.7 | **ADDRESSES KNOWN FROM THE BUILD LOG, Packages page not yet confirmed.** The workflow pushes to `ghcr.io/digitalidf/refuaautomationtests/refua-automation-tests` and `.../refua-automation-core`, so the ECR addresses are the ones in Phase 2. Open the organization's Packages page once to confirm them and the access settings (only needed if the Phase 2 pull fails). To list them with `gh`, refresh the login with the `read:packages` scope: `gh auth refresh -h github.com -s read:packages` | Addresses noted |
+| 1.8 | **OPEN, outside this pipeline.** PR check `ScanLi / Checking Scanning Results` fails while any code-scanning alert is open. Alert #23 (`actions/excessive-secrets-exposure`) is in `.github/workflows/upload-test-plan-to-azure.yml` line 92: the dynamic secret lookup `secrets[format('AZURE_IMPORT_PAT_{0}', inputs.upload_id)]` that gives each upload its own temporary PAT. Decide with the owner of the Azure import tool: fix it, or dismiss the alert with a reason. It is not caused by the Docker pipeline or PR #13 | PR checks green, or the alert dismissed with a recorded reason |
 
 ### Phase 2 - GHCR -> ECR pull-through (ECR PTC)  [You; Platform only if the first pull fails]
 
@@ -238,9 +242,9 @@ All values come from environment variables with defaults, following the existing
 | 5.3 | **DROPPED (D5).** Redaction is not built because the logs contain no personal data or tokens | - | - |
 | 5.4 | **DONE in code; verify after the next image build.** **Richer run metadata.** Each run JSON has `build`: `image_tag`, `git_sha`, `core_version`, `playwright_version`, `python_version`. `docker/tests/Dockerfile` now sets `IMAGE_TAG` and `GIT_SHA` from the existing `APP_VERSION` and `GIT_SHA` build args, which the workflow already passes | `docker/tests/Dockerfile`, `refua_service/buildinfo.py`, `refua_service/runs.py` | `GET /api/runs/<id>` shows `build`; checked in the image in Phase 7.2 |
 | 5.5 | **DONE (changed).** **Manifest for the future agent.** `manifest.json` per run (schema version, run id, status, archived_at, list of files with sizes), written last, so its presence means the archive is complete. The planned daily `index.jsonl` and `summary.json` are not built: S3 cannot append to an object, `run.json` already holds the summary, and listing `<prefix>/YYYY/MM/DD/` finds every run of a day | `refua_service/archive.py` | Tests check the manifest content and that it is the last object written |
-| 5.6 | **Complete run history on the homepage.** Add paging (`offset`) and filters (status, system, date) to `GET /api/runs`; the page gets "Load more" and filters. The current cap is 500 runs | `refua_service/app.py`, `refua_service/runs.py`, `refua_service/static/index.html` | 60 days of runs are all reachable from the page |
-| 5.7 | **Report index.** A `/reports/` page listing all stored reports newest first with status counts (the static mount has no directory listing today) | `refua_service/app.py` | Opening `/reports/` shows every report |
-| 5.8 | **PARTLY DONE.** **Docs.** Done: `SERVICE_PORT`, `ARCHIVE_S3_BUCKET`, `ARCHIVE_DIR`, `ARCHIVE_PREFIX`, the archive layout and the 60-day default in DOCKER_PIPELINE.md; the 60-day default in LATER_ACTION_ITEMS.md. Still open: liveness probe in the DOCKER_PIPELINE.md Kubernetes sketch, link to RUN_IMAGE_WITH_REAL_TESTS.md from the rollout plan | `docs/guides/*.md` | Docs match the code |
+| 5.6 | **DONE (PR #13).** The page reloads the already loaded older pages behind the new head when a new run arrives, so no run falls between the live page and the older pages (covered by `tools/tests/js/runlist_sim.js`, run from `test_homepage_run_list.py` when node is installed). **Complete run history on the homepage.** `GET /api/runs` takes `offset`, `status`, `system`, `date_from`, `date_to` (offset counts matching runs); the page has filters and "Load more" (newest page refreshes live, older pages load on demand) | `refua_service/app.py`, `refua_service/runs.py`, `refua_service/static/index.html` | 60 days of runs are all reachable from the page |
+| 5.7 | **DONE.** **Report index.** A `/reports/` page listing all stored reports newest first with status counts (the static mount has no directory listing today) | `refua_service/app.py` | Opening `/reports/` shows every report |
+| 5.8 | **DONE.** **Docs.** Done (all): `SERVICE_PORT`, `ARCHIVE_S3_BUCKET`, `ARCHIVE_DIR`, `ARCHIVE_PREFIX`, the archive layout and the 60-day default in DOCKER_PIPELINE.md; the 60-day default in LATER_ACTION_ITEMS.md. liveness probe in the DOCKER_PIPELINE.md Kubernetes sketch, link to RUN_IMAGE_WITH_REAL_TESTS.md from the rollout plan, paging/filters and `/reports/` described | `docs/guides/*.md` | Docs match the code |
 | 5.9 | **DONE.** **Default retention.** Code default of `RETENTION_DAYS` is now 60 (`DEFAULT_RETENTION_DAYS`) | `refua_service/settings.py` | Test for the default |
 
 Allure note: the trend widget keeps a limited number of past builds (Allure default is 20), so the trend graph will not show all 60 days.
@@ -325,4 +329,4 @@ Phase 2 needs no platform work unless the first pull fails (step 2.5).
 - Phases 1 to 4 and 6 completed, Phase 5 merged to `main`.
 - Every check in Phase 7 recorded as passed.
 - The homepage URL, the SHA currently deployed and the S3 bucket name are written in DOCKER_PIPELINE.md.
-- The platform team has confirmed the ECR rule, the IAM role, the lifecycle rule and the log retention in writing.
+- The ECR pull of our image addresses works (Phase 2.3), and the platform team has confirmed the IAM role, the lifecycle rule and the log retention in writing.

@@ -83,15 +83,16 @@ The pod also needs network access to the application under test and its database
 ## Using it
 
 **UI:** choose system, suite, tag, user, environment, "clean", then *Start run*. The page shows the equivalent
-`run_tests.py` command, live log, status, pass/fail counts and an *Open Allure report* link. `/reports/latest` opens the
-newest report.
+`run_tests.py` command, live log, status, pass/fail counts and an *Open Allure report* link. The runs table has filters
+(status, system, date range) and *Load more* for older runs. `/reports/` lists every stored report, newest first, and
+`/reports/latest` opens the newest one.
 
 **API:**
 
 ```bash
 curl -X POST http://HOST:8080/api/runs -H 'Content-Type: application/json' -H 'X-API-Token: …' \
   -d '{"system":"meditik","suite":"bdd","tags":"home","user":"4444401","env":"test","clean":true}'
-curl http://HOST:8080/api/runs                    # list
+curl 'http://HOST:8080/api/runs?limit=50&offset=50&status=failed&system=meditik&date_from=2026-11-01&date_to=2026-11-30'  # list (newest first; every filter optional; limit max 500)
 curl http://HOST:8080/api/runs/<id>/log?offset=0  # log (poll with next_offset)
 curl -X POST http://HOST:8080/api/runs/<id>/cancel
 curl http://HOST:8080/api/options                 # valid values for every parameter
@@ -147,6 +148,7 @@ spec:
           envFrom: [{ secretRef: { name: refua-tests-env } }]
           volumeMounts: [{ name: data, mountPath: /data }]
           readinessProbe: { httpGet: { path: /api/health, port: 8080 } }
+          livenessProbe:  { httpGet: { path: /api/health, port: 8080 }, initialDelaySeconds: 30, periodSeconds: 30, failureThreshold: 3 }
           resources: { requests: { memory: 2Gi, cpu: "1" } }
       volumes: [{ name: data, persistentVolumeClaim: { claimName: refua-tests-data } }]
 ```

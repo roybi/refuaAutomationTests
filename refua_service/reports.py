@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import time
 from pathlib import Path
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, List, Optional
 
 from .settings import Settings
 
@@ -14,10 +14,15 @@ GENERATE_TIMEOUT_SECONDS = 600
 
 def latest_report_id(settings: Settings) -> Optional[str]:
     """Newest generated report (run ids sort chronologically)."""
-    if not settings.reports_dir.exists():
-        return None
-    ids = sorted((p.name for p in settings.reports_dir.iterdir() if (p / "index.html").exists()), reverse=True)
+    ids = stored_report_ids(settings)
     return ids[0] if ids else None
+
+
+def stored_report_ids(settings: Settings) -> List[str]:
+    """Every generated report, newest first."""
+    if not settings.reports_dir.exists():
+        return []
+    return sorted((p.name for p in settings.reports_dir.iterdir() if (p / "index.html").exists()), reverse=True)
 
 
 def _carry_history(settings: Settings, results: Path) -> None:

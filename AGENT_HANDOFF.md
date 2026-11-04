@@ -184,6 +184,8 @@ Next action (when resumed): either (a) get a fresh manual login in the integrate
 
 | 2026-11-03 | Claude Code | Added the runner website (`refua_service`), two Docker images and the GHCR publish workflow; merged via PRs #5-#10 on DigitalIDF/refuaAutomationTests. Learned: org uses ghcr.io + ECR pull-through (no ECR repos by us). Fixed after real container runs: Playwright package pinned to the base image's version, seed guard accepts env vars, docs/setup kept in the image, strict smoke test (Chromium launch + full collection). Verified locally: Chromium launches, home dashboard scenario passes in the container, seed plan read-only works, service persists data across restart. No full website-started run against TEST yet (writes seed rows); ECR pull and Kubernetes deploy still open (see docs/guides/LATER_ACTION_ITEMS.md). 92 tests pass in tools/tests. |
 
+| 2026-11-04 | Claude Code | Archive-to-S3 feature merged to DigitalIDF/main (`17a872d`, plan: docs/guides/PIPELINE_IMPLEMENTATION_PLAN.md). Then plan steps 5.6-5.8 on branch `feat/run-history-reports-index`: `GET /api/runs` paging + filters (offset, status, system, date_from, date_to), homepage filters + "Load more", `/reports/` index page, liveness probe and links in the docs. 107 tests pass in tools/tests (`TEST_ENV=test`). Still open in the plan: Phases 1-4, 6, 7 (build/publish, ECR pull, AWS deploy, retention, verification) and checking `build.image_tag` after the next image build. |
+
 ## PROJECT QUICK REFERENCE (static — rarely changes)
 
 - **Project**: refuaAutomationTests — Playwright/pytest test automation for the MEDITEK medical app.

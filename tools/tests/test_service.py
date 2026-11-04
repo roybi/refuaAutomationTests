@@ -231,3 +231,53 @@ def test_prune_removes_only_expired_inactive_runs(tmp_path):
     assert reports.prune(config, {"active-run"}) == 1
     assert not (config.runs_dir / "old-run.json").exists() and not (config.results_dir / "old-run").exists()
     assert (config.runs_dir / "fresh-run.json").exists() and (config.runs_dir / "active-run.json").exists()
+
+
+def _seed_runs(config, specs):
+    """Write finished run records: (id, status, system, created_at, summary)."""
+    config.ensure_directories()
+    for run_id, status, system, created, summary in specs:
+        record = {"id": run_id, "status": status, "system": system, "suite": "all", "tags": None, "user": "4444401",
+                  "env": "test", "created_at": created, "started_at": created, "summary": summary}
+        (config.runs_dir / f"{run_id}.json").write_text(json.dumps(record), encoding="utf-8")
+
+
+def test_run_list_pages_and_filters(service):
+    client, app_module = service
+    _seed_runs(app_module.settings, [
+        ("20260101-000000-aaaaaa", "passed", "meditik", "2026-01-01T10:00:00+00:00", None),
+        ("20260102-000000-bbbbbb", "failed", "meditik", "2026-01-02T10:00:00+00:00", None),
+        ("20260103-000000-cccccc", "passed", "other", "2026-01-03T10:00:00+00:00", None),
+        ("20260104-000000-dddddd", "passed", "meditik", "2026-01-04T10:00:00+00:00", None),
+    ])
+    ids = lambda **params: [r["id"][:8] for r in client.get("/api/runs", params=params).json()]  # noqa: E731
+    assert ids() == ["20260104", "20260103", "20260102", "20260101"]
+    assert ids(limit=2) == ["20260104", "20260103"]
+    assert ids(limit=2, offset=2) == ["20260102", "20260101"]
+    assert ids(status="passed") == ["20260104", "20260103", "20260101"]
+    assert ids(status="passed", limit=1, offset=1) == ["20260103"]  # offset counts matching runs only
+    assert ids(system="meditik", date_from="2026-01-02") == ["20260104", "20260102"]
+    assert ids(date_from="2026-01-02", date_to="2026-01-03") == ["20260103", "20260102"]
+    assert client.get("/api/runs", params={"date_from": "yesterday"}).status_code == 422
+    assert client.get("/api/runs", params={"offset": -1}).status_code == 422
+
+
+def test_reports_index_lists_every_stored_report_newest_first(service):
+    client, app_module = service
+    config = app_module.settings
+    _seed_runs(config, [
+        ("20260101-000000-aaaaaa", "passed", "meditik", "2026-01-01T10:00:00+00:00",
+         {"passed": 3, "failed": 1, "broken": 1, "skipped": 2, "unknown": 0, "total": 7}),
+        ("20260102-000000-bbbbbb", "failed", "meditik", "2026-01-02T10:00:00+00:00", None),
+    ])
+    for run_id in ("20260101-000000-aaaaaa", "20260102-000000-bbbbbb", "20260103-000000-orphan"):
+        (config.reports_dir / run_id).mkdir()
+        (config.reports_dir / run_id / "index.html").write_text("<html></html>", encoding="utf-8")
+    (config.reports_dir / "20260104-000000-nohtml").mkdir()  # no index.html: not a report
+    for url in ("/reports/", "/reports"):
+        page = client.get(url)
+        assert page.status_code == 200 and "text/html" in page.headers["content-type"]
+        text = page.text
+        assert text.index("20260103-000000-orphan") < text.index("20260102-000000-bbbbbb") < text.index("20260101-000000-aaaaaa")
+        assert "nohtml" not in text and "3 passed, 2 failed, 2 skipped" in text
+    assert client.get("/reports/20260101-000000-aaaaaa/").status_code == 200  # the static mount still serves reports
