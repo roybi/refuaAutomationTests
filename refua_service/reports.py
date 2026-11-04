@@ -61,14 +61,19 @@ def generate_report(settings: Settings, run_id: str, log: Callable[[str], None])
 
 
 def prune(settings: Settings, active_ids: set) -> int:
-    """Delete runs older than RETENTION_DAYS (0 keeps everything); returns how many were removed."""
+    """Delete runs older than RETENTION_DAYS (0 keeps everything); returns how many were removed.
+
+    Runs queued, running, or still waiting for their archive upload are never deleted.
+    """
     if not settings.retention_days:
         return 0
     cutoff = time.time() - settings.retention_days * 86400
+    pending = ({marker.name for marker in settings.pending_dir.iterdir()}
+               if settings.archive_enabled and settings.pending_dir.exists() else set())
     removed = 0
     for meta in settings.runs_dir.glob("*.json"):
         run_id = meta.stem
-        if run_id in active_ids or meta.stat().st_mtime >= cutoff:
+        if run_id in active_ids or run_id in pending or meta.stat().st_mtime >= cutoff:
             continue
         shutil.rmtree(settings.results_dir / run_id, ignore_errors=True)
         shutil.rmtree(settings.reports_dir / run_id, ignore_errors=True)

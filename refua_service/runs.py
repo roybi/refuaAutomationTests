@@ -1,6 +1,7 @@
 """Run lifecycle: queue, execute ``run_tests.py`` as a subprocess, persist state, build the report."""
 
 import json
+import logging
 import os
 import secrets
 import signal
@@ -12,10 +13,12 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
-from . import reports
+from . import buildinfo, reports
+from .archive import Archiver
 from .settings import REPO_ROOT, Settings
 
 ACTIVE = ("queued", "running")
+logger = logging.getLogger("refua_service.runs")
 LOG_CHUNK_BYTES = 64 * 1024
 
 
@@ -37,8 +40,13 @@ class RunManager:
         self._closing = False
         self._live: Dict[str, dict] = {}  # queued/running runs: the source of truth until they finish
         self._executor = ThreadPoolExecutor(max_workers=settings.max_concurrent_runs, thread_name_prefix="run")
+        self.archiver = Archiver(settings)
+        # One archive worker, separate from the run workers, so an upload never delays the next run.
+        self._archive_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="archive")
         self._mark_interrupted()
         reports.prune(settings, set())
+        if self.archiver.enabled:
+            self._archive_executor.submit(self._archive_pending)  # uploads that failed before a restart
 
     # ---- persistence -------------------------------------------------------------------------
 
@@ -114,6 +122,7 @@ class RunManager:
                 "id": run_id, "status": "queued", "system": system, "suite": suite, "tags": tags or None,
                 "user": user, "env": env, "clean": clean, "created_at": _now(), "started_at": None,
                 "finished_at": None, "exit_code": None, "command": None, "report_url": None, "summary": None,
+                "build": buildinfo.collect(),
             }
             self._write(run)
             self._live[run_id] = run
@@ -160,6 +169,7 @@ class RunManager:
         for process in list(self._processes.values()):
             self._terminate(process)
         self._executor.shutdown(wait=False, cancel_futures=True)
+        self._archive_executor.shutdown(wait=False, cancel_futures=True)  # markers survive; retried at next start
 
     # ---- execution ---------------------------------------------------------------------------
 
@@ -230,4 +240,13 @@ class RunManager:
         summary = reports.generate_report(self.settings, run_id, lambda line: self._append_log(run_id, line))
         self._update(run_id, status=status, exit_code=exit_code, finished_at=_now(), summary=summary,
                      report_url=f"/reports/{run_id}/" if summary is not None else None)
+        if self.archiver.enabled:
+            self.archiver.mark_pending(run_id)  # before prune, so the run is not deleted before it is uploaded
+            self._archive_executor.submit(self._archive_pending)
         reports.prune(self.settings, {r["id"] for r in self.list(limit=200) if r["status"] in ACTIVE})
+
+    def _archive_pending(self) -> None:
+        try:
+            self.archiver.retry_pending(self.get)
+        except Exception:  # noqa: BLE001 - the worker must survive; the markers stay and the next call retries
+            logger.exception("archiving pending runs failed")
