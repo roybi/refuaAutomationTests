@@ -88,15 +88,15 @@ try {
     catch { $code = [int]$_.Exception.Response.StatusCode }
     Report 'start without token is refused' ($code -eq 401) "HTTP $code"
 
-    $info = Kube exec deploy/refua-tests -- python -c "import json; from refua_service import buildinfo; print(json.dumps(buildinfo.collect()))" | ConvertFrom-Json
+    $info = Kube exec deploy/refua-tests '--' python -c "import json; from refua_service import buildinfo; print(json.dumps(buildinfo.collect()))" | ConvertFrom-Json
     Report 'build info image_tag equals the deployed tag' ($info.image_tag -eq $tag) "image_tag=$($info.image_tag) core=$($info.core_version)"
 
-    Kube exec deploy/refua-tests -- sh -c 'echo rehearsal > /data/rehearsal-marker'
+    Kube exec deploy/refua-tests '--' sh -c 'echo rehearsal > /data/rehearsal-marker'
     Kube delete pod -l app=refua-tests --wait=true | Out-Null
     & kubectl --context $context -n $namespace rollout status deployment/refua-tests --timeout=300s
-    $marker = (Kube exec deploy/refua-tests -- cat /data/rehearsal-marker) -join ''
+    $marker = (Kube exec deploy/refua-tests '--' cat /data/rehearsal-marker) -join ''
     Report 'data survives a pod restart (volume)' ($marker.Trim() -eq 'rehearsal')
-    Kube exec deploy/refua-tests -- rm -f /data/rehearsal-marker | Out-Null
+    Kube exec deploy/refua-tests '--' rm -f /data/rehearsal-marker | Out-Null
 }
 catch {
     Write-Host "ERROR: $($_.Exception.Message)" -ForegroundColor Red

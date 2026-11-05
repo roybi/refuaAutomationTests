@@ -147,7 +147,7 @@ Always reference the commit SHA.
 
 ### Phase 3 - Run it on AWS  [Platform, You]
 
-**Status 2026-11-04: manifests and scripts ready, nothing deployed.** Real manifests (kustomize, overlays `local` and `aws`), `create-secret.ps1` and a local rehearsal script are in `deploy/k8s/`; the step-by-step guide is [DEPLOY_TO_KUBERNETES.md](DEPLOY_TO_KUBERNETES.md). Two corrections found while checking the image: the container user is uid/gid **1001** (not 1000), and `/dev/shm` needs an in-memory volume for Chromium. The sketch below is kept for reference; the files in `deploy/k8s/` are the source of truth. This PC has no EKS context (only local kind clusters), so the AWS steps need the cluster access from the platform team.
+**Status 2026-11-05: local rehearsal on a kind cluster passed (image `f239b6656389`): pod ready, 1 replica, health OK, start without token refused (401), build info `image_tag` equals the tag with refua-core 2.0.1, data survives a pod restart. Nothing is deployed to AWS yet.** Real manifests (kustomize, overlays `local` and `aws`), `create-secret.ps1` and a local rehearsal script are in `deploy/k8s/`; the step-by-step guide is [DEPLOY_TO_KUBERNETES.md](DEPLOY_TO_KUBERNETES.md). Two corrections found while checking the image: the container user is uid/gid **1001** (not 1000), and `/dev/shm` needs an in-memory volume for Chromium. The sketch below is kept for reference; the files in `deploy/k8s/` are the source of truth. This PC has no EKS context (only local kind clusters), so the AWS steps need the cluster access from the platform team.
 
 | # | Action | Check |
 |---|---|---|
