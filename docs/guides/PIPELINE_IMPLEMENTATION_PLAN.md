@@ -147,6 +147,8 @@ Always reference the commit SHA.
 
 ### Phase 3 - Run it on AWS  [Platform, You]
 
+**Blocked 2026-11-05 on the platform team (Kubernetes Support issue).** Role `General-Developer-PS` in account 119268605376 cannot create secrets (`secretsmanager:CreateSecret`) or view pull-through cache rules. The platform's CI test runner (`digitalidf-actions` `test-runner.yaml`) is Node/npm only, so it cannot run this Python suite and does not replace the service. Open questions sent: namespace and cluster, team name for `eks/secrets/team-<team>/`, how the secret reaches the pod, ECR pull permission, internal exposure.
+
 **Status 2026-11-05: local rehearsal on a kind cluster passed (image `f239b6656389`): pod ready, 1 replica, health OK, start without token refused (401), build info `image_tag` equals the tag with refua-core 2.0.1, data survives a pod restart. Nothing is deployed to AWS yet.** Real manifests (kustomize, overlays `local` and `aws`), `create-secret.ps1` and a local rehearsal script are in `deploy/k8s/`; the step-by-step guide is [DEPLOY_TO_KUBERNETES.md](DEPLOY_TO_KUBERNETES.md). Two corrections found while checking the image: the container user is uid/gid **1001** (not 1000), and `/dev/shm` needs an in-memory volume for Chromium. The sketch below is kept for reference; the files in `deploy/k8s/` are the source of truth. This PC has no EKS context (only local kind clusters), so the AWS steps need the cluster access from the platform team.
 
 | # | Action | Check |
@@ -218,6 +220,8 @@ Pick the memory limit after measuring a real run: Chromium plus Allure generatio
 A plain Docker host (D1 alternative) uses the same image with `docker run -v refua-data:/data --env-file ... -p 8080:8080`.
 
 ### Phase 4 - Storage and retention (60 days)  [Platform, You]
+
+**Status 2026-11-05: parked.** Not needed for the first deployment. The service works without the S3 archive (run data stays on the volume). Resume after the first pod runs on AWS; the bucket and pod role are then a separate platform request.
 
 | # | Action | Check |
 |---|---|---|
