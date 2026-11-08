@@ -17,6 +17,8 @@ spec:
         app: refua-tests
     spec:
       serviceAccountName: refua-tests
+      # The service never calls the Kubernetes API. (AWS access through Pod Identity does not use this token.)
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001   # pwuser in the image (checked: uid=1001 gid=1001)
@@ -61,6 +63,13 @@ spec:
               cpu: "1"
             limits:
               memory: 4Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            seccompProfile:
+              type: RuntimeDefault
+            capabilities:
+              drop:
+                - ALL
       volumes:
         - name: data
           persistentVolumeClaim:
