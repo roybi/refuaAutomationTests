@@ -1,0 +1,98 @@
+# Values for refua-tests - test environment (DRAFT for the medical-helm repo: refua-tests/test.yaml)
+# Usage: helm template . -f refua-tests/test.yaml
+#
+# refua-tests is an internal service that starts Playwright/pytest runs against the TEST environment
+# and serves run history and Allure reports. One replica only: the run queue and the DB-seed lock live in the process.
+#
+# Secret values never go in this file. They live in AWS Secrets Manager (eks/secrets/team-refua/refua-tests/test)
+# and arrive as env vars through the ExternalSecret "refua-tests-test-externalsecrets", which writes the Kubernetes
+# secret "refua-tests-test-secret-manager". Its keys: AUTOMATION_SECRET, ORM_DB_USER, ORM_DB_PASSWORD, SERVICE_API_TOKEN.
+#
+# Known gaps against this chart (see the notes at the bottom): no persistent volume, /tmp is the only writable path,
+# /dev/shm stays at the 64 MB default, and no route is defined until an internal-only gateway is confirmed.
+
+project: refua-tests
+namespace: team-refua
+env: test
+secretName: refua-tests-test-secret-manager
+appNames:
+  - service
+service:
+  enabled: true
+  nameOverride: refua-tests
+  kind: node
+  replicas: 1
+  strategy:
+    type: Recreate
+  port: 8080
+  image:
+    # Same ECR pull-through prefix as the chart default (<registry>/ghcr/digitalidf), with our repository path.
+    repository: 373007444960.dkr.ecr.il-central-1.amazonaws.com/ghcr/digitalidf/refuaautomationtests/refua-automation-tests
+    tag: f239b6656389
+  configMap:
+    name: refua-tests-configmap
+    data:
+      # Service. The chart's only writable path is the /tmp emptyDir, so run data is lost when the pod restarts.
+      DATA_DIR: "/tmp/refua-data"
+      RETENTION_DAYS: "60"
+      SERVICE_ALLOWED_ENVS: "test"
+      SERVICE_REQUIRE_TOKEN: "true"
+      # Application under test (not secret).
+      TEST_BASE_URL: "https://meditik.test.medical.idf.il/home"
+      TEST_API_ENDPOINT: "https://api-test.meditek.app"
+      TEST_WEBSOCKET_URL: "wss://ws-test.meditek.app"
+      TEST_API_TIMEOUT: "30"
+      TEST_SESSION_TTL: "259200"
+      TEST_LOG_LEVEL: "INFO"
+      TEST_USER_PHONE: "+1234567890"
+      # TEST database (host and names only; user and password are in the secret).
+      ORM_DB_HOST: "meditik.cjo4y2jzzy7c.il-central-1.rds.amazonaws.com"
+      ORM_DB_PORT: "5432"
+      ORM_DB_DATABASE: "meditik"
+      ORM_DB_SCHEMA: "public"
+      DISABLE_SSL: "true"
+      # DB seed.
+      SEED_ALLOWED_PERSONAL_NUMBERS: "4444400-4444499"
+      MEDITIK_SEED_ENV: "test"
+      MEDITIK_SEED_DATASET: "all"
+      MEDITIK_SEED_CLEANUP: "report"
+      # Test feature flags.
+      TEST_ENABLE_VISUAL_REGRESSION: "true"
+      TEST_ENABLE_PERFORMANCE_TESTING: "false"
+      TEST_ENABLE_ACCESSIBILITY_TESTING: "true"
+  resources:
+    requests:
+      memory: 2Gi
+      cpu: "1"
+    limits:
+      memory: 4Gi
+
+# Route: intentionally not defined yet. The only gateway seen in this repo is public-medical (digitalidf-gateway),
+# and the service has no login on its read pages. Add this block only after the platform team confirms the gateway
+# is internal-only, or after read access is protected.
+# httpRoutes:
+#   - name: refua-tests-http-route-test
+#     labels:
+#       app: refua-tests
+#       env: test
+#       project: refua-tests
+#     gateway:
+#       name: <internal gateway>
+#       namespace: digitalidf-gateway
+#     hostnames:
+#       - "refua-tests.test.medical.idf.il"
+#     rules:
+#       - path: /
+#         service: refua-tests
+#         port: 8080
+
+# Notes on how this chart differs from deploy/k8s/base/deployment.yaml:
+# - Volumes: the chart mounts only an emptyDir at /tmp (no PVC, no extra volumes). Run history, logs and reports are
+#   therefore ephemeral. Persistence needs a chart change (extra volumes) or the S3 archive (parked, Phase 4).
+# - /dev/shm: stays at the 64 MB default. Chromium may crash on heavy pages. Fix: a memory emptyDir at /dev/shm
+#   (chart change) or the --disable-dev-shm-usage launch argument in the core framework.
+# - User: the chart forces runAsUser 1000 / runAsGroup 3000, with a read-only root filesystem. The image's pwuser is 1001.
+#   Not tested: whether the service and Chromium start as uid 1000 with only /tmp writable.
+# - Probes: the chart defines none. Kubernetes only checks that the process runs; /api/health is not probed.
+# - Service account: the pod uses the namespace default. Terraform also created refua-tests-test-secrets-sa for
+#   External Secrets. The pod does not need it.

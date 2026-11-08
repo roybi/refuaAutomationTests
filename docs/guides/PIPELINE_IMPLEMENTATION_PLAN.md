@@ -161,13 +161,24 @@ Replace the tag and digest if a newer build has been published. The expected dig
 
 ### Phase 3 - Run it on AWS  [Platform, You]
 
+**Blocked 2026-11-05 on the platform team (Kubernetes Support issue).** Role `General-Developer-PS` in account 119268605376 cannot create secrets (`secretsmanager:CreateSecret`) or view pull-through cache rules. The platform's CI test runner (`digitalidf-actions` `test-runner.yaml`) is Node/npm only, so it cannot run this Python suite and does not replace the service. Open questions sent: namespace and cluster, team name for `eks/secrets/team-<team>/`, how the secret reaches the pod, ECR pull permission, internal exposure.
+
+**Status 2026-11-08: the platform route is a Terraform PR plus a Helm values file, not a Kubernetes Support issue.**
+- **Secret: done, values entered.** [PR #7771](https://github.com/DigitalIDF/digitalidf-gitops-platform/pull/7771) (`app-refua-tests.tf`, merged and applied) created the secret `eks/secrets/team-refua/refua-tests/test`, the service account `refua-tests-test-secrets-sa` and the External Secrets sync into the existing namespace `team-refua` (the Kubernetes secret is `refua-tests-test-secret-manager`). A team member whose Department tag is allowed entered four keys: `AUTOMATION_SECRET`, `ORM_DB_USER`, `ORM_DB_PASSWORD`, `SERVICE_API_TOKEN`. Plain settings go in a Helm config map. Nothing was verified inside the cluster (no cluster access).
+- **Open: write access for our own role.** The secret's resource policy (`iam/resource-policy` in `digitalidf-gitops-modules`, statement `GeneralDeveloperPSDenyAccess`) denies Get/Put/UpdateSecret to `General-Developer-PS` unless the session tag `Department` is in `permitted_departments`. Our department ID (`23c950b6-d3d2-4127-a36e-966ddc7eaa7d`) is already in the list, yet `PutSecretValue` was denied for the developer. Cause unknown: the session may carry a different tag value. A question for the platform team; until then value changes go through a colleague whose tag matches.
+- **Deployment: draft values file in `deploy/medical-helm/refua-tests/test.yaml`**, for the `medical-helm` repo (`refua-tests/test.yaml`; contact in its README). The chart's default image registry is the same ECR pull-through prefix, which suggests the cache rule exists (unverified for our repository). Gaps against the chart: no PVC or extra volumes (only `/tmp` is writable, so run data is lost on restart), forced uid 1000 / gid 3000 with a read-only root, no probes, and only a `public-medical` gateway is known for routes (none defined: the read pages have no login).
+- **Checked locally with the chart's security settings** (uid 1000 / gid 3000, read-only root, `/tmp` tmpfs, all capabilities dropped, `/dev/shm` 64 MB): the service starts and `/api/health` returns ok; run data is written under `DATA_DIR=/tmp/refua-data`; Chromium 141 launches and renders and screenshots five synthetic pages. Not tested: a real MediTik run, a full-length run's memory, and any of this on EKS.
+- **Still open:** ECR pull permission for the cluster, an internal-only route, the `medical-helm` PR (and a chart change if persistent storage or a larger `/dev/shm` is needed), the Department tag question, the S3 bucket and pod role (Phase 4, parked).
+
+**Status 2026-11-05: local rehearsal on a kind cluster passed (image `f239b6656389`): pod ready, 1 replica, health OK, start without token refused (401), build info `image_tag` equals the tag with refua-core 2.0.1, data survives a pod restart. Nothing is deployed to AWS yet.** Real manifests (kustomize, overlays `local` and `aws`), `create-secret.ps1` and a local rehearsal script are in `deploy/k8s/`; the step-by-step guide is [DEPLOY_TO_KUBERNETES.md](DEPLOY_TO_KUBERNETES.md). Two corrections found while checking the image: the container user is uid/gid **1001** (not 1000), and `/dev/shm` needs an in-memory volume for Chromium. The sketch below is kept for reference; the files in `deploy/k8s/` are the source of truth. This PC has no EKS context (only local kind clusters), so the AWS steps need the cluster access from the platform team.
+
 | # | Action | Check |
 |---|---|---|
 | 3.1 | Create namespace `refua-tests` | `kubectl get ns` |
 | 3.2 | Create Secret `refua-tests-env` from the `.env.<env>` content plus `SERVICE_API_TOKEN`: a random value of 16+ characters; the pod does not start without it (never in the image or in git) | `kubectl describe secret` lists the keys |
 | 3.3 | Create the PVC (EBS gp3, start at 50 GiB, `allowVolumeExpansion: true`) | Bound |
 | 3.4 | Create an IAM role for the service account (IRSA) with `s3:PutObject`, `s3:GetObject`, `s3:ListBucket` on the archive bucket only | `aws sts get-caller-identity` inside the pod shows the role |
-| 3.5 | Apply the Deployment/Service/Ingress below with the SHA tag | Pod Ready |
+| 3.5 | Apply the manifests with the SHA tag: `kubectl --context <name> apply -k deploy/k8s/overlays/aws` (guide: DEPLOY_TO_KUBERNETES.md, Part 2). This is also the first real test of the ECR pull (Phase 2 is assumed OK) | Pod Ready; `buildinfo.image_tag` equals the SHA |
 | 3.6 | Expose the service on an internal address only, reachable over the VPN (decision D2) | A request from outside the VPN is refused |
 | 3.7 | Allow the pod network egress to the TEST application, its database and S3 | A small run (tag `home`) passes |
 
@@ -201,7 +212,7 @@ spec:
     metadata: { labels: { app: refua-tests } }
     spec:
       serviceAccountName: refua-tests
-      securityContext: { fsGroup: 1000 }
+      securityContext: { fsGroup: 1001 }   # pwuser is uid/gid 1001 in our image
       containers:
         - name: runner
           image: 373007444960.dkr.ecr.il-central-1.amazonaws.com/ghcr/digitalidf/refuaautomationtests/refua-automation-tests:<sha>
@@ -230,6 +241,8 @@ Pick the memory limit after measuring a real run: Chromium plus Allure generatio
 A plain Docker host (D1 alternative) uses the same image with `docker run -v refua-data:/data --env-file ... -p 8080:8080`.
 
 ### Phase 4 - Storage and retention (60 days)  [Platform, You]
+
+**Status 2026-11-05: parked.** Not needed for the first deployment. The service works without the S3 archive (run data stays on the volume). Resume after the first pod runs on AWS; the bucket and pod role are then a separate platform request.
 
 | # | Action | Check |
 |---|---|---|

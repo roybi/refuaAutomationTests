@@ -119,8 +119,8 @@ every run. Set the 60-day expiry as an S3 lifecycle rule on the prefix; the serv
 
 ## Where results are kept
 
-Everything under `/data` (mount a PersistentVolumeClaim; the container runs as user `pwuser`, uid 1000 in the Playwright
-image, so set `fsGroup: 1000`):
+Everything under `/data` (mount a PersistentVolumeClaim; the container runs as user `pwuser`, uid 1001 in this image (checked with `docker exec <container> id`)
+so set `fsGroup: 1001`):
 
 ```
 /data/runs/<id>.json | .log      run parameters, status, exit code, console output
@@ -141,7 +141,7 @@ spec:
   strategy: { type: Recreate }
   template:
     spec:
-      securityContext: { fsGroup: 1000 }
+      securityContext: { fsGroup: 1001 }
       containers:
         - name: runner
           image: 373007444960.dkr.ecr.il-central-1.amazonaws.com/ghcr/digitalidf/refuaautomationtests/refua-automation-tests:<tag>

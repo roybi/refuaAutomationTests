@@ -1,0 +1,81 @@
+# One replica only: the run queue and the test processes live inside the service, and the DB seed
+# holds a per-user lock. Recreate (not RollingUpdate) so two pods never share the volume.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: refua-tests
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: refua-tests
+  template:
+    metadata:
+      labels:
+        app: refua-tests
+    spec:
+      serviceAccountName: refua-tests
+      # The service never calls the Kubernetes API. (AWS access through Pod Identity does not use this token.)
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001   # pwuser in the image (checked: uid=1001 gid=1001)
+        runAsGroup: 1001
+        fsGroup: 1001     # makes the volume writable for pwuser
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: runner
+          # The overlays replace this with the real image (kustomize "images").
+          image: refua-automation-tests:set-by-overlay
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            # Created by deploy/k8s/create-secret.ps1: the .env.<env> values plus SERVICE_API_TOKEN.
+            - secretRef:
+                name: refua-tests-env
+          env:
+            - name: RETENTION_DAYS
+              value: "60"
+            - name: SERVICE_ALLOWED_ENVS
+              value: "test,preprod"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: shm
+              mountPath: /dev/shm   # Chromium needs more than the 64 MB default
+          startupProbe:
+            httpGet: { path: /api/health, port: http }
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: { path: /api/health, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /api/health, port: http }
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: 2Gi
+              cpu: "1"
+            limits:
+              memory: 4Gi
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            seccompProfile:
+              type: RuntimeDefault
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: refua-tests-data
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi

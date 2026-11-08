@@ -1,0 +1,33 @@
+# Rehearsal on a local cluster (kind / Docker Desktop). The image is loaded into the cluster from the local
+# Docker (kind load docker-image), so no registry login is needed.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+images:
+  - name: refua-automation-tests
+    newName: ghcr.io/digitalidf/refuaautomationtests/refua-automation-tests
+    newTag: f239b6656389   # change to the tag you loaded
+
+patches:
+  - target:
+      kind: Deployment
+      name: refua-tests
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: IfNotPresent
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests: { memory: 512Mi, cpu: 250m }
+          limits: { memory: 2Gi }
+  - target:
+      kind: PersistentVolumeClaim
+      name: refua-tests-data
+    patch: |-
+      - op: replace
+        path: /spec/resources/requests/storage
+        value: 2Gi
