@@ -64,6 +64,7 @@ spec:
             limits:
               memory: 4Gi
           securityContext:
+            runAsNonRoot: true
             allowPrivilegeEscalation: false
             seccompProfile:
               type: RuntimeDefault
