@@ -40,6 +40,7 @@ class RunManager:
         self._cancelled: set = set()
         self._closing = False
         self._live: Dict[str, dict] = {}  # queued/running runs: the source of truth until they finish
+        self._report_locks: Dict[str, threading.Lock] = {}  # one report rebuild per run at a time
         self._executor = ThreadPoolExecutor(max_workers=settings.max_concurrent_runs, thread_name_prefix="run")
         self.archiver = Archiver(settings)
         # One archive worker, separate from the run workers, so an upload never delays the next run.
@@ -143,6 +144,36 @@ class RunManager:
             self._live[run_id] = run
         self._executor.submit(self._execute, run_id)
         return dict(run)
+
+    def ensure_report(self, run_id: str) -> bool:
+        """Make sure the HTML report of a finished run exists, rebuilding it from its raw Allure results.
+
+        The report folder lives in the pod's temporary storage and is lost on every restart, while the raw results
+        are kept in the archive. Returns True when the report is available afterwards.
+        """
+        index = self.settings.reports_dir / run_id / "index.html"
+        if index.is_file():
+            return True
+        run = self.get(run_id)
+        if run is None or run["status"] in ACTIVE:
+            return False
+        label = run_id.replace("\r", "").replace("\n", "")  # run_id comes from the URL: keep it out of log lines as is
+        with self._lock:
+            lock = self._report_locks.setdefault(run_id, threading.Lock())
+        with lock:
+            if index.is_file():  # another request built it while this one waited
+                return True
+            results = self.settings.results_dir / run_id
+            if not (results.is_dir() and any(results.iterdir())):
+                try:
+                    results = self.archiver.fetch_results(run)
+                except Exception:  # noqa: BLE001 - an unreachable archive means "no report", not a server error
+                    logger.exception("fetching the archived results of run %s failed", label)
+                    return False
+                if results is None:
+                    return False
+            summary = reports.generate_report(self.settings, run_id, lambda line: logger.info("%s: %s", label, line.replace("\r", "").replace("\n", " ")))
+            return summary is not None and index.is_file()
 
     def cancel(self, run_id: str) -> Optional[dict]:
         run = self.get(run_id)

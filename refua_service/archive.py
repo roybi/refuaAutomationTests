@@ -67,6 +67,9 @@ class LocalDirBackend:
         except FileNotFoundError:
             return None
 
+    def download_file(self, key: str, path: Path) -> None:
+        Path(path).write_bytes(self._target(key).read_bytes())
+
 
 class S3Backend:
     """Writes the archive to an S3 bucket. Encryption and expiry come from the bucket configuration."""
@@ -94,6 +97,9 @@ class S3Backend:
             return self._client.get_object(Bucket=self.bucket, Key=key)["Body"].read()
         except self._client.exceptions.NoSuchKey:
             return None
+
+    def download_file(self, key: str, path: Path) -> None:
+        self._client.download_file(self.bucket, key, str(path))
 
 
 def backend_from_settings(settings: Settings):
@@ -185,8 +191,9 @@ class Archiver:
         """Bring archived runs back into the local run list after the local volume was lost (pod restart).
 
         Restores the run record and the console log of every run whose archive is complete (manifest present), is
-        inside the retention window and is not already known. The HTML report is not archived, so a restored run
-        has no report link. Returns how many runs were restored.
+        inside the retention window and is not already known. The HTML report is not archived: a restored run
+        keeps its report link when the archive holds raw results, and the report is rebuilt when it is opened
+        (``RunManager.ensure_report``). Returns how many runs were restored.
         """
         if not self.enabled:
             return 0
@@ -214,7 +221,8 @@ class Archiver:
         if not isinstance(run, dict) or run.get("id") != run_id:
             return 0
         created = _created(run)
-        run["report_url"] = None
+        # The HTML report is not archived, but it can be rebuilt from the archived raw results when it is opened.
+        run["report_url"] = f"/reports/{run_id}/" if self._has_results(run_prefix) else None
         run["restored_from_archive"] = True
         log = self.backend.get_bytes(f"{run_prefix}console.log")
         if log is not None:
@@ -225,6 +233,32 @@ class Archiver:
         os.replace(temporary, meta)  # last: a run without its record is not listed, so a half restore is retried
         os.utime(meta, (created.timestamp(), created.timestamp()))  # retention counts from the run, not the restore
         return 1
+
+    def _has_results(self, run_prefix: str) -> bool:
+        try:
+            manifest = json.loads(self.backend.get_bytes(f"{run_prefix}manifest.json") or b"{}")
+            return any(str(entry.get("name", "")).startswith("allure-results/") for entry in manifest.get("files", []))
+        except (ValueError, AttributeError):
+            return False
+
+    def fetch_results(self, run: dict) -> Optional[Path]:
+        """Download the archived raw Allure results of one run into the local results folder.
+
+        Returns the folder, or None when the archive holds no results for the run (or no archive is configured).
+        """
+        if not self.enabled:
+            return None
+        prefix = f"{self.key_prefix(run)}/allure-results/"
+        target = (self.settings.results_dir / run["id"]).resolve()
+        downloaded = 0
+        for key in self.backend.list_keys(prefix):
+            destination = (target / key[len(prefix):]).resolve()
+            if destination == target or target not in destination.parents:
+                continue  # an empty name or a key that would leave the results folder
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            self.backend.download_file(key, destination)
+            downloaded += 1
+        return target if downloaded else None
 
     def retry_pending(self, load_run: Callable[[str], Optional[dict]]) -> int:
         """Archive every run that still has a marker; returns how many succeeded."""

@@ -368,3 +368,110 @@ def test_allure_version_reads_the_cli_and_does_not_remember_failures(tmp_path, m
     assert reports.allure_version(service_settings.Settings(
         data_dir=tmp_path, allure_bin=None, max_concurrent_runs=1, retention_days=0, api_token=None,
         allowed_envs=("test",), user_ranges=(), run_timeout_minutes=1)) is None
+
+
+RUN_A = "20261104-093700-abc123"
+RUN_B = "20261105-101500-def456"
+
+
+@pytest.fixture
+def archived_service(tmp_path, monkeypatch):
+    """The service with an archive folder holding two finished runs that the pod no longer has locally."""
+    monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("ARCHIVE_DIR", str(tmp_path / "archive"))
+    monkeypatch.setenv("SERVICE_ALLOWED_USERS", "4444401")
+    monkeypatch.delenv("SERVICE_API_TOKEN", raising=False)
+    monkeypatch.delenv("ALLURE_BIN", raising=False)
+    monkeypatch.setattr("shutil.which", lambda name: None)
+    from refua_service import archive as archive_module
+    config = service_settings.load_settings()
+    config.ensure_directories()
+    archiver = archive_module.Archiver(config)
+    for run_id, day, with_results in ((RUN_A, "2026-11-04", True), (RUN_B, "2026-11-05", False)):
+        run = {"id": run_id, "status": "failed", "created_at": f"{day}T09:37:00+00:00", "system": "meditik",
+               "summary": {"passed": 1}, "report_url": f"/reports/{run_id}/"}
+        (config.runs_dir / f"{run_id}.json").write_text(json.dumps(run), encoding="utf-8")
+        (config.runs_dir / f"{run_id}.log").write_text("log\n", encoding="utf-8")
+        results = config.results_dir / run_id
+        results.mkdir(parents=True)
+        if with_results:
+            (results / "one-result.json").write_text("{}", encoding="utf-8")
+            (results / "attachments").mkdir()
+            (results / "attachments" / "shot.png").write_bytes(b"png")
+        assert archiver.archive_run(run)
+    import shutil
+    for directory in (config.runs_dir, config.results_dir, config.reports_dir, config.pending_dir):  # the pod restarts
+        shutil.rmtree(directory)
+    app_module = importlib.reload(importlib.import_module("refua_service.app"))
+    with TestClient(app_module.app) as client:
+        app_module.get_manager()._archive_executor.shutdown(wait=True)  # the start-up restore of the run list
+        yield client, app_module
+    app_module.manager = None
+
+
+def fake_allure(monkeypatch, built):
+    """Stand-in for `allure generate`: writes an index.html from the downloaded results and records the call."""
+    def generate(config, run_id, log):
+        results = config.results_dir / run_id
+        assert (results / "one-result.json").exists() and (results / "attachments" / "shot.png").read_bytes() == b"png"
+        built.append(run_id)
+        (config.reports_dir / run_id).mkdir(parents=True, exist_ok=True)
+        (config.reports_dir / run_id / "index.html").write_text(f"<html>report {run_id}</html>", encoding="utf-8")
+        return {"passed": 1}
+    monkeypatch.setattr(reports, "generate_report", generate)
+    monkeypatch.setattr(reports, "allure_version", lambda config: "2.30.0")
+
+
+def test_restored_runs_keep_a_report_link_only_when_the_archive_has_results(archived_service):
+    client, _ = archived_service
+    assert client.get(f"/api/runs/{RUN_A}").json()["report_url"] == f"/reports/{RUN_A}/"
+    assert client.get(f"/api/runs/{RUN_B}").json()["report_url"] is None
+
+
+def test_opening_a_report_that_the_pod_lost_rebuilds_it_from_the_archive_once(archived_service, monkeypatch):
+    client, _ = archived_service
+    built = []
+    fake_allure(monkeypatch, built)
+    for _ in range(2):
+        page = client.get(f"/reports/{RUN_A}/")
+        assert page.status_code == 200 and f"report {RUN_A}" in page.text
+    assert built == [RUN_A]  # the second visit uses the rebuilt report
+
+
+def test_a_report_without_archived_results_or_with_a_bad_id_shows_a_message_or_404(archived_service, monkeypatch):
+    client, _ = archived_service
+    fake_allure(monkeypatch, [])
+    page = client.get(f"/reports/{RUN_B}/")
+    assert page.status_code == 200 and "Report not available" in page.text
+    assert client.get("/reports/20260101-000000-aaaaaa/").status_code == 200  # no such run: same message, no crash
+    assert client.get("/reports/..%2f..%2fetc/").status_code == 404
+
+
+def test_all_reports_and_latest_report_use_executions_that_can_be_rebuilt(archived_service, monkeypatch):
+    client, _ = archived_service
+    built = []
+    fake_allure(monkeypatch, built)
+    index = client.get("/reports/").text
+    assert f"/reports/{RUN_A}/" in index and RUN_B not in index and "Reports (1)" in index
+    assert "rebuilt from the archived results" in index
+    latest = client.get("/reports/latest", follow_redirects=False)
+    assert latest.status_code in (302, 307) and latest.headers["location"] == f"/reports/{RUN_A}/"
+    assert built == [RUN_A]
+    status = client.get("/api/reports/status").json()
+    assert status["run_count"] == 2 and status["runs_with_report"] == 1 and status["report_count"] == 1
+
+
+def test_latest_report_skips_an_execution_whose_report_cannot_be_built(archived_service, monkeypatch):
+    client, app_module = archived_service
+    fake_allure(monkeypatch, [])
+    manager = app_module.get_manager()
+    manager._update(RUN_B, report_url=f"/reports/{RUN_B}/")  # newer run that claims a report but has no archived results
+    latest = client.get("/reports/latest", follow_redirects=False)
+    assert latest.headers["location"] == f"/reports/{RUN_A}/"
+
+
+def test_homepage_links_every_finished_execution_to_its_own_report():
+    page = (Path(__file__).resolve().parents[2] / "refua_service" / "static" / "index.html").read_text(encoding="utf-8")
+    assert "isFinished(run)" in page and "function reportUrl(run)" in page
+    assert "'/reports/' + encodeURIComponent(run.id) + '/'" in page
+    assert "if (run.report_url) {" not in page  # the link no longer depends on a report that the pod may have lost
