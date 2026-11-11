@@ -60,6 +60,9 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    outputs:
+      tests_sha: ${{ steps.meta.outputs.tests_sha }}
+      push_images: ${{ steps.meta.outputs.push_images }}
     steps:
       - name: Validate inputs
         env:
@@ -193,3 +196,83 @@ jobs:
             echo "Pull through ECR (after the pull-through cache fetches it):"
             echo "\`$ECR_PREFIX/refua-automation-tests:$TESTS_SHA\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # Deploys the new image to the dev cluster: changes the image tag in medical-helm (refua-tests/dev.yaml) through a
+  # PR that is merged at once, then ArgoCD auto-sync rolls the pod out. Runs only for images pushed from main.
+  # Needs the repository secret HELM_REPO_TOKEN (write access to medical-helm: Contents + Pull requests).
+  # Kill switch: set the repository variable AUTO_DEPLOY_DEV to "false".
+  update-dev-image-tag:
+    needs: build-and-push
+    if: >-
+      needs.build-and-push.outputs.push_images == 'true' &&
+      github.ref == 'refs/heads/main' &&
+      vars.AUTO_DEPLOY_DEV != 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HELM_REPO: DigitalIDF/medical-helm
+      VALUES_FILE: refua-tests/dev.yaml
+      TAG: ${{ needs.build-and-push.outputs.tests_sha }}
+    steps:
+      - name: Check the token and the tag
+        env:
+          HELM_REPO_TOKEN: ${{ secrets.HELM_REPO_TOKEN }}
+        run: |
+          [[ -n "$HELM_REPO_TOKEN" ]] || { echo "::error::Repository secret HELM_REPO_TOKEN is not set (write access to $HELM_REPO)"; exit 1; }
+          [[ "$TAG" =~ ^[0-9a-f]{12}$ ]] || { echo "::error::Unexpected image tag '$TAG'"; exit 1; }
+
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.HELM_REPO }}
+          ref: main
+          token: ${{ secrets.HELM_REPO_TOKEN }}
+          path: helm
+
+      - name: Set the image tag in the values file
+        id: edit
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, re, sys
+          tag = os.environ["TAG"]
+          path = pathlib.Path("helm") / os.environ["VALUES_FILE"]
+          text = path.read_bytes().decode("utf-8")  # bytes, so the file's line endings stay as they are
+          pattern = re.compile(r"^([ \t]+tag:[ \t]*)(\S+)", re.MULTILINE)
+          found = pattern.findall(text)
+          if len(found) != 1:
+              sys.exit(f"expected exactly one 'tag:' line in {path}, found {len(found)}")
+          if found[0][1] == tag:
+              print("unchanged")
+          else:
+              path.write_bytes(pattern.sub(lambda m: m.group(1) + tag, text).encode("utf-8"))
+              print(f"changed from {found[0][1]}")
+          PY
+          if git -C helm diff --quiet -- "$VALUES_FILE"; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "The tag in $VALUES_FILE is already \`$TAG\`. Nothing to do." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open the PR in medical-helm and merge it
+        if: steps.edit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.HELM_REPO_TOKEN }}
+        run: |
+          cd helm
+          git config user.name "refua-tests-bot"
+          git config user.email "refua-tests-bot@users.noreply.github.com"
+          branch="bot/refua-tests-dev-tag-$TAG"
+          git checkout -b "$branch"
+          git add "$VALUES_FILE"
+          git commit -m "refua-tests dev: image tag $TAG" \
+            -m "Automated by $GITHUB_REPOSITORY, workflow run $GITHUB_RUN_ID (commit $GITHUB_SHA)."
+          git push origin "$branch"
+          url=$(gh pr create --repo "$HELM_REPO" --base main --head "$branch" \
+            --title "refua-tests dev: image tag $TAG" \
+            --body "Automated tag update from $GITHUB_REPOSITORY, commit $GITHUB_SHA ([workflow run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)). Changes only the image tag in \`$VALUES_FILE\`.")
+          if gh pr merge "$url" --squash --delete-branch; then
+            echo "Image tag set to \`$TAG\` in $HELM_REPO ($url). ArgoCD rolls the pod out." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::The PR could not be merged automatically (review or checks required?). Merge it by hand: $url"
+            echo "**Merge by hand:** $url (image tag \`$TAG\`)" >> "$GITHUB_STEP_SUMMARY"
+          fi
