@@ -9,6 +9,9 @@ Layout (same for S3 and for a local folder)::
 
 The date is the run's creation date in UTC. Listing ``<prefix>/YYYY/MM/DD/`` finds every run of a day.
 
+At service start, runs whose archive is complete and that are missing locally (the pod's /tmp is lost on every restart)
+are restored into the run list: record and console log only, without a report link (see ``Archiver.restore``).
+
 Uploading never affects a run's result. A finished run gets a marker file in ``archive_pending/`` first; the marker is
 removed only after the manifest is stored, so a failed upload is retried (at service start and after every run) and
 ``reports.prune`` does not delete a run that is still waiting for its upload.
@@ -18,13 +21,16 @@ Enable with ``ARCHIVE_S3_BUCKET`` (S3, credentials from the standard AWS chain, 
 
 import json
 import logging
-from datetime import datetime, timezone
+import os
+import re
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, Iterator, List, Optional
 
 from .settings import Settings
 
 SCHEMA_VERSION = 1
+RUN_ID_PATTERN = re.compile(r"^[0-9]{8}-[0-9]{6}-[0-9a-f]{6}$")  # what RunManager.submit generates
 HISTORY_DIR = "history"  # Allure trend data copied from the previous report; already in older archives
 logger = logging.getLogger("refua_service.archive")
 
@@ -48,6 +54,19 @@ class LocalDirBackend:
     def put_bytes(self, key: str, data: bytes) -> None:
         self._target(key).write_bytes(data)
 
+    def list_keys(self, prefix: str) -> Iterator[str]:
+        base = self._target(prefix)
+        if base.is_dir():
+            for path in sorted(base.rglob("*")):
+                if path.is_file():
+                    yield path.relative_to(self.root).as_posix()
+
+    def get_bytes(self, key: str) -> Optional[bytes]:
+        try:
+            return self._target(key).read_bytes()
+        except FileNotFoundError:
+            return None
+
 
 class S3Backend:
     """Writes the archive to an S3 bucket. Encryption and expiry come from the bucket configuration."""
@@ -64,6 +83,17 @@ class S3Backend:
 
     def put_bytes(self, key: str, data: bytes) -> None:
         self._client.put_object(Bucket=self.bucket, Key=key, Body=data, ContentType="application/json")
+
+    def list_keys(self, prefix: str) -> Iterator[str]:
+        for page in self._client.get_paginator("list_objects_v2").paginate(Bucket=self.bucket, Prefix=prefix):
+            for item in page.get("Contents", []):
+                yield item["Key"]
+
+    def get_bytes(self, key: str) -> Optional[bytes]:
+        try:
+            return self._client.get_object(Bucket=self.bucket, Key=key)["Body"].read()
+        except self._client.exceptions.NoSuchKey:
+            return None
 
 
 def backend_from_settings(settings: Settings):
@@ -140,6 +170,61 @@ class Archiver:
         self._marker(run["id"]).unlink(missing_ok=True)
         logger.info("run %s archived under %s/", run["id"], prefix)
         return True
+
+    def _day_prefixes(self) -> List[str]:
+        """One listing prefix per day inside the retention window, so the (large) allure-results trees of other
+        days are never listed. Without a retention limit the whole archive prefix is listed."""
+        base = self.settings.archive_prefix
+        if not self.settings.retention_days:
+            return [f"{base}/"]
+        today = datetime.now(timezone.utc)
+        return [f"{base}/{day:%Y/%m/%d}/" for day in
+                (today - timedelta(days=offset) for offset in range(self.settings.retention_days + 1))]
+
+    def restore(self) -> int:
+        """Bring archived runs back into the local run list after the local volume was lost (pod restart).
+
+        Restores the run record and the console log of every run whose archive is complete (manifest present), is
+        inside the retention window and is not already known. The HTML report is not archived, so a restored run
+        has no report link. Returns how many runs were restored.
+        """
+        if not self.enabled:
+            return 0
+        self.settings.runs_dir.mkdir(parents=True, exist_ok=True)
+        restored = 0
+        for prefix in self._day_prefixes():
+            for key in self.backend.list_keys(prefix):
+                parts = key.split("/")
+                if parts[-1] != "manifest.json" or len(parts) < 2 or not RUN_ID_PATTERN.match(parts[-2]):
+                    continue
+                run_id = parts[-2]
+                if (self.settings.runs_dir / f"{run_id}.json").exists():
+                    continue
+                try:
+                    restored += self._restore_run(key[:-len("manifest.json")], run_id)
+                except Exception as error:  # noqa: BLE001 - one unreadable run must not stop the others
+                    logger.warning("restoring run %s from the archive failed: %s", run_id, error)
+        if restored:
+            logger.info("restored %d run(s) from the archive", restored)
+        return restored
+
+    def _restore_run(self, run_prefix: str, run_id: str) -> int:
+        raw = self.backend.get_bytes(f"{run_prefix}run.json")
+        run = json.loads(raw) if raw else None
+        if not isinstance(run, dict) or run.get("id") != run_id:
+            return 0
+        created = _created(run)
+        run["report_url"] = None
+        run["restored_from_archive"] = True
+        log = self.backend.get_bytes(f"{run_prefix}console.log")
+        if log is not None:
+            (self.settings.runs_dir / f"{run_id}.log").write_bytes(log)
+        meta = self.settings.runs_dir / f"{run_id}.json"
+        temporary = meta.with_suffix(".json.tmp")
+        temporary.write_text(json.dumps(run, indent=2), encoding="utf-8")
+        os.replace(temporary, meta)  # last: a run without its record is not listed, so a half restore is retried
+        os.utime(meta, (created.timestamp(), created.timestamp()))  # retention counts from the run, not the restore
+        return 1
 
     def retry_pending(self, load_run: Callable[[str], Optional[dict]]) -> int:
         """Archive every run that still has a marker; returns how many succeeded."""

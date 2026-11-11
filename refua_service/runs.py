@@ -47,6 +47,7 @@ class RunManager:
         self._mark_interrupted()
         reports.prune(settings, set())
         if self.archiver.enabled:
+            self._archive_executor.submit(self._restore_archived)  # history lost with the local volume (pod restart)
             self._archive_executor.submit(self._archive_pending)  # uploads that failed before a restart
 
     # ---- persistence -------------------------------------------------------------------------
@@ -264,6 +265,12 @@ class RunManager:
             self.archiver.mark_pending(run_id)  # before prune, so the run is not deleted before it is uploaded
             self._archive_executor.submit(self._archive_pending)
         reports.prune(self.settings, {r["id"] for r in self.list(limit=200) if r["status"] in ACTIVE})
+
+    def _restore_archived(self) -> None:
+        try:
+            self.archiver.restore()
+        except Exception:  # noqa: BLE001 - the worker must survive; history just stays as it is
+            logger.exception("restoring runs from the archive failed")
 
     def _archive_pending(self) -> None:
         try:

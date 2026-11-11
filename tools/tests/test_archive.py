@@ -244,3 +244,119 @@ def test_finished_run_is_archived_with_build_info(tmp_path, monkeypatch):
     finally:
         manager.shutdown()
         buildinfo.collect.cache_clear()
+
+
+def _lose_local_volume(settings: Settings) -> None:
+    """What a pod restart does to the emptyDir: runs, results and reports are gone."""
+    import shutil
+    for directory in (settings.runs_dir, settings.results_dir, settings.reports_dir, settings.pending_dir):
+        shutil.rmtree(directory)
+    settings.ensure_directories()
+
+
+def test_restore_brings_back_run_record_and_log_without_a_report_link(tmp_path):
+    settings = make_settings(tmp_path, retention_days=0)
+    run = {**make_run(settings), "report_url": f"/reports/{RUN_ID}/", "summary": {"passed": 2}}
+    archiver = archive.Archiver(settings)
+    assert archiver.archive_run(run) is True
+    _lose_local_volume(settings)
+
+    assert archiver.restore() == 1
+
+    restored = json.loads((settings.runs_dir / f"{RUN_ID}.json").read_text(encoding="utf-8"))
+    assert restored["id"] == RUN_ID and restored["summary"] == {"passed": 2}
+    assert restored["report_url"] is None and restored["restored_from_archive"] is True
+    assert (settings.runs_dir / f"{RUN_ID}.log").read_bytes() == archived(settings, "console.log").read_bytes()
+    created = archive._created(run).timestamp()
+    assert abs((settings.runs_dir / f"{RUN_ID}.json").stat().st_mtime - created) < 2  # retention counts from the run
+    assert archiver.restore() == 0  # known runs are left alone
+
+
+def test_restore_skips_incomplete_archives_foreign_ids_and_runs_outside_retention(tmp_path):
+    settings = make_settings(tmp_path, retention_days=0)
+    run = make_run(settings)
+    archiver = archive.Archiver(settings)
+    assert archiver.archive_run(run) is True
+    archived(settings, "manifest.json").rename(archived(settings, "manifest.json.bak"))  # upload never finished
+    odd = settings.archive_dir / "runs" / "2026" / "11" / "04" / "..evil" / "manifest.json"
+    odd.parent.mkdir(parents=True)
+    odd.write_text("{}", encoding="utf-8")
+    other = settings.archive_dir / "runs" / "2026" / "11" / "04" / "20261104-100000-def456"
+    other.mkdir()
+    (other / "manifest.json").write_text("{}", encoding="utf-8")
+    (other / "run.json").write_text(json.dumps({"id": "somebody-else"}), encoding="utf-8")  # id does not match its folder
+    _lose_local_volume(settings)
+
+    assert archiver.restore() == 0
+    assert list(settings.runs_dir.iterdir()) == []
+
+    archived(settings, "manifest.json.bak").rename(archived(settings, "manifest.json"))
+    old = make_settings(tmp_path, retention_days=3)  # the archived run is from 2026-11-04: far outside the window
+    assert archive.Archiver(old).restore() == 0
+
+
+def test_restore_reads_days_inside_the_retention_window(tmp_path):
+    from datetime import datetime, timedelta, timezone
+    settings = make_settings(tmp_path, retention_days=5)
+    created = (datetime.now(timezone.utc) - timedelta(days=2)).replace(microsecond=0)
+    run_id = f"{created:%Y%m%d-%H%M%S}-abc123"
+    run = make_run(settings, run_id, created.isoformat())
+    archiver = archive.Archiver(settings)
+    assert archiver.archive_run(run) is True
+    _lose_local_volume(settings)
+    assert archiver.restore() == 1 and (settings.runs_dir / f"{run_id}.json").exists()
+
+
+def test_run_manager_restores_history_at_start_so_the_run_list_survives_a_restart(tmp_path):
+    settings = make_settings(tmp_path, retention_days=0)
+    run = make_run(settings)
+    assert archive.Archiver(settings).archive_run(run) is True
+    _lose_local_volume(settings)
+
+    manager = runs.RunManager(settings)
+    manager._archive_executor.shutdown(wait=True)  # the restore runs on the archive worker
+    assert [item["id"] for item in manager.list()] == [RUN_ID]
+    assert manager.read_log(RUN_ID, 0)["text"].splitlines() == ["line one", "line two"]
+    manager.shutdown()
+
+
+class FakeS3Client:
+    """The few boto3 calls S3Backend makes, over a dict."""
+
+    class exceptions:  # noqa: N801 - mirrors boto3's client.exceptions
+        class NoSuchKey(Exception):
+            pass
+
+    def __init__(self, objects):
+        self.objects = objects
+
+    def get_paginator(self, name):
+        assert name == "list_objects_v2"
+        client = self
+
+        class Paginator:
+            def paginate(self, Bucket, Prefix):  # noqa: N803 - boto3 argument names
+                keys = sorted(key for key in client.objects if key.startswith(Prefix))
+                yield {"Contents": [{"Key": key} for key in keys[:1]]}  # two pages, to exercise the loop
+                yield {"Contents": [{"Key": key} for key in keys[1:]]}
+                yield {}
+
+        return Paginator()
+
+    def get_object(self, Bucket, Key):  # noqa: N803
+        if Key not in self.objects:
+            raise self.exceptions.NoSuchKey()
+        data = self.objects[Key]
+
+        class Body:
+            def read(self):
+                return data
+
+        return {"Body": Body()}
+
+
+def test_s3_backend_lists_across_pages_and_maps_a_missing_key_to_none():
+    client = FakeS3Client({"runs/a": b"1", "runs/b": b"2", "other/c": b"3"})
+    backend = archive.S3Backend("bucket", client)
+    assert list(backend.list_keys("runs/")) == ["runs/a", "runs/b"]
+    assert backend.get_bytes("runs/b") == b"2" and backend.get_bytes("runs/none") is None
