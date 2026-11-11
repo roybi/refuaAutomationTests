@@ -20,6 +20,7 @@ from refua_tests.systems import ALL, SYSTEMS, resolve_system, system_names
 from tools import update_bdd_tags
 
 from . import reports
+from .archive import RUN_ID_PATTERN
 from .runs import DuplicateRunError, RunManager
 from .settings import load_settings
 
@@ -156,11 +157,12 @@ def cancel_run(run_id: str) -> dict:
 def reports_status() -> dict:
     """Whether the Allure CLI runs (reports can be built), how many executions exist and how many have a report."""
     version = reports.allure_version(settings)
-    report_ids = reports.stored_report_ids(settings)
-    run_ids = {path.stem for path in settings.runs_dir.glob("*.json")}
+    built = reports.stored_report_ids(settings)
+    runs = get_manager().list(limit=10_000)
+    with_report = [run["id"] for run in runs if run.get("report_url") or run["id"] in built]
     return {"allure_ready": version is not None, "allure_version": version,
-            "run_count": len(run_ids), "runs_with_report": len(run_ids.intersection(report_ids)),
-            "report_count": len(report_ids), "latest_report": reports.latest_report_id(settings)}
+            "run_count": len(runs), "runs_with_report": len(with_report),
+            "report_count": len(built), "latest_report": reports.latest_report_id(settings)}
 
 
 def _page(title: str, body: str) -> HTMLResponse:
@@ -177,8 +179,8 @@ def _page(title: str, body: str) -> HTMLResponse:
         "main{margin:24px}table{border-collapse:collapse}"
         "th,td{text-align:left;padding:6px 12px;border-bottom:1px solid #d9dee4}"
         ".notice{max-width:640px;padding:12px 16px;border:1px solid #d9dee4;border-radius:8px;background:#f4f6f8}"
-        ".notice.warn{border-color:#b26a00;background:#fff6e5}</style></head><body>"
-        '<header><h1>Refua automation runner</h1><a href="/">Runs</a><a href="/reports/">All reports</a>'
+        ".notice.warn{border-color:#b26a00;background:#fff6e5}.muted{color:#5d6b7a}</style></head><body>"
+        '<header><h1>Refua automation runner</h1><a href="/">Execution history</a><a href="/reports/">All reports</a>'
         f'<a href="/reports/latest">Latest report</a>{logos}</header><main>{body}</main></body></html>')
 
 
@@ -193,21 +195,29 @@ def _report_notice(report_count: int) -> str:
     return ""
 
 
+def _report_ids() -> List[str]:
+    """Executions that have a report, newest first: built ones plus those whose report can be rebuilt from the archive."""
+    ids = set(reports.stored_report_ids(settings))
+    ids.update(run["id"] for run in get_manager().list(limit=10_000) if run.get("report_url"))
+    return sorted(ids, reverse=True)
+
+
 @app.get("/reports/latest")
 @app.get("/reports/latest/")
 def latest_report():
-    run_id = reports.latest_report_id(settings)
-    if run_id is None:
-        return _page("Latest report", "<h2>Latest report</h2>" + _report_notice(0))
-    return RedirectResponse(f"/reports/{run_id}/")
+    for run_id in _report_ids()[:5]:  # the newest one that has, or can get, its report
+        if get_manager().ensure_report(run_id):
+            return RedirectResponse(f"/reports/{run_id}/")
+    return _page("Latest report", "<h2>Latest report</h2>" + _report_notice(0))
 
 
 @app.get("/reports", include_in_schema=False)
 @app.get("/reports/")
 def reports_index() -> HTMLResponse:
-    """Every stored report, newest first (the static mount below has no directory listing)."""
+    """Every report, newest first (the static mount below has no directory listing). A report that is not built
+    yet is rebuilt from the archived results when it is opened."""
     rows = []
-    for report_id in reports.stored_report_ids(settings):
+    for report_id in _report_ids():
         run = get_manager().get(report_id) or {}
         summary = run.get("summary") or {}
         started = (run.get("started_at") or run.get("created_at") or "-").replace("T", " ")[:19]
@@ -222,8 +232,32 @@ def reports_index() -> HTMLResponse:
     return _page(
         "Reports",
         f"<h2>Reports ({len(rows)})</h2>" + _report_notice(len(rows))
+        + '<p class="muted">A report that is not stored on the server is rebuilt from the archived results when you open '
+          "it. This takes a few seconds.</p>"
         + '<table><thead><tr><th>Run</th><th>Started</th><th>System</th><th>Tag</th><th>User</th><th>Env</th>'
         f"<th>Status</th><th>Results</th></tr></thead><tbody>{''.join(rows)}</tbody></table>")
+
+
+@app.get("/reports/{run_id}", include_in_schema=False)
+def report_without_slash(run_id: str):
+    if not RUN_ID_PATTERN.match(run_id):
+        raise HTTPException(404, "Report not found")
+    return RedirectResponse(f"/reports/{run_id}/")
+
+
+@app.get("/reports/{run_id}/", include_in_schema=False)
+def report_page(run_id: str):
+    """The report of one execution; rebuilt from the archived raw results when the server no longer has it."""
+    if not RUN_ID_PATTERN.match(run_id):
+        raise HTTPException(404, "Report not found")
+    index = settings.reports_dir / run_id / "index.html"
+    if not index.is_file() and not get_manager().ensure_report(run_id):
+        return _page("Report not available", (
+            "<h2>Report not available</h2>"
+            '<p class="notice warn"><strong>There is no report for this execution.</strong> It produced no Allure results, '
+            "or its results are no longer in the archive (they are kept for the retention period). "
+            'The console log is in the <a href="/">execution history</a>.</p>'))
+    return FileResponse(index)
 
 
 settings.ensure_directories()
