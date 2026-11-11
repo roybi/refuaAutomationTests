@@ -154,11 +154,13 @@ def cancel_run(run_id: str) -> dict:
 
 @app.get("/api/reports/status")
 def reports_status() -> dict:
-    """Whether the Allure CLI runs (reports can be built) and how many reports exist."""
+    """Whether the Allure CLI runs (reports can be built), how many executions exist and how many have a report."""
     version = reports.allure_version(settings)
+    report_ids = reports.stored_report_ids(settings)
+    run_ids = {path.stem for path in settings.runs_dir.glob("*.json")}
     return {"allure_ready": version is not None, "allure_version": version,
-            "report_count": len(reports.stored_report_ids(settings)),
-            "latest_report": reports.latest_report_id(settings)}
+            "run_count": len(run_ids), "runs_with_report": len(run_ids.intersection(report_ids)),
+            "report_count": len(report_ids), "latest_report": reports.latest_report_id(settings)}
 
 
 def _page(title: str, body: str) -> HTMLResponse:
@@ -169,7 +171,8 @@ def _page(title: str, body: str) -> HTMLResponse:
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
         f"<title>{html.escape(title)}</title>"
         "<style>body{font:14px system-ui,sans-serif;margin:0;color:#1c2733}"
-        "header{background:#16222f;color:#fff;padding:12px 24px;display:flex;align-items:center;gap:16px}"
+        "header{background:#16222f;color:#fff;padding:12px 24px;display:flex;align-items:center;gap:16px;"
+        "position:sticky;top:0}"
         "header h1{font-size:18px;margin:0;flex:1}header a{color:#9cc4ff}header img{border-radius:6px}"
         "main{margin:24px}table{border-collapse:collapse}"
         "th,td{text-align:left;padding:6px 12px;border-bottom:1px solid #d9dee4}"

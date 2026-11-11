@@ -10,7 +10,8 @@
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   body { margin:0; font:14px/1.45 system-ui, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
-  header { background:#16222f; color:#fff; padding:12px 24px; display:flex; align-items:center; gap:16px; }
+  header { background:#16222f; color:#fff; padding:12px 24px; display:flex; align-items:center; gap:16px;
+           position:sticky; top:0; z-index:100; }
   header h1 { font-size:18px; margin:0; flex:1; }
   header a { color:#9cc4ff; }
   header .logo { height:40px; width:auto; border-radius:6px; }
@@ -56,7 +57,7 @@
 </header>
 <main>
   <section>
-    <h2>New run</h2>
+    <h2>New execution</h2>
     <form id="form">
       <label>System <select id="system"></select></label>
       <label>Suite <select id="suite"></select></label>
@@ -73,7 +74,7 @@
   </section>
 
   <section>
-    <h2>Runs <span class="muted" id="refreshNote"></span></h2>
+    <h2>Execution history <span class="muted" id="refreshNote"></span></h2>
     <form id="filters" class="filters">
       <label>Status <select id="fStatus"></select></label>
       <label>System <select id="fSystem"></select></label>
@@ -180,7 +181,7 @@ function renderRuns(runs) {
     body.append(row);
   }
   if (!runs.length) {
-    const row = el('tr'), cell = el('td', { colSpan: 9, className: 'muted' }, 'No runs yet');
+    const row = el('tr'), cell = el('td', { colSpan: 9, className: 'muted' }, 'No executions yet');
     row.append(cell);
     body.append(row);
   }
@@ -320,9 +321,10 @@ async function showAllureStatus() {
   try {
     const status = await (await fetch('/api/reports/status')).json();
     chip.className = 'chip ' + (status.allure_ready ? 'ok' : 'bad');
-    chip.textContent = status.allure_ready
-      ? 'Allure ready \u00b7 ' + status.report_count + ' report' + (status.report_count === 1 ? '' : 's')
-      : 'Allure unavailable: runs will not produce reports';
+    chip.textContent = !status.allure_ready ? 'Allure unavailable: executions will not produce reports'
+      : status.run_count === 0 ? 'Allure ready \u00b7 no executions yet'
+      : 'Allure ready \u00b7 reports for ' + status.runs_with_report + ' of ' + status.run_count + ' execution'
+        + (status.run_count === 1 ? '' : 's');
   } catch (e) {
     chip.className = 'chip bad';
     chip.textContent = 'Allure status unknown';
@@ -332,6 +334,7 @@ async function showAllureStatus() {
 
 (async () => {
   showAllureStatus();
+  setInterval(showAllureStatus, 15000);
   await loadOptions();
   (async function loop() { await refresh(); setTimeout(loop, 3000); })();
 })();
