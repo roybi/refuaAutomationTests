@@ -2,10 +2,12 @@
 
 import importlib
 import json
+import re
 import shlex
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 import pytest
 
@@ -327,10 +329,31 @@ def test_reports_index_without_reports_explains_why_and_carries_the_logos(servic
 def test_reports_status_tells_whether_allure_runs(service, monkeypatch):
     client, _ = service
     assert client.get("/api/reports/status").json() == {
-        "allure_ready": False, "allure_version": None, "report_count": 0, "latest_report": None}
+        "allure_ready": False, "allure_version": None, "run_count": 0, "runs_with_report": 0,
+        "report_count": 0, "latest_report": None}
     monkeypatch.setattr(reports, "allure_version", lambda settings: "2.30.0")
     status = client.get("/api/reports/status").json()
     assert status["allure_ready"] is True and status["allure_version"] == "2.30.0"
+
+
+def test_reports_status_counts_executions_and_the_ones_that_have_a_report(service):
+    client, app_module = service
+    config = app_module.settings
+    for run_id in ("20260101-000000-aaaaaa", "20260102-000000-bbbbbb", "20260103-000000-cccccc"):
+        (config.runs_dir / f"{run_id}.json").write_text(json.dumps({"id": run_id, "status": "failed"}), encoding="utf-8")
+    for run_id in ("20260102-000000-bbbbbb", "20260109-000000-orphan"):  # the second report has no run record
+        (config.reports_dir / run_id).mkdir()
+        (config.reports_dir / run_id / "index.html").write_text("<html></html>", encoding="utf-8")
+    status = client.get("/api/reports/status").json()
+    assert status["run_count"] == 3 and status["runs_with_report"] == 1 and status["report_count"] == 2
+    assert status["latest_report"] == "20260109-000000-orphan"
+
+
+def test_homepage_uses_execution_wording_and_a_pinned_header():
+    page = (Path(__file__).resolve().parents[2] / "refua_service" / "static" / "index.html").read_text(encoding="utf-8")
+    assert "<h2>New execution</h2>" in page and "<h2>Execution history " in page
+    assert "<h2>New run</h2>" not in page and "<h2>Runs " not in page
+    assert re.search(r"header \{[^}]*position:\s*sticky;[^}]*top:\s*0", page)
 
 
 def test_allure_version_reads_the_cli_and_does_not_remember_failures(tmp_path, monkeypatch):
