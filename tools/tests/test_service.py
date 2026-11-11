@@ -469,3 +469,10 @@ def test_latest_report_skips_an_execution_whose_report_cannot_be_built(archived_
     manager._update(RUN_B, report_url=f"/reports/{RUN_B}/")  # newer run that claims a report but has no archived results
     latest = client.get("/reports/latest", follow_redirects=False)
     assert latest.headers["location"] == f"/reports/{RUN_A}/"
+
+
+def test_homepage_links_every_finished_execution_to_its_own_report():
+    page = (Path(__file__).resolve().parents[2] / "refua_service" / "static" / "index.html").read_text(encoding="utf-8")
+    assert "isFinished(run)" in page and "function reportUrl(run)" in page
+    assert "'/reports/' + encodeURIComponent(run.id) + '/'" in page
+    assert "if (run.report_url) {" not in page  # the link no longer depends on a report that the pod may have lost
