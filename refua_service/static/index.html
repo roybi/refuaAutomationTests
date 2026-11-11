@@ -13,6 +13,9 @@
   header { background:#16222f; color:#fff; padding:12px 24px; display:flex; align-items:center; gap:16px; }
   header h1 { font-size:18px; margin:0; flex:1; }
   header a { color:#9cc4ff; }
+  header .logo { height:40px; width:auto; border-radius:6px; }
+  .chip { padding:2px 10px; border-radius:10px; font-size:12px; background:#26394d; color:#fff; }
+  .chip.ok { background:var(--ok); } .chip.bad { background:var(--warn); }
   main { max-width:1200px; margin:20px auto; padding:0 16px; display:grid; gap:16px; }
   section { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:16px; }
   h2 { font-size:15px; margin:0 0 12px; }
@@ -47,6 +50,9 @@
   <h1>Refua automation runner</h1>
   <a href="/reports/" target="_blank" rel="noopener">All reports</a>
   <a href="/reports/latest" target="_blank" rel="noopener">Latest report</a>
+  <span class="chip" id="allureStatus" hidden></span>
+  <img class="logo" src="/assets/meditik-logo.png" alt="MediTik" height="40">
+  <img class="logo" src="/assets/idf-computer-service-directorate-logo.png" alt="IDF Computer Service Directorate" height="40">
 </header>
 <main>
   <section>
@@ -309,7 +315,23 @@ $('fClear').addEventListener('click', () => {
 $('loadMore').addEventListener('click', loadMore);
 $('filters').addEventListener('submit', e => e.preventDefault());
 
+async function showAllureStatus() {
+  const chip = $('allureStatus');
+  try {
+    const status = await (await fetch('/api/reports/status')).json();
+    chip.className = 'chip ' + (status.allure_ready ? 'ok' : 'bad');
+    chip.textContent = status.allure_ready
+      ? 'Allure ready \u00b7 ' + status.report_count + ' report' + (status.report_count === 1 ? '' : 's')
+      : 'Allure unavailable: runs will not produce reports';
+  } catch (e) {
+    chip.className = 'chip bad';
+    chip.textContent = 'Allure status unknown';
+  }
+  chip.hidden = false;
+}
+
 (async () => {
+  showAllureStatus();
   await loadOptions();
   (async function loop() { await refresh(); setTimeout(loop, 3000); })();
 })();

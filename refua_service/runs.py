@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import secrets
+import shlex
 import signal
 import subprocess
 import sys
@@ -196,9 +197,15 @@ class RunManager:
             command.append("--clean")
         return command + ["--headless"]
 
-    def _environment(self) -> dict:
+    def _environment(self, run_id: str = "run") -> dict:
         data = self.settings.data_dir
-        return dict(os.environ, PYTHONUNBUFFERED="1", AUTH_CHECK_HEADLESS="true",
+        # pytest.ini points log_file at the repo root and pytest caches there too; the image's root filesystem is
+        # read-only, so both are redirected to the data volume (the ini's log_file would otherwise abort every run).
+        pytest_files = data / "pytest"
+        addopts = " ".join(filter(None, [os.environ.get("PYTEST_ADDOPTS"),
+                                         f"-o log_file={shlex.quote(str(pytest_files / f'{run_id}.log'))}",
+                                         f"-o cache_dir={shlex.quote(str(pytest_files / 'cache'))}"]))
+        return dict(os.environ, PYTHONUNBUFFERED="1", AUTH_CHECK_HEADLESS="true", PYTEST_ADDOPTS=addopts,
                     REFUA_ALLURE_ROOT=str(self.settings.allure_root),
                     MEDITIK_SEED_MANIFEST_DIR=str(data / "seeds"), HOME=str(data / "home"))
 
@@ -222,7 +229,7 @@ class RunManager:
         try:
             with open(self._log_path(run_id), "ab") as log:
                 process = subprocess.Popen(
-                    command, cwd=REPO_ROOT, env=self._environment(), stdin=subprocess.DEVNULL,
+                    command, cwd=REPO_ROOT, env=self._environment(run_id), stdin=subprocess.DEVNULL,
                     stdout=log, stderr=subprocess.STDOUT, start_new_session=(os.name == "posix"))
                 with self._lock:
                     self._processes[run_id] = process

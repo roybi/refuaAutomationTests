@@ -2,6 +2,8 @@
 
 import importlib
 import json
+import shlex
+import subprocess
 import sys
 import time
 
@@ -154,7 +156,8 @@ def test_restart_marks_in_flight_runs_interrupted(tmp_path):
     manager.shutdown()
 
 
-def test_command_uses_run_tests_with_persistent_results_dir(tmp_path):
+def test_command_uses_run_tests_with_persistent_results_dir(tmp_path, monkeypatch):
+    monkeypatch.delenv("PYTEST_ADDOPTS", raising=False)
     config = service_settings.Settings(data_dir=tmp_path, allure_bin=None, max_concurrent_runs=1, retention_days=0,
                                        api_token=None, allowed_envs=("test",), user_ranges=(), run_timeout_minutes=1)
     manager = runs.RunManager(config)
@@ -168,6 +171,11 @@ def test_command_uses_run_tests_with_persistent_results_dir(tmp_path):
     environment = manager._environment()
     assert environment["REFUA_ALLURE_ROOT"] == str(tmp_path / "allure")
     assert environment["MEDITIK_SEED_MANIFEST_DIR"] == str(tmp_path / "seeds")
+    # pytest.ini's relative log_file would land in the read-only image root: it must go to the data volume instead
+    options = shlex.split(manager._environment("r1")["PYTEST_ADDOPTS"])
+    assert options == ["-o", f"log_file={tmp_path / 'pytest' / 'r1.log'}", "-o", f"cache_dir={tmp_path / 'pytest' / 'cache'}"]
+    monkeypatch.setenv("PYTEST_ADDOPTS", "-x")
+    assert shlex.split(manager._environment("r1")["PYTEST_ADDOPTS"])[0] == "-x"  # an existing value is kept
     manager.shutdown()
 
 
@@ -281,3 +289,59 @@ def test_reports_index_lists_every_stored_report_newest_first(service):
         assert text.index("20260103-000000-orphan") < text.index("20260102-000000-bbbbbb") < text.index("20260101-000000-aaaaaa")
         assert "nohtml" not in text and "3 passed, 2 failed, 2 skipped" in text
     assert client.get("/reports/20260101-000000-aaaaaa/").status_code == 200  # the static mount still serves reports
+
+
+def test_latest_report_without_reports_shows_a_message_instead_of_an_error(service, monkeypatch):
+    client, _ = service
+    monkeypatch.setattr(reports, "allure_version", lambda settings: "2.30.0")
+    for url in ("/reports/latest", "/reports/latest/"):
+        page = client.get(url)
+        assert page.status_code == 200 and "text/html" in page.headers["content-type"]
+        assert "No reports yet" in page.text and "Allure report generator is running" in page.text
+    monkeypatch.setattr(reports, "allure_version", lambda settings: None)
+    page = client.get("/reports/latest")
+    assert page.status_code == 200 and "Allure report generator is not available" in page.text
+
+
+def test_latest_report_redirects_to_the_newest_report(service):
+    client, app_module = service
+    config = app_module.settings
+    for run_id in ("20260101-000000-aaaaaa", "20260102-000000-bbbbbb"):
+        (config.reports_dir / run_id).mkdir()
+        (config.reports_dir / run_id / "index.html").write_text("<html></html>", encoding="utf-8")
+    response = client.get("/reports/latest", follow_redirects=False)
+    assert response.status_code in (302, 307) and response.headers["location"] == "/reports/20260102-000000-bbbbbb/"
+
+
+def test_reports_index_without_reports_explains_why_and_carries_the_logos(service, monkeypatch):
+    client, _ = service
+    monkeypatch.setattr(reports, "allure_version", lambda settings: "2.30.0")
+    page = client.get("/reports/")
+    assert page.status_code == 200 and "No reports yet" in page.text
+    assert "/assets/meditik-logo.png" in page.text
+    for name in ("meditik-logo.png", "idf-computer-service-directorate-logo.png"):
+        image = client.get(f"/assets/{name}")
+        assert image.status_code == 200 and image.headers["content-type"] == "image/png"
+
+
+def test_reports_status_tells_whether_allure_runs(service, monkeypatch):
+    client, _ = service
+    assert client.get("/api/reports/status").json() == {
+        "allure_ready": False, "allure_version": None, "report_count": 0, "latest_report": None}
+    monkeypatch.setattr(reports, "allure_version", lambda settings: "2.30.0")
+    status = client.get("/api/reports/status").json()
+    assert status["allure_ready"] is True and status["allure_version"] == "2.30.0"
+
+
+def test_allure_version_reads_the_cli_and_does_not_remember_failures(tmp_path, monkeypatch):
+    config = service_settings.Settings(data_dir=tmp_path, allure_bin="allure", max_concurrent_runs=1, retention_days=0,
+                                       api_token=None, allowed_envs=("test",), user_ranges=(), run_timeout_minutes=1)
+    monkeypatch.setattr(reports, "_allure_versions", {})
+    answers = iter([subprocess.CompletedProcess([], 1, "", "no java"), subprocess.CompletedProcess([], 0, "2.30.0\n", "")])
+    monkeypatch.setattr(reports.subprocess, "run", lambda *args, **kwargs: next(answers))
+    assert reports.allure_version(config) is None
+    assert reports.allure_version(config) == "2.30.0"
+    assert reports.allure_version(config) == "2.30.0"  # remembered: no third subprocess answer is needed
+    assert reports.allure_version(service_settings.Settings(
+        data_dir=tmp_path, allure_bin=None, max_concurrent_runs=1, retention_days=0, api_token=None,
+        allowed_envs=("test",), user_ranges=(), run_timeout_minutes=1)) is None
