@@ -27,6 +27,7 @@ SUITES = ("all", "bdd", "pytest")
 TAG_PATTERN = re.compile(r"^[A-Za-z0-9_]+$")
 DATE_PATTERN = r"^\d{4}-\d{2}-\d{2}$"
 STATIC_DIR = Path(__file__).parent / "static"
+LOGOS = (("meditik-logo.png", "MediTik"), ("idf-computer-service-directorate-logo.png", "IDF Computer Service Directorate"))
 
 settings = load_settings()
 manager: Optional[RunManager] = None
@@ -151,12 +152,50 @@ def cancel_run(run_id: str) -> dict:
     return run
 
 
+@app.get("/api/reports/status")
+def reports_status() -> dict:
+    """Whether the Allure CLI runs (reports can be built) and how many reports exist."""
+    version = reports.allure_version(settings)
+    return {"allure_ready": version is not None, "allure_version": version,
+            "report_count": len(reports.stored_report_ids(settings)),
+            "latest_report": reports.latest_report_id(settings)}
+
+
+def _page(title: str, body: str) -> HTMLResponse:
+    """Standalone page for the report links, with the same header and logos as the main page."""
+    logos = "".join(f'<img src="/assets/{name}" alt="{html.escape(alt)}" height="40">' for name, alt in LOGOS)
+    return HTMLResponse(
+        '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        f"<title>{html.escape(title)}</title>"
+        "<style>body{font:14px system-ui,sans-serif;margin:0;color:#1c2733}"
+        "header{background:#16222f;color:#fff;padding:12px 24px;display:flex;align-items:center;gap:16px}"
+        "header h1{font-size:18px;margin:0;flex:1}header a{color:#9cc4ff}header img{border-radius:6px}"
+        "main{margin:24px}table{border-collapse:collapse}"
+        "th,td{text-align:left;padding:6px 12px;border-bottom:1px solid #d9dee4}"
+        ".notice{max-width:640px;padding:12px 16px;border:1px solid #d9dee4;border-radius:8px;background:#f4f6f8}"
+        ".notice.warn{border-color:#b26a00;background:#fff6e5}</style></head><body>"
+        '<header><h1>Refua automation runner</h1><a href="/">Runs</a><a href="/reports/">All reports</a>'
+        f'<a href="/reports/latest">Latest report</a>{logos}</header><main>{body}</main></body></html>')
+
+
+def _report_notice(report_count: int) -> str:
+    """The message shown instead of reports: Allure not usable, or nothing generated yet. Empty when all is well."""
+    if reports.allure_version(settings) is None:
+        return ('<p class="notice warn"><strong>The Allure report generator is not available on this server.</strong> '
+                "Test runs cannot produce reports until it is fixed. Please tell the team that maintains the service.</p>")
+    if report_count == 0:
+        return ('<p class="notice"><strong>No reports yet.</strong> The Allure report generator is running. '
+                'A report appears here after the first test run finishes. Start one from the <a href="/">main page</a>.</p>')
+    return ""
+
+
 @app.get("/reports/latest")
 @app.get("/reports/latest/")
-def latest_report() -> RedirectResponse:
+def latest_report():
     run_id = reports.latest_report_id(settings)
     if run_id is None:
-        raise HTTPException(404, "No report has been generated yet")
+        return _page("Latest report", "<h2>Latest report</h2>" + _report_notice(0))
     return RedirectResponse(f"/reports/{run_id}/")
 
 
@@ -175,17 +214,17 @@ def reports_index() -> HTMLResponse:
                  run.get("status", "-"), counts]
         rows.append(f'<tr><td><a href="/reports/{html.escape(report_id)}/">{html.escape(report_id)}</a></td>'
                     + "".join(f"<td>{html.escape(str(cell))}</td>" for cell in cells) + "</tr>")
-    body = "".join(rows) or '<tr><td colspan="8">No reports yet</td></tr>'
-    return HTMLResponse(
-        '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Reports</title>'
-        "<style>body{font:14px system-ui,sans-serif;margin:24px}table{border-collapse:collapse}"
-        "th,td{text-align:left;padding:6px 12px;border-bottom:1px solid #d9dee4}</style></head><body>"
-        f'<h1>Reports ({len(rows)})</h1><p><a href="/">Back to runs</a></p><table><thead><tr><th>Run</th>'
-        "<th>Started</th><th>System</th><th>Tag</th><th>User</th><th>Env</th><th>Status</th><th>Results</th></tr></thead>"
-        f"<tbody>{body}</tbody></table></body></html>")
+    if not rows:
+        return _page("Reports", "<h2>Reports (0)</h2>" + _report_notice(0))
+    return _page(
+        "Reports",
+        f"<h2>Reports ({len(rows)})</h2>" + _report_notice(len(rows))
+        + '<table><thead><tr><th>Run</th><th>Started</th><th>System</th><th>Tag</th><th>User</th><th>Env</th>'
+        f"<th>Status</th><th>Results</th></tr></thead><tbody>{''.join(rows)}</tbody></table>")
 
 
 settings.ensure_directories()
+app.mount("/assets", StaticFiles(directory=STATIC_DIR / "img"), name="assets")
 app.mount("/reports", StaticFiles(directory=settings.reports_dir, html=True), name="reports")
 
 

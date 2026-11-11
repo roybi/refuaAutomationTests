@@ -10,6 +10,32 @@ from typing import Callable, Dict, List, Optional
 from .settings import Settings
 
 GENERATE_TIMEOUT_SECONDS = 600
+ALLURE_PROBE_TIMEOUT_SECONDS = 30
+
+
+_allure_versions: Dict[str, str] = {}
+
+
+def allure_version(settings: Settings) -> Optional[str]:
+    """Version printed by the Allure CLI, or None when it is missing or does not run (e.g. no Java).
+
+    Report generation shells out to this CLI, so a version here means reports can be built. Only a working
+    answer is remembered; a failed probe is repeated on the next call.
+    """
+    allure_bin = settings.allure_bin
+    if not allure_bin:
+        return None
+    if allure_bin not in _allure_versions:
+        try:
+            completed = subprocess.run([allure_bin, "--version"], capture_output=True, text=True,
+                                       timeout=ALLURE_PROBE_TIMEOUT_SECONDS)
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        lines = (completed.stdout or "").strip().splitlines()
+        if completed.returncode != 0 or not lines:
+            return None
+        _allure_versions[allure_bin] = lines[0]
+    return _allure_versions[allure_bin]
 
 
 def latest_report_id(settings: Settings) -> Optional[str]:
