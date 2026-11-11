@@ -238,13 +238,6 @@ def reports_index() -> HTMLResponse:
         f"<th>Status</th><th>Results</th></tr></thead><tbody>{''.join(rows)}</tbody></table>")
 
 
-@app.get("/reports/{run_id}", include_in_schema=False)
-def report_without_slash(run_id: str):
-    if not RUN_ID_PATTERN.match(run_id):
-        raise HTTPException(404, "Report not found")
-    return RedirectResponse(f"/reports/{run_id}/")
-
-
 @app.get("/reports/{run_id}/", include_in_schema=False)
 def report_page(run_id: str):
     """The report of one execution; rebuilt from the archived raw results when the server no longer has it."""

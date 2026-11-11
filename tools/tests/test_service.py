@@ -445,7 +445,6 @@ def test_a_report_without_archived_results_or_with_a_bad_id_shows_a_message_or_4
     assert page.status_code == 200 and "Report not available" in page.text
     assert client.get("/reports/20260101-000000-aaaaaa/").status_code == 200  # no such run: same message, no crash
     assert client.get("/reports/..%2f..%2fetc/").status_code == 404
-    assert client.get(f"/reports/{RUN_A}", follow_redirects=False).headers["location"] == f"/reports/{RUN_A}/"
 
 
 def test_all_reports_and_latest_report_use_executions_that_can_be_rebuilt(archived_service, monkeypatch):

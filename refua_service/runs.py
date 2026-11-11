@@ -157,6 +157,7 @@ class RunManager:
         run = self.get(run_id)
         if run is None or run["status"] in ACTIVE:
             return False
+        label = run_id.replace("\r", "").replace("\n", "")  # run_id comes from the URL: keep it out of log lines as is
         with self._lock:
             lock = self._report_locks.setdefault(run_id, threading.Lock())
         with lock:
@@ -167,11 +168,11 @@ class RunManager:
                 try:
                     results = self.archiver.fetch_results(run)
                 except Exception:  # noqa: BLE001 - an unreachable archive means "no report", not a server error
-                    logger.exception("fetching the archived results of run %s failed", run_id)
+                    logger.exception("fetching the archived results of run %s failed", label)
                     return False
                 if results is None:
                     return False
-            summary = reports.generate_report(self.settings, run_id, lambda line: logger.info("%s: %s", run_id, line))
+            summary = reports.generate_report(self.settings, run_id, lambda line: logger.info("%s: %s", label, line.replace("\r", "").replace("\n", " ")))
             return summary is not None and index.is_file()
 
     def cancel(self, run_id: str) -> Optional[dict]:
