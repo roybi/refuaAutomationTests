@@ -208,7 +208,7 @@ jobs:
       github.ref == 'refs/heads/main' &&
       vars.AUTO_DEPLOY_DEV != 'false'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     env:
       HELM_REPO: DigitalIDF/medical-helm
       VALUES_FILE: refua-tests/dev.yaml
@@ -270,9 +270,16 @@ jobs:
           url=$(gh pr create --repo "$HELM_REPO" --base main --head "$branch" \
             --title "refua-tests dev: image tag $TAG" \
             --body "Automated tag update from $GITHUB_REPOSITORY, commit $GITHUB_SHA ([workflow run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)). Changes only the image tag in \`$VALUES_FILE\`.")
-          if gh pr merge "$url" --squash --delete-branch; then
+          # medical-helm requires its scan workflows to pass first, which takes a few minutes: retry the merge until
+          # GitHub accepts it (a failing check that is not required does not block the merge).
+          merged=false
+          for _ in $(seq 1 40); do
+            if gh pr merge "$url" --squash --delete-branch > /tmp/merge.out 2>&1; then merged=true; break; fi
+            sleep 15
+          done
+          if [[ "$merged" == "true" ]]; then
             echo "Image tag set to \`$TAG\` in $HELM_REPO ($url). ArgoCD rolls the pod out." >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "::warning::The PR could not be merged automatically (review or checks required?). Merge it by hand: $url"
+            echo "::warning::The PR could not be merged automatically: $(tail -n 1 /tmp/merge.out). Merge it by hand: $url"
             echo "**Merge by hand:** $url (image tag \`$TAG\`)" >> "$GITHUB_STEP_SUMMARY"
           fi
