@@ -6,13 +6,13 @@ Run a tag from GitHub: **Actions → BDD - Run by tag → Run workflow**.
 
 | Tag | Scenarios | Runnable | Status | Feature files |
 |---|---:|---:|---|---|
-| `@bdd` | 294 | 72 | available | 23 feature files |
+| `@bdd` | 308 | 86 | available | 24 feature files |
 | `@home` | 6 | 6 | available | meditik_home.feature |
 | `@known_issue` | 1 | 1 | available | meditik_request_forms.feature |
 | `@main_page` | 14 | 14 | available | mainPage.feature |
 | `@medical_profile` | 14 | 3 | available | meditik_medical_profile.feature, meditik_medical_profile_pending.feature |
 | `@medicines` | 22 | 4 | available | meditik_medicines_pending.feature, meditik_medicines_tabs.feature |
-| `@meditik` | 294 | 72 | available | 23 feature files |
+| `@meditik` | 308 | 86 | available | 24 feature files |
 | `@menu` | 1 | 1 | available | meditik_menu.feature |
 | `@my_appointments` | 32 | 11 | available | meditik_my_appointments.feature, meditik_my_appointments_pending.feature |
 | `@my_requests` | 28 | 12 | available | meditik_my_requests.feature, meditik_my_requests_pending.feature |
