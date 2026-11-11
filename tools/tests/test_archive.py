@@ -254,7 +254,7 @@ def _lose_local_volume(settings: Settings) -> None:
     settings.ensure_directories()
 
 
-def test_restore_brings_back_run_record_and_log_without_a_report_link(tmp_path):
+def test_restore_brings_back_run_record_and_log_and_keeps_the_report_link(tmp_path):
     settings = make_settings(tmp_path, retention_days=0)
     run = {**make_run(settings), "report_url": f"/reports/{RUN_ID}/", "summary": {"passed": 2}}
     archiver = archive.Archiver(settings)
@@ -265,7 +265,8 @@ def test_restore_brings_back_run_record_and_log_without_a_report_link(tmp_path):
 
     restored = json.loads((settings.runs_dir / f"{RUN_ID}.json").read_text(encoding="utf-8"))
     assert restored["id"] == RUN_ID and restored["summary"] == {"passed": 2}
-    assert restored["report_url"] is None and restored["restored_from_archive"] is True
+    assert restored["report_url"] == f"/reports/{RUN_ID}/"  # rebuilt from the archived results when opened
+    assert restored["restored_from_archive"] is True
     assert (settings.runs_dir / f"{RUN_ID}.log").read_bytes() == archived(settings, "console.log").read_bytes()
     created = archive._created(run).timestamp()
     assert abs((settings.runs_dir / f"{RUN_ID}.json").stat().st_mtime - created) < 2  # retention counts from the run
@@ -360,3 +361,37 @@ def test_s3_backend_lists_across_pages_and_maps_a_missing_key_to_none():
     backend = archive.S3Backend("bucket", client)
     assert list(backend.list_keys("runs/")) == ["runs/a", "runs/b"]
     assert backend.get_bytes("runs/b") == b"2" and backend.get_bytes("runs/none") is None
+
+
+def test_restored_run_without_archived_results_has_no_report_link(tmp_path):
+    import shutil
+    settings = make_settings(tmp_path, retention_days=0)
+    run = {**make_run(settings), "report_url": f"/reports/{RUN_ID}/"}
+    shutil.rmtree(settings.results_dir / RUN_ID)  # nothing to archive but the log
+    archiver = archive.Archiver(settings)
+    assert archiver.archive_run(run) is True
+    _lose_local_volume(settings)
+    assert archiver.restore() == 1
+    assert json.loads((settings.runs_dir / f"{RUN_ID}.json").read_text(encoding="utf-8"))["report_url"] is None
+
+
+def test_fetch_results_downloads_the_archived_results_and_nothing_outside_the_folder(tmp_path):
+    settings = make_settings(tmp_path, retention_days=0)
+    run = make_run(settings)
+    archiver = archive.Archiver(settings)
+    assert archiver.archive_run(run) is True
+    _lose_local_volume(settings)
+
+    target = archiver.fetch_results(run)
+
+    assert target == (settings.results_dir / RUN_ID).resolve()
+    assert (target / "a-result.json").read_text(encoding="utf-8") == '{"name": "t"}'
+    assert (target / "attachments" / "shot.png").read_bytes() == b"png"
+    assert not (target / "history").exists() and not (target / "console.log").exists()
+    assert archive.Archiver(make_settings(tmp_path / "other", archive_dir=None)).fetch_results(run) is None  # no archive
+
+
+def test_fetch_results_returns_none_when_the_run_has_no_archived_results(tmp_path):
+    settings = make_settings(tmp_path, retention_days=0)
+    run = make_run(settings)
+    assert archive.Archiver(settings).fetch_results(run) is None

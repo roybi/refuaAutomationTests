@@ -161,6 +161,9 @@ function stats(run) {
   return box;
 }
 
+function isFinished(run) { return run.status !== 'queued' && run.status !== 'running'; }
+function reportUrl(run) { return run.report_url || '/reports/' + encodeURIComponent(run.id) + '/'; }
+
 function renderRuns(runs) {
   const body = $('runs');
   body.replaceChildren();
@@ -169,8 +172,8 @@ function renderRuns(runs) {
     row.addEventListener('click', () => select(run.id));
     const started = run.started_at || run.created_at;
     const report = el('td');
-    if (run.report_url) {
-      const link = el('a', { href: run.report_url, target: '_blank', rel: 'noopener' }, 'Open');
+    if (isFinished(run)) {  // every finished execution links to its own report; the server rebuilds a lost one on open
+      const link = el('a', { href: reportUrl(run), target: '_blank', rel: 'noopener' }, 'Open');
       link.addEventListener('click', e => e.stopPropagation());
       report.append(link);
     }
@@ -277,8 +280,8 @@ async function showDetail(run) {
   $('detailStatus').textContent = run.status;
   $('detailStatus').className = 'badge ' + run.status;
   $('detailCommand').textContent = run.command ? `run_tests.py ${run.command.split('run_tests.py ').pop()}` : '';
-  $('detailReport').hidden = !run.report_url;
-  if (run.report_url) $('detailReport').href = run.report_url;
+  $('detailReport').hidden = !isFinished(run);
+  if (isFinished(run)) $('detailReport').href = reportUrl(run);
   $('cancel').hidden = !(run.status === 'queued' || run.status === 'running');
   const log = $('log'), atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 20;
   for (let guard = 0; guard < 20; guard++) {
