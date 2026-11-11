@@ -37,6 +37,13 @@ Only the core token is required.
 | Secret | `CORE_REPO_TOKEN` | Token that can read `DigitalIDF/refuaAutomationCore` (required) |
 | Variable (optional) | `CORE_REF` | refuaAutomationCore ref to build. Default `feat/meditik-element-scraper` |
 | Variable (optional) | `BASE_IMAGE` | Mirror of the Playwright base image; blank = Microsoft's public `playwright/python` image |
+| Secret (deploy) | `HELM_REPO_TOKEN` | Token with Contents + Pull requests write on `DigitalIDF/medical-helm`; used by the `update-dev-image-tag` job |
+| Variable (optional) | `AUTO_DEPLOY_DEV` | Set to `false` to stop the automatic dev deploy |
+
+**Automatic dev deploy.** After an image is pushed from `main`, the `update-dev-image-tag` job sets `image.tag` in
+`refua-tests/dev.yaml` of `DigitalIDF/medical-helm` to the new commit SHA (12 characters) through a PR that it merges at once.
+ArgoCD auto-sync then rolls the pod out. If the PR cannot be merged (review or checks required), the job warns and prints the PR
+link in the run summary; merge it by hand. The token expires: renew it and update the secret before then.
 
 Image names (lowercase) and tags (commit SHA, `latest`, optional extra tag):
 `ghcr.io/digitalidf/refuaautomationtests/refua-automation-core` and `.../refua-automation-tests`.
